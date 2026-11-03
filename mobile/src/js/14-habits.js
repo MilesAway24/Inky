@@ -144,7 +144,7 @@ VIEWS.habits = function () {
   var monthKey = t.slice(0, 7), monthN = 0;
   hs.forEach(function (h) { Object.keys(h.marks || {}).forEach(function (k) { if (k.slice(0, 7) === monthKey && h.marks[k] === 1) monthN++; }); });
   var best = hs.reduce(function (m, h) { return Math.max(m, bestRun(h)); }, 0);
-  var h = '<div class="stats4">' + [['Done today', doneN + '<small>/' + due.length + '</small>'], ['This month', monthN], ['Longest run', best], ['Habits', hs.length]]
+  var h = '<div class="chlist">' + challengeCards() + '</div><div class="stats4">' + [['Done today', doneN + '<small>/' + due.length + '</small>'], ['This month', monthN], ['Longest run', best], ['Habits', hs.length]]
     .map(function (x) { return '<div><span>' + x[0] + '</span><b>' + x[1] + '</b></div>'; }).join('') + '</div>';
   h += '<div class="seg" role="tablist">' + [['week', 'Week'], ['month', '30 days'], ['daily', 'Daily']].map(function (v) {
     return '<button role="tab" aria-selected="' + (habView === v[0]) + '" class="' + (habView === v[0] ? 'on' : '') + '" data-act="habview" data-v="' + v[0] + '">' + v[1] + '</button>';

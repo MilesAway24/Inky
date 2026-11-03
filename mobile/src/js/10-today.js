@@ -73,7 +73,7 @@ VIEWS.today = function () {
   var hd = habitsDueToday();
   if (hd.length) {
     var hdone = hd.filter(function (x) { return habitDone(x, t); }).length;
-    h += '<section><div class="sechead"><h2>Habits today</h2><span class="meta">' + hdone + '/' + hd.length + '</span></div><div class="hchips">'
+    h += '<section><div class="sechead"><h2>Habits today</h2><span class="meta">' + hdone + '/' + hd.length + esc(challengeTag()) + '</span></div><div class="hchips">'
       + hd.map(habitChip).join('') + '</div></section>';
   }
 

@@ -5,7 +5,7 @@
    That subtree is the viewer's own, so the same person on iPhone and iPad
    sees one set of data. Without db (signed out, or a plain browser) the
    app keeps working from the device cache. */
-var COLS = ['areas', 'tasks', 'inbox', 'notes', 'log', 'meta', 'habits', 'goals', 'projects', 'journal', 'ranks', 'decks', 'lifts', 'tools'];
+var COLS = ['areas', 'tasks', 'inbox', 'notes', 'log', 'meta', 'habits', 'goals', 'projects', 'journal', 'ranks', 'decks', 'lifts', 'tools', 'challenges', 'books'];
 var CACHE_KEY = 'mossos.mobile.v1';
 
 var Store = (function () {

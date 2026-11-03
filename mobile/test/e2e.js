@@ -447,6 +447,46 @@ const ok = (cond, msg) => { console.log((cond ? 'ok   ' : 'FAIL ') + msg); if (!
     ok(/Reminder probe/.test(await p.textContent('.headsup')), 'a reminder shows in Heads up once its window opens');
   } else ok(true, 'reminder check skipped this late in the day');
 
+  // ── Challenges (built on habits) ───────────────────────────────
+  await p.click('.tabs [data-v=habits]'); await p.waitForTimeout(200);
+  ok(await p.isVisible('.chcard.empty'), 'Habits offers a challenge when there is none');
+  await p.click('.chcard.empty'); await p.waitForTimeout(150);
+  await p.click('#sheet [data-act=chhab] >> nth=0'); await p.click('#sheet [data-act=chhab] >> nth=1');
+  await p.fill('#chdays', '3'); await p.dispatchEvent('#chdays', 'change'); await p.waitForTimeout(100);
+  await p.click('#sheet [data-act=chsave]'); await p.waitForTimeout(300);
+  ok(await p.$$eval('.wall i', (x) => x.length) === 3, 'a 3-day challenge shows a wall of 3 squares');
+  for (let i = 0; i < 4 && await p.$('.hchips .hchip:not(.on)'); i++) { await p.click('.hchips .hchip:not(.on) >> nth=0'); await p.waitForTimeout(200); }
+  ok(await p.$eval('.wall i:first-child', (e) => e.className) === 'todaydone', 'doing every habit in it fills today\'s square');
+  await p.click('.hchips .hchip.on >> nth=0'); await p.waitForTimeout(200);
+  ok(await p.$eval('.wall i:first-child', (e) => e.className) === 'today', 'undoing one of them empties the square again');
+  await p.click('.tabs [data-v=today]'); await p.waitForTimeout(200);
+  ok(/Day 1\/3/.test(await p.textContent('section:has(h2:text("Habits today")) .meta')), 'Today\'s Habits heading shows the challenge day');
+  // Strict vs grace, with known history
+  await p.evaluate(() => {
+    const ymd = (n) => { const d = new Date(); d.setDate(d.getDate() + n); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+    const base = 'data/users/u_test/m/', now = Date.now(), seven = [1, 1, 1, 1, 1, 1, 1];
+    const m2 = {}; m2[ymd(-2)] = 1;
+    window.__mock.docs[base + 'habits/hA'] = { id: 'hA', ic: '🧊', n: 'Cold shower', color: '#7AA2F7', days: seven, marks: m2, since: ymd(-10), created: now, updated: now };
+    window.__mock.docs[base + 'habits/hB'] = { id: 'hB', ic: '🤸', n: 'Stretch', color: '#C39BD3', days: seven, marks: Object.assign({}, m2), since: ymd(-10), created: now, updated: now };
+    window.__mock.docs[base + 'challenges/cS'] = { id: 'cS', name: 'Strict test', habits: ['hA', 'hB'], days: 5, mode: 'strict', start: ymd(-2), runs: [], created: now, updated: now };
+    window.__mock.docs[base + 'challenges/cG'] = { id: 'cG', name: 'Grace test', habits: ['hA', 'hB'], days: 5, mode: 'grace', start: ymd(-2), runs: [], created: now + 1, updated: now };
+  });
+  await reloadKeeping(p, ctx);
+  await p.click('.tabs [data-v=habits]'); await p.waitForTimeout(200);
+  await p.click('.chcard:has-text("Strict test")'); await p.waitForTimeout(200);
+  const sc = await p.$$eval('.wall i', (x) => x.map((e) => e.className));
+  ok(sc[0] === 'done' && sc[1] === 'miss' && await p.isVisible('.chend'), 'strict: a missed day ends the run and offers a fresh start (' + sc.join(',') + ')');
+  await p.click('[data-act=chrestart]'); await p.waitForTimeout(600);
+  const cs = await p.evaluate(() => window.__mock.docs['data/users/u_test/m/challenges/cS']);
+  ok(cs.runs.length === 1 && cs.runs[0].reached === 1 && !(await p.isVisible('.chend')), 'starting again keeps the old run on record');
+  await p.click('[data-act=back]'); await p.waitForTimeout(150);
+  await p.click('.chcard:has-text("Grace test")'); await p.waitForTimeout(200);
+  const gc = await p.$$eval('.wall i', (x) => x.map((e) => e.className));
+  ok(gc[0] === 'done' && gc[1] === 'grace' && !(await p.isVisible('.chend')), 'grace: one miss in a week is forgiven (' + gc.join(',') + ')');
+  await p.screenshot({ path: shots + '/phone-challenge.png', fullPage: true });
+  await p.click('[data-act=back]'); await p.waitForTimeout(150);
+  await p.click('.tabs [data-v=today]'); await p.waitForTimeout(200);
+
   // ── Habit amounts ──────────────────────────────────────────────
   const water = () => p.evaluate(() => Object.values(window.__mock.docs).filter((d) => d.n === 'Drink water')[0]);
   ok(/0 \/ 3 L/.test(await p.textContent('.hchip:has-text("Drink water")')), 'an amount habit shows 0 / 3 L');
