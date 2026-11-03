@@ -992,6 +992,35 @@ var BLOCKS=[['table','▤','Table','Rows and columns you can type into'],
  ['list','☰','Checklist','Tick things off'],
  ['timer','⏱','Timer','Counts down, then nudges'],
  ['calendar','🗓','Month grid','Dots on the days that matter']];
+function blockName(id){
+  for(var i=0;i<BLOCKS.length;i++) if(BLOCKS[i][0]===id) return BLOCKS[i];
+  return [id,'▫',id,''];
+}
+function blockPreview(id){
+  var b=blockName(id), body='';
+  var rows=function(r){return '<div style="display:flex;flex-direction:column;gap:6px;font-size:12px;color:var(--mu)">'
+    +r.map(function(x){return '<div style="display:flex;gap:8px;align-items:center">'+x+'</div>'}).join('')+'</div>'};
+  if(id==='table') body='<table class="ptable"><tr><th>Item</th><th>Category</th><th style="text-align:right">£</th></tr>'
+    +'<tr><td>Groceries</td><td>Food</td><td class="num">142.80</td></tr><tr><td>Train pass</td><td>Travel</td><td class="num">96.00</td></tr>'
+    +'<tr><td>Gym</td><td>Health</td><td class="num">32.00</td></tr></table>';
+  else if(id==='tiles') body='<div class="ptiles"><div class="ptile"><div class="k">This month</div><div class="v">£1,284</div></div>'
+    +'<div class="ptile"><div class="k">Budget left</div><div class="v">£416</div></div><div class="ptile"><div class="k">Days left</div><div class="v">13</div></div></div>';
+  else if(id==='chart') body='<div class="pbars">'+[38,52,44,70,61,83,57].map(function(h){return '<i style="height:'+h+'%"></i>'}).join('')+'</div>';
+  else if(id==='list') body=rows(['☑ Pick a deck','☐ Review 12 due cards','☐ Add three new ones']);
+  else if(id==='cards') body='<div style="background:var(--card2);border-radius:7px;padding:18px 12px;text-align:center;font-size:13px">What does <b>ser</b> mean?<div style="font-size:10.5px;color:var(--fa);margin-top:6px">tap to flip · 3 due</div></div>';
+  else if(id==='timer') body='<div style="font:300 28px/1 var(--hn);font-variant-numeric:tabular-nums">04:59 <span style="font-size:11px;color:var(--fa)">then a nudge</span></div>';
+  else if(id==='rank') body=rows(['<b>1</b> Arrival','<b>2</b> Paddington 2','<b>3</b> Heat']);
+  else if(id==='dice') body='<div style="font-size:13px">🎲 Tonight: <b>walk to the river</b></div>';
+  else if(id==='recipe') body=rows(['1 · Boil the water <span class="pill p-org">⏱ 8 min</span>','2 · Add the pasta','3 · Drain, keep a cup of water']);
+  else if(id==='sets') body=rows(['Squat · 3 × 8 · 60 kg <span style="color:var(--fa)">last 57.5</span>','Bench · 3 × 8 · 45 kg <span style="color:var(--fa)">last 45</span>']);
+  else if(id==='matrix') body='<div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;font-size:11px">'
+    +['Do now','Schedule','Hand off','Drop'].map(function(x){return '<div class="ptile">'+x+'</div>'}).join('')+'</div>';
+  else if(id==='form') body='<div style="display:flex;gap:7px"><div style="flex:1;background:var(--card2);border-radius:6px;padding:6px 9px;font-size:12px;color:var(--fa)">Add one…</div><button class="newbtn">Add</button></div>';
+  else if(id==='calendar') body='<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px">'
+    +Array.apply(null,Array(28)).map(function(_,i){return '<i style="display:block;height:14px;border-radius:3px;background:'+(i%3===0?'var(--grn)':'var(--card2)')+'"></i>'}).join('')+'</div>';
+  else body='<p class="subline">'+esc(b[3]||b[2])+'</p>';
+  return '<div class="pblock"><div class="bh">'+b[1]+' '+esc(b[2])+'</div>'+body+'</div>';
+}
 var TOOLS=[
  {id:'flash',ic:'🎴',n:'Flashcards',cov:'linear-gradient(140deg,#6B3A2E,#3A2B52)',
   s:'Decks, spaced review, import from a lesson',from:'mobile',blocks:['cards','list','timer'],
