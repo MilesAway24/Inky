@@ -2,7 +2,7 @@
 // offline; everything else (the Google font) is cached the first time it loads.
 // VERSION is stamped by app/build.mjs from a hash of index.html, so every
 // build makes installed copies refresh their offline cache.
-const VERSION = 'mossos-4f62fe5ff5';
+const VERSION = 'mossos-514331d6af';
 const SHELL = [
   './',
   './index.html',

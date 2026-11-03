@@ -3135,12 +3135,14 @@ addEventListener('pagehide',saveNow);
 document.addEventListener('visibilitychange',function(){if(document.hidden)saveNow()});
 
 CMDS.push(['App','↺','Reset saved data','','resetdata']);
-var runBase=run;
+var runBase=run,resetAsked=0;
 run=function(k){
   if(k==='resetdata'){
-    if(confirm('Reset MossOS to its starting data? Everything you changed will be cleared.')){
-      try{localStorage.removeItem(SAVE_KEY)}catch(err){}
-      removeEventListener('pagehide',saveNow);saveNow=function(){};location.reload()}
+    // Two steps instead of confirm(), which some hosts (claude.ai) block.
+    if(Date.now()-resetAsked>6000){resetAsked=Date.now();
+      toast('↺ Run <b>Reset saved data</b> again within 6 s to clear everything you changed');return}
+    try{localStorage.removeItem(SAVE_KEY)}catch(err){}
+    removeEventListener('pagehide',saveNow);saveNow=function(){};location.reload();
     return}
   return runBase(k)};
 

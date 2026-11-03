@@ -165,12 +165,14 @@ addEventListener('pagehide',saveNow);
 document.addEventListener('visibilitychange',function(){if(document.hidden)saveNow()});
 
 CMDS.push(['App','↺','Reset saved data','','resetdata']);
-var runBase=run;
+var runBase=run,resetAsked=0;
 run=function(k){
   if(k==='resetdata'){
-    if(confirm('Reset MossOS to its starting data? Everything you changed will be cleared.')){
-      try{localStorage.removeItem(SAVE_KEY)}catch(err){}
-      removeEventListener('pagehide',saveNow);saveNow=function(){};location.reload()}
+    // Two steps instead of confirm(), which some hosts (claude.ai) block.
+    if(Date.now()-resetAsked>6000){resetAsked=Date.now();
+      toast('↺ Run <b>Reset saved data</b> again within 6 s to clear everything you changed');return}
+    try{localStorage.removeItem(SAVE_KEY)}catch(err){}
+    removeEventListener('pagehide',saveNow);saveNow=function(){};location.reload();
     return}
   return runBase(k)};
 
@@ -216,3 +218,25 @@ const stamped = sw.replace(/const VERSION = '[^']*';/, `const VERSION = 'mossos-
 if (stamped === sw && !sw.includes(`mossos-${hash}`)) throw new Error('build: VERSION line not found in sw.js');
 writeFileSync(swPath, stamped);
 console.log(`build: sw.js cache version mossos-${hash}`);
+
+// Optional: `node app/build.mjs --hosted <file>` also writes a copy for hosts
+// that wrap the page in their own document (claude.ai artifacts). It has no
+// <html>/<head> of its own, no manifest or service worker, and the icon inline.
+const hostedAt = process.argv.indexOf('--hosted');
+if (hostedAt > -1) {
+  const dest = process.argv[hostedAt + 1];
+  if (!dest) throw new Error('build: --hosted needs a file path');
+  const svg = readFileSync(join(here, 'icons', 'icon.svg'), 'utf8').trim();
+  const icon = 'data:image/svg+xml;base64,' + Buffer.from(svg).toString('base64');
+  let h = html;
+  const cut = (label, from, to) => {
+    if (!h.includes(from)) throw new Error(`build --hosted: "${label}" not found`);
+    h = h.replace(from, () => to);
+  };
+  cut('head', h.slice(0, h.indexOf('<title>MossOS</title>')),
+    `<link rel="icon" href="${icon}" type="image/svg+xml">\n`);
+  cut('close html', '</script>\n</html>\n', '</script>\n');
+  cut('color scheme', '\n</style>', '\n:root{color-scheme:dark}\n</style>');
+  writeFileSync(dest, h);
+  console.log(`build: wrote hosted copy ${dest} (${(h.length / 1024).toFixed(0)} KB)`);
+}
