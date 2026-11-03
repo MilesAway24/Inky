@@ -148,6 +148,7 @@ function sectionCount(k) {
   if (k === 'journal') { var e = entryFor(t); return e && (e.text || e.mood) ? 'written today' : 'not yet today'; }
   if (k === 'inbox') { return Store.all('inbox').length + ' to sort'; }
   if (k === 'tasks') { return tasksIn('today').filter(function (x) { return !x.done; }).length + ' today'; }
+  if (k === 'books') { var br = booksReading(); return br.length ? br.length + ' reading' : 'add a book'; }
   if (k === 'plan') { var tn = tasksOn(addDays(t, 1)).filter(function (x) { return !x.done; }).length; return tn + ' planned'; }
   if (k === 'areas') { return areasSorted().filter(function (a) { return a.state === 'Needs you'; }).length + ' need you'; }
   return '';

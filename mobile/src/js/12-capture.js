@@ -14,7 +14,7 @@ var CAP_KINDS = [['smart', 'Smart sort'], ['inbox', 'Inbox'], ['task', 'Task'], 
 var STYPES = {
   task: ['Task', '✅'], done: ['Done ✓', '☑️'], habit_done: ['Habit ✓', '🔁'], habit_new: ['New habit', '🔁'],
   note: ['Note', '📝'], idea: ['Idea', '💡'], journal: ['Journal', '📔'],
-  movie: ['Movie watched', '🎬'], rank: ['Rank list', '🏆'], spent: ['Spent', '💵'], grocery: ['Grocery list', '🛒'], drop: ['Delete', '🗑']
+  movie: ['Movie watched', '🎬'], rank: ['Rank list', '🏆'], spent: ['Spent', '💵'], grocery: ['Grocery list', '🛒'], reading: ['Reading', '📖'], quote: ['Quote', '❝'], drop: ['Delete', '🗑']
 };
 
 ACTS.capture = function () {
@@ -119,7 +119,8 @@ function sortContext() {
     projects: projectsAll('active').map(function (p) { return { id: p.id, name: p.t }; }),
     tasks: Store.all('tasks').filter(function (t) { return !t.done; }).slice(0, 80).map(function (t) { return { id: t.id, t: t.t }; }),
     habits: habitsSorted().map(function (h) { return { id: h.id, name: h.n }; }),
-    lists: Store.all('ranks').map(function (l) { return { id: l.id, name: l.name }; })
+    lists: Store.all('ranks').map(function (l) { return { id: l.id, name: l.name }; }),
+    books: booksAll().map(function (b) { return { id: b.id, title: b.title, page: b.page || 0 }; })
   };
 }
 /* Resolves to suggestions; never rejects. */
@@ -139,12 +140,14 @@ function smartSort(items) {
     + '- "journal": about how the day or the person is going ("rough shift, tired").\n'
     + '- "movie": a film or show. Give title (clean, no score), status ("watched", "watching", or "want" for something they want to see / add to their watchlist), year if stated, score (0-10) if stated, note (any opinion).\n'
     + '- "rank": something to add to one of context.lists. Give targetId and title.\n'
+    + '- "reading": reading progress on a book in context.books ("read 20 pages of Atomic Habits", "on page 140 of Dune"). Give targetId, and pagesRead (pages just read) or page (the page they are on now).\n'
+    + '- "quote": a line from a book in context.books, usually in quotation marks. Give targetId, title (the quote itself, without the book name) and page if stated.\n'
     + '- "grocery": things to add to the grocery list ("add eggs and milk to the grocery list", "groceries: bread, rice"). Give items: an array of short item names.\n'
     + '- "spent": money already spent ("spent $12 at Wawa", "$8 chipotle"). Give amount (number), title (the store or what it was) and bucket: "allow" (eating out, snacks, drinks), "gas" (fuel), "groc" (grocery shopping), "fun", "cloth" (clothes), "misc" (toiletries, small needs) or "need" (bills, health, other).\n'
     + '- "drop": empty or meaningless.\n'
     + 'Use only ids that appear in the context. area, project, due (YYYY-MM-DD, only if a day is named or clearly implied) may be null. icon: one emoji.\n'
     + 'Items: ' + JSON.stringify(items.map(function (i) { return { id: i.id, text: i.text || '(photo with no text)' }; })) + '\n'
-    + 'Reply with JSON only: {"items":[{"id":"…","type":"task","title":"…","area":null,"project":null,"due":null,"firstStep":null,"targetId":null,"time":null,"repeat":null,"year":null,"status":null,"score":null,"note":null,"amount":null,"bucket":null,"items":null,"icon":"📝"}]}')
+    + 'Reply with JSON only: {"items":[{"id":"…","type":"task","title":"…","area":null,"project":null,"due":null,"firstStep":null,"targetId":null,"time":null,"repeat":null,"year":null,"status":null,"score":null,"note":null,"amount":null,"bucket":null,"items":null,"pagesRead":null,"page":null,"icon":"📝"}]}')
     .then(function (r) {
       var byId = {}; (r && r.items || []).forEach(function (s) { if (s && s.id) byId[s.id] = s; });
       return items.map(function (i) { return byId[i.id] ? cleanSugg(byId[i.id], i, ctx) : guessSort(i, ctx); });
@@ -162,6 +165,15 @@ function cleanSugg(s, item, ctx) {
     year: s.year ? String(s.year).slice(0, 4) : '', score: s.score != null && !isNaN(+s.score) ? Math.max(0, Math.min(10, +s.score)) : null,
     status: ['want', 'watching', 'watched'].indexOf(s.status) > -1 ? s.status : 'watched',
     note: s.note ? String(s.note).slice(0, 200) : '', icon: typeof s.icon === 'string' ? s.icon.slice(0, 4) : '', targetId: null };
+  if (type === 'reading' || type === 'quote') {
+    o.targetId = idIn(ctx.books || [], s.targetId);
+    var pr = type === 'reading' ? parseReading(item.text || '') : parseQuote(item.text || '');
+    if (!o.targetId && pr) o.targetId = pr.book.id;
+    o.pagesRead = +s.pagesRead > 0 ? Math.round(+s.pagesRead) : pr && pr.pages || null;
+    o.page = +s.page > 0 ? Math.round(+s.page) : pr && pr.page || null;
+    if (type === 'quote' && pr && (!s.title || s.title === item.text)) o.title = pr.text;
+    if (!o.targetId || (type === 'reading' && !o.pagesRead && !o.page)) o.type = type === 'quote' ? 'note' : 'task';
+  }
   if (type === 'grocery') {
     o.items = Array.isArray(s.items) ? s.items.map(function (x) { return String(x).trim().slice(0, 60).replace(/^\w/, function (c) { return c.toUpperCase(); }); }).filter(Boolean).slice(0, 20) : parseGrocery(item.text || '');
     if (!o.items || !o.items.length) o.type = 'task';
@@ -204,6 +216,10 @@ function guessSort(item, ctx) {
     o.title = (wm[1] || text.slice(wm[0].length)).replace(/\s+to\s+(my\s+)?watch\s?list$/i, '').trim().replace(/^\w/, function (c) { return c.toUpperCase(); });
     return o;
   }
+  var rp = parseReading(text);
+  if (rp) { o.type = 'reading'; o.targetId = rp.book.id; o.pagesRead = rp.pages || null; o.page = rp.page || null; o.title = rp.book.title; return o; }
+  var qp = parseQuote(text);
+  if (qp) { o.type = 'quote'; o.targetId = qp.book.id; o.title = qp.text; o.page = qp.page; return o; }
   var gr = parseGrocery(text);
   if (gr) { o.type = 'grocery'; o.items = gr; o.title = gr.join(', '); return o; }
   var sp = parseSpent(text);
@@ -243,6 +259,8 @@ function suggCards(list, where) {
       : s.type === 'rank' ? 'Add to ' + (target ? target.name : '') + ': ' + s.title
       : s.type === 'movie' ? s.title + (s.year ? ' (' + s.year + ')' : '') + (s.status === 'want' ? ' · want to watch' : s.status === 'watching' ? ' · watching' : '')
       : s.type === 'spent' ? fmtMoney(s.amount || 0) + ' · ' + s.title
+      : s.type === 'reading' ? (s.pagesRead ? 'Log ' + s.pagesRead + ' pages of ' : 'On page ' + s.page + ' of ') + (Store.get('books', s.targetId) || {}).title
+      : s.type === 'quote' ? '“' + s.title + '” · ' + (Store.get('books', s.targetId) || {}).title + (s.page ? ' p. ' + s.page : '')
       : s.type === 'grocery' ? 'Add to groceries: ' + (s.items || parseGrocery(it.text || '') || [s.title]).join(', ')
       : s.title;
     var meta = '<span class="pill">' + STYPES[s.type][1] + ' ' + STYPES[s.type][0] + '</span>'
@@ -253,7 +271,7 @@ function suggCards(list, where) {
       + (s.type === 'task' && s.repeat ? '<span class="pill">↻ ' + esc(repeatLabel(s.repeat)) + '</span>' : '')
       + (s.type === 'movie' && s.score != null ? '<span class="pill">said ' + esc(s.score) + '/10</span>' : '')
       + (s.type === 'spent' ? '<span class="pill">' + esc(FIN_BUCKETS[s.bucket] || 'Allowance') + '</span>' : '');
-    var opts = Object.keys(STYPES).filter(function (k) { return (k !== 'done' || s.type === 'done') && (k !== 'habit_done' || s.type === 'habit_done') && (k !== 'rank' || s.type === 'rank'); });
+    var opts = Object.keys(STYPES).filter(function (k) { return (k !== 'done' || s.type === 'done') && (k !== 'habit_done' || s.type === 'habit_done') && (k !== 'rank' || s.type === 'rank') && (k !== 'reading' || s.type === 'reading') && (k !== 'quote' || s.type === 'quote'); });
     return '<div class="sugg"><div class="orig">“' + esc(it.text || '') + '”</div>'
       + '<div class="t">' + esc(s.icon ? s.icon + ' ' : '') + esc(line) + '</div>'
       + '<div class="meta">' + meta + '</div>'
@@ -312,6 +330,15 @@ function applySuggestion(it, s) {
     var mst = s.status || 'watched';
     addToRank(m.id, { t: title, year: s.year || '', status: mst, note: [s.score != null ? 'said ' + s.score + '/10' : '', s.note || ''].filter(Boolean).join(' · '), watched: mst === 'watched' ? today() : null });
     if (mst === 'watched') { logEvent('Watched ' + title); msg = esc(title) + ' added to Movies'; } else msg = esc(title) + (mst === 'want' ? ' added to your watchlist' : ' marked as watching');
+  } else if (s.type === 'reading') {
+    var bk = Store.get('books', s.targetId);
+    if (!bk) return 'That book isn\'t in Books';
+    var lr = logPages(bk.id, s.page || (bk.page || 0) + (s.pagesRead || 0));
+    msg = lr && lr.finished ? '🎉 Finished ' + esc(bk.title) : esc(bk.title) + ' · p. ' + (lr ? lr.page : bk.page);
+  } else if (s.type === 'quote') {
+    var qb = Store.get('books', s.targetId);
+    if (!qb) return 'That book isn\'t in Books';
+    addBookNote(qb.id, 'quote', title, s.page); msg = 'Quote saved to ' + esc(qb.title);
   } else if (s.type === 'grocery') {
     var gi = s.items && s.items.length ? s.items : parseGrocery(it.text || '') || [title];
     var gn = finGrocAdd(gi);

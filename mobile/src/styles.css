@@ -133,7 +133,7 @@ textarea.input{resize:vertical;min-height:110px}
 .input:focus{outline:none;border-color:var(--accent)}
 
 /* ── rows ─────────────────────────────────────────────────────────── */
-.list{display:grid}
+.list{display:grid;grid-template-columns:minmax(0,1fr)}
 .row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line);min-height:56px;width:100%;text-align:left}
 .row:last-child{border-bottom:0}
 .row .grow{flex:1;min-width:0}
@@ -615,3 +615,23 @@ p.finline .bad{color:var(--bad)}
 .wallkey i{width:12px;height:12px}
 .chend p{margin:0 0 10px}
 .stats3 b small{font-size:14px;color:var(--faint)}
+/* ── books ────────────────────────────────────────────────────────── */
+.booklist{display:grid;gap:10px}
+.bookcard{display:flex;gap:14px;align-items:center;text-align:left;width:100%;padding:14px;border-radius:18px;background:var(--surface);border:1px solid var(--line);color:var(--ink)}
+.bookcard .grow{display:grid;gap:5px;min-width:0}
+.bookcard .t{font-size:16px;font-weight:600}
+.bookcard .s{font-size:12.5px;color:var(--muted)}
+.bcov{display:grid;place-items:center;flex:none;width:44px;height:60px;border-radius:6px 10px 10px 6px;background:color-mix(in srgb,var(--c) 70%,var(--surface));box-shadow:inset 4px 0 0 rgba(0,0,0,.15);font-size:20px}
+.bcov.big{width:58px;height:80px;font-size:26px}
+.bookhead{display:flex;gap:14px;align-items:center}
+.bookhead .t{font-size:20px;font-weight:600;letter-spacing:-.01em}
+.bookhead .s{color:var(--muted)}
+.bigpage b{font-size:34px;font-weight:300;letter-spacing:-.03em}
+.bigpage span{color:var(--muted)}
+section.card{display:grid;gap:10px}
+.bookform{display:grid;gap:10px;margin-top:10px}
+.t.quote{font-style:italic}
+.aitext p{margin:0 0 10px;line-height:1.55}
+/* Long titles (quotes) wrap instead of widening the page. */
+.row>.grow{min-width:0}
+.row .t{overflow-wrap:anywhere}

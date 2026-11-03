@@ -203,7 +203,7 @@ const ok = (cond, msg) => { console.log((cond ? 'ok   ' : 'FAIL ') + msg); if (!
   await p.click('[data-act=capkind][data-k=task]'); await p.click('[data-act=capsave]'); await p.waitForTimeout(500);
   const lostBefore = await p.evaluate(() => !Object.values(window.__mock.docs).some((d) => d.t === 'Written just before the app was suspended'));
   await p.evaluate(() => sessionStorage.removeItem('__mockDrop'));
-  await p.reload(); await p.waitForTimeout(800);
+  await p.reload(); await p.waitForTimeout(1600);
   const resent = await p.evaluate(() => Object.values(window.__mock.docs).some((d) => d.t === 'Written just before the app was suspended'));
   ok(lostBefore && resent, 'an edit the server never received is kept and re-sent on the next launch');
 
@@ -603,8 +603,44 @@ const ok = (cond, msg) => { console.log((cond ? 'ok   ' : 'FAIL ') + msg); if (!
   ok(await p.isVisible('.headsup >> text=PS6 controller'), 'a wishlist item past 72 hours shows in Heads up');
   ok(await p.isVisible('.finline'), 'Today\'s Money section shows the next card to go');
 
+  // ── Books ───────────────────────────────────────────────────────
+  await p.click('.tabs [data-v=more]'); await p.click('#view [data-act=tab][data-v=books]'); await p.waitForTimeout(200);
+  ok(await p.isVisible('#bkt'), 'Books starts with a way to add the book you\'re reading');
+  await p.fill('#bkt', 'Atomic Habits'); await p.fill('#bka', 'James Clear'); await p.fill('#bkp', '320');
+  await p.click('form[data-form=addbook] [type=submit]'); await p.waitForTimeout(300);
+  ok((await p.textContent('#top h1')) === 'Atomic Habits', 'adding a book opens its page');
+  await p.fill('#bkpg', '40'); await p.press('#bkpg', 'Enter'); await p.waitForTimeout(300);
+  const pace = await p.textContent('#bkpace');
+  ok(/p\. 40/.test(await p.textContent('.bigpage')) && /13%/.test(await p.textContent('.bigpage')) && /40 pages a day/.test(pace) && /finish around/.test(pace),
+    'logging a page shows progress, pace and a finish date (' + pace.trim() + ')');
+  await p.click('[data-act=bookadd][data-n="20"]'); await p.waitForTimeout(250);
+  ok(/p\. 60/.test(await p.textContent('.bigpage')), '+20 pages moves it on');
+  await p.fill('#bkn', 'You do not rise to the level of your goals. You fall to the level of your systems.'); await p.fill('#bknp', '27');
+  await p.click('form[data-form=booknote] [type=submit]'); await p.waitForTimeout(500);
+  ok(await p.isVisible('.t.quote:has-text("fall to the level of your systems")'), 'a quote is kept with the book');
+  await p.click('[data-act=bookai][data-k=recap]'); await p.waitForTimeout(400);
+  const bp = await p.evaluate(() => window.__mock.sampleCalls.slice(-1)[0] || '');
+  ok(/page 60/.test(bp) && /No spoilers past page 60/.test(bp) && /say so plainly/.test(bp), 'the companion is told your page and not to spoil or guess');
+  ok(await p.isVisible('#sheet .aitext'), 'the recap shows in a sheet');
+  await p.click('[data-act=booksaveai]'); await p.waitForTimeout(400);
+  ok(await p.evaluate(() => Object.values(window.__mock.docs).some((d) => d.kind === 'thought' && /Claude on Atomic Habits/.test(d.title || ''))), 'a companion answer can be saved as a note');
+  await p.click('.tabs [data-v=more]'); await p.click('#view [data-act=tab][data-v=notes]'); await p.waitForTimeout(200);
+  await p.fill('#nq', 'level of your systems'); await p.waitForTimeout(200);
+  ok(await p.isVisible('#notelist .row:has-text("Atomic Habits p. 27")'), 'the quote shows up in Notes search, tagged with the book and page');
+  await p.fill('#nq', ''); await p.evaluate(() => document.activeElement && document.activeElement.blur()); await p.waitForTimeout(300);
+  await p.click('.tabs .cap'); await p.waitForTimeout(100);
+  await p.fill('#captext', 'read 20 pages of Atomic Habits'); await p.click('[data-act=capsave]'); await p.waitForTimeout(400);
+  ok(/Reading/.test(await p.textContent('#sheet .sugg .meta .pill:first-child')), 'capture sorts "read 20 pages of Atomic Habits" as Reading');
+  await p.click('#sheet [data-act=suggone]'); await p.waitForTimeout(500);
+  if (await p.isVisible('#sheetbg')) await p.keyboard.press('Escape');
+  ok(await p.evaluate(() => Object.values(window.__mock.docs).filter((d) => d.title === 'Atomic Habits')[0].page) === 80, 'filing it moves the book to page 80');
+  await p.click('.tabs [data-v=more]'); await p.click('#view [data-act=tab][data-v=books]'); await p.waitForTimeout(200);
+  await p.screenshot({ path: shots + '/phone-books.png', fullPage: true });
+  await p.click('.bookcard'); await p.waitForTimeout(200);
+  await p.screenshot({ path: shots + '/phone-book.png', fullPage: true });
+
   // Every screen: no sideways scrolling
-  const views = ['plan', 'tools', 'ranks', 'decks', 'bored', 'gym', 'timer','today', 'tasks', 'more', 'areas', 'inbox', 'notes', 'settings', 'money', 'habits', 'goals', 'projects', 'journal', 'calendar'];
+  const views = ['plan', 'books', 'notes', 'tools', 'ranks', 'decks', 'bored', 'gym', 'timer','today', 'tasks', 'more', 'areas', 'inbox', 'notes', 'settings', 'money', 'habits', 'goals', 'projects', 'journal', 'calendar'];
   let wide = [];
   for (const v of views) {
     await p.evaluate((v) => { document.querySelector('[data-act=tab][data-v="' + v + '"]') ? document.querySelector('[data-act=tab][data-v="' + v + '"]').click() : null; }, v);

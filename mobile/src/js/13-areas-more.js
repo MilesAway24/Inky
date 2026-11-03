@@ -48,10 +48,12 @@ VIEWS.notes = function () {
     if (noteF === 'idea' && n.kind !== 'idea') return false;
     if (noteF === 'note' && n.kind === 'idea') return false;
     if (noteF.indexOf('a:') === 0 && n.area !== noteF.slice(2)) return false;
+    if (noteF === 'books' && !n.book) return false;
     return !q || ((n.title || '') + ' ' + (n.body || '')).toLowerCase().indexOf(q) > -1;
   }).sort(function (a, b) { return (!!b.pinned - !!a.pinned) || b.updated - a.updated; });
   var all = Store.all('notes');
   var f = [['all', 'All · ' + all.length], ['note', 'Notes'], ['idea', 'Ideas · ' + all.filter(function (n) { return n.kind === 'idea'; }).length]];
+  var nb = all.filter(function (n) { return n.book; }).length; if (nb) f.push(['books', '📖 Books · ' + nb]);
   return '<div class="search"><label class="sr" for="nq">Search notes</label><input id="nq" class="input" type="search" placeholder="Search notes" value="' + esc(noteQ) + '" autocomplete="off"></div>'
     + '<div class="scrollx" role="group" aria-label="Filter">' + f.map(function (x) {
       return '<button class="chip' + (noteF === x[0] ? ' on' : '') + '" data-act="notef" data-f="' + x[0] + '">' + x[1] + '</button>';
@@ -68,7 +70,7 @@ function noteList(ns, q) {
     var snip = (n.body || '').replace(/\s+/g, ' ').slice(0, 90);
     return '<button class="row" data-act="open" data-v="note" data-id="' + n.id + '"><span class="grow"><div class="t">' + (n.pinned ? '📌 ' : '') + esc(n.title || 'Untitled') + '</div>'
       + (snip && snip !== n.title ? '<div class="s" style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(snip) + '</div>' : '')
-      + '<div class="s">' + (n.area ? areaDot(n.area) + esc(areaName(n.area)) + ' · ' : '') + (pr ? esc(pr.t) + ' · ' : '') + (n.kind === 'idea' ? 'Idea · ' : '') + esc(timeAgo(n.updated)) + ' ' + exPill(n) + '</div></span>'
+      + '<div class="s">' + (n.book && Store.get('books', n.book) ? '📖 ' + esc(Store.get('books', n.book).title) + (n.page ? ' p. ' + n.page : '') + ' · ' : '') + (n.area ? areaDot(n.area) + esc(areaName(n.area)) + ' · ' : '') + (pr ? esc(pr.t) + ' · ' : '') + (n.kind === 'idea' ? 'Idea · ' : '') + esc(timeAgo(n.updated)) + ' ' + exPill(n) + '</div></span>'
       + icon('chev', 'sm chev') + '</button>';
   }).join('') + '</div>';
 }
@@ -83,7 +85,9 @@ ACTS.notef = function (d) { noteF = d.f; render(); };
 TITLES.note = 'Note';
 VIEWS.note = function (id) {
   var n = Store.get('notes', id); if (!n) return '<div class="empty">This note was deleted.</div>';
-  return '<label class="sr" for="ntitle">Title</label><input id="ntitle" class="input" style="font-size:19px;font-weight:500" data-nfield="title" value="' + esc(n.title || '') + '" placeholder="Title">'
+  var nbk = n.book ? Store.get('books', n.book) : null;
+  return (nbk ? '<button class="link" data-act="open" data-v="book" data-id="' + nbk.id + '" style="justify-self:start">📖 ' + esc(nbk.title) + (n.page ? ' · p. ' + n.page : '') + '</button>' : '')
+    + '<label class="sr" for="ntitle">Title</label><input id="ntitle" class="input" style="font-size:19px;font-weight:500" data-nfield="title" value="' + esc(n.title || '') + '" placeholder="Title">'
     + (n.photo ? '<img src="/_blob/' + esc(n.photo) + '" alt="Attached photo" style="max-width:100%;border-radius:14px">' : '')
     + '<label class="sr" for="nbody">Note</label><textarea id="nbody" class="input" style="min-height:45vh;font-size:16.5px;line-height:1.55" data-nfield="body" placeholder="Write…">' + esc(n.body || '') + '</textarea>'
     + '<div class="scrollx" role="group" aria-label="Area">' + areasSorted().map(function (a) {
@@ -118,7 +122,7 @@ ACTS.notetotask = function (d) {
 TITLES.more = 'More';
 var SOON = {};
 VIEWS.more = function () {
-  return jumpTiles(['plan', 'habits', 'goals', 'notes', 'projects', 'calendar', 'journal', 'tools', 'inbox', 'areas'])
+  return jumpTiles(['plan', 'habits', 'goals', 'notes', 'books', 'projects', 'calendar', 'journal', 'tools', 'inbox', 'areas'])
     + '<div class="menu">' + ['money', 'settings'].map(function (k) {
       return '<button class="row" data-act="tab" data-v="' + k + '">' + icon(SECTIONS[k][1]) + '<span class="grow t">' + SECTIONS[k][0] + '</span>' + icon('chev', 'sm chev') + '</button>';
     }).join('') + '</div>';

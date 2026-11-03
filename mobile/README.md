@@ -31,6 +31,27 @@ Opened anywhere else, such as a plain browser, it still works, but saves on that
 | **Getting around** | Today and More open with one-tap tiles (Habits, Goals, Notes, Projects, Tools, Calendar…) with live counts. The bottom bar is Today · Tasks · ＋ · Habits · More by default; Settings lets you pick any three sections around ＋ |
 | **Settings** | Sync status, bottom bar, theme, clear examples, erase |
 
+### Added from Miles's answers
+
+- **Quick capture on open:** opening MossOS after 10+ minutes away lands in a capture box. Enter saves to the inbox, and Claude sorts it later. Settings → Opens to switches it to Today.
+- **Tomorrow:** one evening planning page, linked from Today after 5pm, Calendar and More. It shows:
+  - what's left from today, with quick moves
+  - tomorrow's tasks, plus an add box
+  - tomorrow's bills and payday
+  - habits due
+  - the inbox
+  - one line for today's journal
+- **Add to Calendar:** timed tasks, habit reminders, and bills and paydays get a 📅 button that opens `ics.agical.io`. That service builds the calendar file, so iPhone offers "Add to Calendar", alert included. The title and time pass through it. Repeating items add their next date only. **Copy** is the fallback.
+- **Challenges:** built on habits, 30/75/111 days or your own length. A day counts when every chosen habit is done.
+  - **Strict:** a miss ends the run, and the run stays on record.
+  - **Grace:** one miss per 7 days is forgiven.
+  - Each challenge shows as a wall of squares; it also appears on Habits and in Today's Habits heading.
+- **Books:**
+  - Pages, pace and a finish estimate. Logging feeds a reading habit.
+  - Quotes and thoughts are saved as notes, so they show in Notes search and under a 📖 Books filter.
+  - A Claude reading companion: recap, discussion questions, "how does this apply to me", or ask anything. It is told your page and not to spoil past it or guess.
+  - Capture understands "read 20 pages of …" and "“quote” — Book p. 27".
+
 ### Money (Payday OS)
 
 The Money tab runs Payday OS **unchanged** (`mobile/finance/payday.html`) inside a frame on the MossOS page. `build.mjs` makes three checked edits to it, and the build fails if any of them stops matching:

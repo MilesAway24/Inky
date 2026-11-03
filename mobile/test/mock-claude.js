@@ -47,6 +47,8 @@
       var items = JSON.parse(m[1]), ctx = cm ? JSON.parse(cm[1]) : { habits: [], tasks: [] };
       return Promise.resolve({ items: items.map(function (it, i) {
         var t = it.text, low = t.toLowerCase();
+        var rdm = /^read (\d+) pages of (.+)$/i.exec(t);
+        if (rdm) { var bk = (ctx.books || []).filter(function (b) { return b.title.toLowerCase() === rdm[2].toLowerCase(); })[0]; if (bk) return { id: it.id, type: 'reading', targetId: bk.id, pagesRead: +rdm[1], title: bk.title }; }
         var grm = /^add (.+) to the grocery list$/i.exec(t);
         if (grm) return { id: it.id, type: 'grocery', items: grm[1].split(/ and |, /), title: grm[1] };
         var spm = /^spent \$(\d+(?:\.\d+)?) at (.+)$/i.exec(t);
@@ -61,6 +63,7 @@
       }) });
     }
     if (/Suggest three possible next actions/.test(prompt)) return Promise.resolve({ options: ['Book the PAT practice slot', 'Run the 1.5 mile test once', 'Print the packet checklist'] });
+    if (/You are a reading companion/.test(prompt)) return Promise.resolve({ text: 'So far the book argues that small habits compound.\nIt has not reached the later chapters yet.', known: true });
     if (/Break this task/.test(prompt)) return Promise.resolve({ steps: ['Open the file', 'Find the timeout', 'Write the fix'] });
     return Promise.resolve({});
   };
