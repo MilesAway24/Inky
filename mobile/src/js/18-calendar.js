@@ -6,7 +6,7 @@
 var cal = { mode: 'month', sel: null, month: null };
 function monthStart(s) { return s.slice(0, 8) + '01'; }
 function tasksOn(d) {
-  return Store.all('tasks').filter(function (t) { return t.due === d || (t.done && t.doneAt && ymd(new Date(t.doneAt)) === d && t.due !== d); });
+  return Store.all('tasks').filter(function (t) { return t.due === d || (t.done && t.doneAt && ymd(new Date(t.doneAt)) === d && t.due !== d); }).sort(byWhen);
 }
 TITLES.calendar = 'Calendar';
 VIEWS.calendar = function () {
@@ -45,7 +45,7 @@ function weekView() {
     var d = addDays(mon, i), ts = tasksOn(d), hd = habitsSorted().filter(function (x) { return dueOn(x, d); }), hit = hd.filter(function (x) { return mark(x, d) === 1; }).length;
     return '<div class="wkday' + (d === t ? ' today' : '') + (d === sel ? ' sel' : '') + '"><button class="wkh" data-act="calday" data-d="' + d + '"><b>' + DOW[parseYmd(d).getDay()] + '</b><span>' + parseYmd(d).getDate() + '</span></button>'
       + '<div class="blocks">' + (ts.length ? ts.map(function (x) {
-        return '<button class="blk' + (x.done ? ' done' : '') + '" style="--c:' + areaColor(x.area) + '" data-act="open" data-v="task" data-id="' + x.id + '">' + esc(x.t) + '</button>';
+        return '<button class="blk' + (x.done ? ' done' : '') + '" style="--c:' + areaColor(x.area) + '" data-act="open" data-v="task" data-id="' + x.id + '">' + (x.time ? esc(fmtTime(x.time)) + ' ' : '') + esc(x.t) + '</button>';
       }).join('') : '<span class="faint small">Nothing planned</span>') + '</div>'
       + (hd.length && d <= t ? '<span class="hab small faint">' + hit + '/' + hd.length + ' habits</span>' : '') + '</div>';
   }).join('') + '</div>';

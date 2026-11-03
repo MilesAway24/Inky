@@ -6,7 +6,6 @@
   --line:rgba(255,255,255,.08);--line2:rgba(255,255,255,.15);
   --ink:#EDEDEB;--muted:#A3A39E;--faint:#76766F;
   --accent:#5FCF8E;--accent-ink:#12251A;--accent-tint:rgba(95,207,142,.14);
-  --p1:#B9A3FA;--p1-tint:rgba(185,163,250,.14);
   --warn:#E8A33D;--bad:#E2574C;--shadow:rgba(0,0,0,.5);
   --hn:"Helvetica Neue","HelveticaNeue",Helvetica,"Segoe UI",Arial,sans-serif;
   --r:16px;
@@ -17,7 +16,6 @@
   --line:rgba(0,0,0,.085);--line2:rgba(0,0,0,.16);
   --ink:#191918;--muted:#66665F;--faint:#8A8A84;
   --accent:#23824B;--accent-ink:#FFFFFF;--accent-tint:rgba(35,130,75,.11);
-  --p1:#6A4BC9;--p1-tint:rgba(106,75,201,.1);
   --warn:#9A5B00;--bad:#C2372C;--shadow:rgba(0,0,0,.18);
   color-scheme:light}}
 :root[data-theme="light"]{
@@ -25,7 +23,6 @@
   --line:rgba(0,0,0,.085);--line2:rgba(0,0,0,.16);
   --ink:#191918;--muted:#66665F;--faint:#8A8A84;
   --accent:#23824B;--accent-ink:#FFFFFF;--accent-tint:rgba(35,130,75,.11);
-  --p1:#6A4BC9;--p1-tint:rgba(106,75,201,.1);
   --warn:#9A5B00;--bad:#C2372C;--shadow:rgba(0,0,0,.18);
   color-scheme:light}
 
@@ -126,8 +123,6 @@ h2{margin:0;font-size:17px;font-weight:500;letter-spacing:-.01em;text-wrap:balan
 .scrollx .chip{flex:none}
 .dot{width:8px;height:8px;border-radius:50%;flex:none;display:inline-block}
 .pill{display:inline-flex;align-items:center;font-size:12px;padding:3px 8px;border-radius:99px;background:var(--sunk);color:var(--muted);white-space:nowrap}
-.pill.p1{background:var(--p1);color:var(--bg);font-weight:600}
-.pill.p2{background:var(--sunk);color:var(--ink);font-weight:600}
 .pill.ex{background:transparent;border:1px dashed var(--line2);color:var(--faint)}
 .pill.warn{color:var(--warn)}
 .field{display:grid;gap:6px}
@@ -153,16 +148,6 @@ textarea.input{resize:vertical;min-height:110px}
 .chev{color:var(--faint);flex:none}
 
 /* ── today ───────────────────────────────────────────────────────── */
-.prio{display:flex;align-items:center;gap:12px;width:100%;min-height:64px;padding:12px 14px;border-radius:14px;
-  background:var(--surface);border:1px solid var(--line);text-align:left}
-.prio.p1{background:var(--p1-tint);border-color:color-mix(in srgb,var(--p1) 45%,transparent)}
-.prio .grow{flex:1;min-width:0}
-.prio .t{font-size:16px;line-height:1.3}
-.prio .s{font-size:13px;color:var(--faint);display:flex;align-items:center;gap:6px;margin-top:3px}
-.prio.done .t{color:var(--faint);text-decoration:line-through}
-.prios{display:grid;gap:8px}
-.slot{display:flex;align-items:center;justify-content:center;min-height:52px;border-radius:14px;border:1px dashed var(--line2);
-  color:var(--faint);font-size:14px;width:100%}
 .play{background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:18px;display:grid;gap:12px}
 .play .k{display:flex;justify-content:space-between;font-size:12.5px;color:var(--faint)}
 .play .t{font-size:22px;font-weight:500;letter-spacing:-.02em;line-height:1.2;display:flex;gap:12px;align-items:flex-start}
@@ -443,3 +428,25 @@ select.input.sel{min-height:40px;padding:6px 10px;font-size:15px;width:auto;max-
 .timer{display:grid;gap:18px;justify-items:center;padding:28px 16px;border-radius:22px;background:var(--surface);border:1px solid var(--line)}
 .tclock{font-size:72px;font-weight:200;letter-spacing:-.04em;line-height:1;font-variant-numeric:tabular-nums}
 .timer .btnrow{width:100%;max-width:340px}
+
+/* ── task list: add box, swipe rows, rename in place ─────────────── */
+.addtask{display:flex;gap:8px}
+.addtask .input{flex:1;min-width:0;min-height:50px;font-size:16px}
+.addtask .btn{flex:0 0 50px;min-height:50px;padding:0}
+.tlist{display:grid}
+.trow{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.trow:last-child{border-bottom:0}
+.trin{position:relative;z-index:1;display:flex;align-items:center;gap:12px;min-height:62px;padding:8px 0;background:var(--bg);touch-action:pan-y;transition:transform .18s ease}
+.trow.swiping .trin{transition:none}
+.trin .grow{flex:1;min-width:0;display:grid;gap:3px}
+.tt{font-size:16.5px;line-height:1.3;text-align:left;overflow-wrap:anywhere;padding:2px 0;cursor:text}
+.trin .s{font-size:13px;color:var(--faint);display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.trow.done .trin{opacity:.45}
+.trow.done .tt{text-decoration:line-through}
+.ttedit{min-height:40px;font-size:16.5px;padding:6px 10px}
+.swbg{position:absolute;inset:0;display:flex;align-items:center;justify-content:space-between;padding:0 18px;font-size:14px;font-weight:600;color:#fff;background:var(--sunk)}
+.swbg span{opacity:.0;transition:opacity .12s}
+.trow.goR .swbg{background:var(--accent)}.trow.goR .swbg .l{opacity:1;color:var(--accent-ink)}
+.trow.goL .swbg{background:#5B9BF5}.trow.goL .swbg .r{opacity:1;color:#0F1220}
+.trow.swiping .swbg span{opacity:.6}
+@media (prefers-reduced-motion:reduce){.trin{transition:none}}

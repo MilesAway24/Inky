@@ -15,10 +15,10 @@ Opened anywhere else, such as a plain browser, it still works, but saves on that
 
 | Screen | What it does |
 |---|---|
-| **Today** | Priorities (1 P1 + 2 P2; a fourth means swapping one to tomorrow), the Play card (one thing at a time from tasks, habits and goal next actions, *Do it* / *Skip*), habits due today, life areas, slipped-and-rescheduled, and a log that writes itself |
+| **Today** | Jump tiles, the Play card (one thing at a time: today's tasks, timed ones first once they're within the hour, then habits, goal next actions and small jobs), habits due today, life areas, slipped-and-rescheduled, and a log that writes itself |
 | **Capture** (＋) | Type or dictate anything; each line is **smart-sorted** the moment you tap *Sort it*: a new task (with its day, area, project and first step), a task you already did (ticked off), a habit you did today (marked), a new habit, a goal, a note, an idea, a journal line, or a movie you watched (added to Movies and ranked). Claude sorts when it's available; built-in rules sort otherwise. You check each before it's filed. Or save to the inbox, or straight to a task or note. Optional photo |
 | **Inbox** | Anything you saved for later, sorted the same way when you're ready |
-| **Tasks** | Today / Tomorrow / This week / Later / Whenever / Drifted, area filter. Detail: notes before steps, Break it down, When, P1/P2, area. Sweep for slipped tasks |
+| **Tasks** | Today / Upcoming / Someday, area filter. An add box that reads plain words ("gym 6pm every Mon, Thu", "pay rent every month on the 1st at 9am"). Swipe right to finish, left for tomorrow, both with Undo; tap a name to rename it. Repeating tasks roll forward when done. Detail: notes before steps, Break it down, time, repeat, area, project. Sweep for slipped tasks. Times show in the app only: the Claude app can't send phone notifications |
 | **Life areas** | Work (EMS · iCare), HCPD, Gym, Inky, School, Partner, Money. State, focus, open tasks. Editable |
 | **Habits** | Mark done (on Today or the Habits page), skip a day on purpose without breaking the streak, week strip, 30-day grid, daily sparkline, streak and best run, a builder with templates, any days of the week |
 | **Goals** | Why, steps that set the progress, and one next action. *Put it on today* makes it a task; finishing it asks for the next one, and Claude can suggest three |

@@ -72,8 +72,19 @@ function paintChrome() {
         + (t[0] === 'inbox' && inboxN ? '<span class="pill" style="margin-left:auto">' + inboxN + '</span>' : '') + '</button>';
     }).join('');
 }
+/* A tap or swipe that starts while a text field is focused blurs it. Don't
+   repaint in the middle of that gesture; wait for the finger to lift. */
+var pointerIsDown = false;
+document.addEventListener('pointerdown', function () { pointerIsDown = true; }, true);
+['pointerup', 'pointercancel'].forEach(function (ev) {
+  document.addEventListener(ev, function () {
+    pointerIsDown = false;
+    if (render.stale) setTimeout(function () { var ae = document.activeElement; if (render.stale && !(ae && $('#view').contains(ae) && (ae.isContentEditable || /TEXTAREA|INPUT/.test(ae.tagName)))) render(); }, 30);
+  }, true);
+});
 document.addEventListener('focusout', function () {
   setTimeout(function () {
+    if (pointerIsDown) return;
     var ae = document.activeElement;
     if (render.stale && !(ae && $('#view').contains(ae) && (ae.isContentEditable || /TEXTAREA|INPUT/.test(ae.tagName)))) render();
   }, 0);

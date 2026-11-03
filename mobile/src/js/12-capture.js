@@ -117,7 +117,7 @@ function smartSort(items) {
   return aiJson('You sort quick captures for a personal organizer. Today is ' + DOWL[d.getDay()] + ' ' + today() + '.\n'
     + 'Context (JSON): ' + JSON.stringify(ctx) + '\n'
     + 'For each item choose one type:\n'
-    + '- "task": something to do. Give title, area, project, due, firstStep.\n'
+    + '- "task": something to do. Give title (without the day/time/repeat words), area, project, due, firstStep, time ("HH:MM" 24h, only if a time is stated) and repeat (only if it recurs: {"every":"day"} | {"every":"weekday"} | {"every":"week","days":[Mon..Sun as 0/1]} | {"every":"month","dom":1-31}).\n'
     + '- "done": says a task in context.tasks was already done ("sent the invoice"). Give targetId.\n'
     + '- "habit_done": says a habit in context.habits was done today ("took meds", "walked"). Give targetId.\n'
     + '- "habit_new": wants to start doing something regularly ("start stretching every morning"). Give title (short, like "Stretch").\n'
@@ -129,7 +129,7 @@ function smartSort(items) {
     + '- "drop": empty or meaningless.\n'
     + 'Use only ids that appear in the context. area, project, due (YYYY-MM-DD, only if a day is named or clearly implied) may be null. icon: one emoji.\n'
     + 'Items: ' + JSON.stringify(items.map(function (i) { return { id: i.id, text: i.text || '(photo with no text)' }; })) + '\n'
-    + 'Reply with JSON only: {"items":[{"id":"…","type":"task","title":"…","area":null,"project":null,"due":null,"firstStep":null,"targetId":null,"year":null,"score":null,"note":null,"icon":"📝"}]}')
+    + 'Reply with JSON only: {"items":[{"id":"…","type":"task","title":"…","area":null,"project":null,"due":null,"firstStep":null,"targetId":null,"time":null,"repeat":null,"year":null,"score":null,"note":null,"icon":"📝"}]}')
     .then(function (r) {
       var byId = {}; (r && r.items || []).forEach(function (s) { if (s && s.id) byId[s.id] = s; });
       return items.map(function (i) { return byId[i.id] ? cleanSugg(byId[i.id], i, ctx) : guessSort(i, ctx); });
@@ -150,16 +150,27 @@ function cleanSugg(s, item, ctx) {
   if (type === 'habit_done') o.targetId = idIn(ctx.habits, s.targetId);
   if (type === 'rank') o.targetId = idIn(ctx.lists, s.targetId);
   if ((type === 'done' || type === 'habit_done' || type === 'rank') && !o.targetId) o.type = type === 'habit_done' ? 'habit_new' : 'task';
-  // A day named in the text that Claude didn't turn into a date.
-  if (o.type === 'task' && !o.due) o.due = guessSort(item, ctx).due || null;
+  o.time = /^([01]\d|2[0-3]):[0-5]\d$/.test(s.time || '') ? s.time : null;
+  var r = s.repeat;
+  if (r && typeof r === 'object' && ['day', 'weekday', 'week', 'month'].indexOf(r.every) > -1) {
+    o.repeat = { every: r.every };
+    if (r.every === 'week') { o.repeat.days = (Array.isArray(r.days) && r.days.length === 7 ? r.days : [0, 0, 0, 0, 0, 0, 0]).map(function (x) { return x ? 1 : 0; }); if (!o.repeat.days.some(Boolean)) o.repeat = null; }
+    if (o.repeat && r.every === 'month') o.repeat.dom = Math.max(1, Math.min(31, +r.dom || 1));
+  } else o.repeat = null;
+  // Fill in what Claude left out from the words themselves.
+  if (o.type === 'task') {
+    var pt = parseTaskText(item.text || '');
+    if (!o.due) o.due = pt.due || null;
+    if (!o.time) o.time = pt.time || null;
+    if (!o.repeat) o.repeat = pt.repeat || null;
+    if (o.repeat && !o.due) o.due = nextOccurrence(o.repeat, addDays(today(), -1));
+  }
   return o;
 }
 /* Rule-based sorter: used without Claude, or when Claude fails. */
-function words(s) { return String(s).toLowerCase().replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter(function (w) { return w.length > 2 && ['the', 'and', 'for', 'with', 'did', 'done', 'just', 'finally', 'today'].indexOf(w) < 0; }); }
-function overlap(a, b) { var wa = words(a), wb = words(b); if (!wa.length || !wb.length) return 0; var n = wa.filter(function (w) { return wb.indexOf(w) > -1; }).length; return n / Math.min(wa.length, wb.length); }
 function guessSort(item, ctx) {
   var text = item.text || '', low = text.toLowerCase().trim();
-  var o = { id: item.id, raw: text, type: 'task', title: text, area: null, project: null, due: null, firstStep: null, year: '', score: null, note: '', icon: '', targetId: null };
+  var o = { id: item.id, raw: text, type: 'task', title: text, area: null, project: null, due: null, time: null, repeat: null, firstStep: null, year: '', score: null, note: '', icon: '', targetId: null };
   var sc = low.match(/\b(\d{1,2}(?:\.\d)?)\s*(?:\/\s*10|out of 10)\b/);
   if (/^(i\s+)?(just\s+)?(watched|saw|rewatched|finished watching)\s+/.test(low) || /\b(movie|film)\b/.test(low) && sc) {
     var title = text.replace(/^(i\s+)?(just\s+)?(watched|saw|rewatched|finished watching)\s+/i, '').replace(/\b\d{1,2}(\.\d)?\s*(\/\s*10|out of 10)\b/i, '').replace(/\b(movie|film)\b/i, '').trim();
@@ -173,24 +184,16 @@ function guessSort(item, ctx) {
     var best = null, bs = 0; ctx.tasks.forEach(function (t) { var v = overlap(t.t, text); if (v > bs) { bs = v; best = t; } });
     if (best && bs >= 0.5) { o.type = 'done'; o.targetId = best.id; o.title = best.t; return o; }
   }
-  if (/\b(every (day|morning|night|evening|week)|each (day|morning|night)|daily|habit)\b/.test(low)) {
+  if (/\b(every (day|morning|night|evening)|each (day|morning|night)|daily|habit)\b/.test(low) && !/\b(\d{1,2}(:\d\d)?\s*(am|pm)|at \d)/.test(low)) {
     o.type = 'habit_new'; o.title = text.replace(/\b(start(ing)?|begin|i want to|i should)\b/ig, '').replace(/\b(every (day|morning|night|evening|week)|each (day|morning|night)|daily|habit)\b/ig, '').trim().replace(/^\w/, function (c) { return c.toUpperCase(); }) || text; return o;
   }
   if (/^idea\b[:\s-]*/i.test(text)) { o.type = 'idea'; o.title = text.replace(/^idea\b[:\s-]*/i, ''); return o; }
   if (/^(feeling|felt|i feel|today was|rough|good day|bad day|tired|grateful|journal)\b/.test(low)) { o.type = 'journal'; return o; }
   if (/^(note|remember that|fyi)\b[:\s-]*/i.test(text) || /https?:\/\//.test(low) || /\b(password|code|address|phone|number|ref)\b.*[:#]/.test(low)) { o.type = 'note'; o.title = text.replace(/^(note|remember that|fyi)\b[:\s-]*/i, '').slice(0, 80); return o; }
   if (/\b(by|before)\s+(summer|winter|spring|fall|the end of|december|january|june|next year)|\bgoal\b/.test(low)) { o.type = 'goal'; return o; }
-  // A task. Pick up a day, an area and a project from the words.
-  var dw = /\b(today|tonight|tomorrow|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/.exec(low);
-  if (dw) {
-    var t = today();
-    if (dw[1] === 'today' || dw[1] === 'tonight') o.due = t;
-    else if (dw[1] === 'tomorrow') o.due = addDays(t, 1);
-    else { var target = DOWL.map(function (x) { return x.toLowerCase(); }).indexOf(dw[1]), n = (target - parseYmd(t).getDay() + 7) % 7 || 7; o.due = addDays(t, n); }
-  }
-  ctx.areas.forEach(function (a) { if (!o.area && new RegExp('\\b' + a.name.split(/\W/)[0].toLowerCase() + '\\b').test(low)) o.area = a.id; });
-  ctx.projects.forEach(function (p) { if (!o.project && overlap(p.name, text) >= 0.6) o.project = p.id; });
-  if (o.project && !o.area) { var pr = Store.get('projects', o.project); if (pr) o.area = pr.area || null; }
+  // A task: read its day, time, repeat, area and project from the words.
+  var pt = parseTaskText(text);
+  o.title = pt.title; o.due = pt.due; o.time = pt.time; o.repeat = pt.repeat; o.area = pt.area; o.project = pt.project;
   return o;
 }
 
@@ -208,6 +211,8 @@ function suggCards(list, where) {
       + (s.area ? '<span class="pill">' + areaDot(s.area) + '&nbsp;' + esc(areaName(s.area)) + '</span>' : '')
       + (s.project && Store.get('projects', s.project) ? '<span class="pill">' + esc(Store.get('projects', s.project).t) + '</span>' : '')
       + (s.due ? '<span class="pill">' + esc(shortDate(s.due)) + '</span>' : '')
+      + (s.type === 'task' && s.time ? '<span class="pill">' + esc(fmtTime(s.time)) + '</span>' : '')
+      + (s.type === 'task' && s.repeat ? '<span class="pill">↻ ' + esc(repeatLabel(s.repeat)) + '</span>' : '')
       + (s.type === 'movie' && s.score != null ? '<span class="pill">said ' + esc(s.score) + '/10</span>' : '');
     var opts = Object.keys(STYPES).filter(function (k) { return (k !== 'done' || s.type === 'done') && (k !== 'habit_done' || s.type === 'habit_done') && (k !== 'rank' || s.type === 'rank'); });
     return '<div class="sugg"><div class="orig">“' + esc(it.text || '') + '”</div>'
@@ -242,7 +247,7 @@ ACTS.suggall = function (d) {
 function applySuggestion(it, s) {
   var title = (s.title || it.text || 'Untitled').slice(0, 140), msg = 'Filed';
   if (s.type === 'task') {
-    var t = Store.put('tasks', { t: title, ic: s.icon || '', area: s.area || null, project: s.project || null, due: s.due || null, done: false,
+    var t = Store.put('tasks', { t: title, ic: s.icon || '', area: s.area || null, project: s.project || null, due: s.due || null, time: s.time || null, repeat: s.repeat || null, done: false,
       note: s.title && s.title !== it.text ? it.text : '', steps: s.firstStep ? [{ t: s.firstStep, done: false }] : [], photo: it.photo || null }, true);
     logEvent('New task: ' + t.t, t.area); msg = 'Task added' + (t.due ? ' for ' + shortDate(t.due).toLowerCase() : '');
   } else if (s.type === 'done') {

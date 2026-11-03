@@ -1,9 +1,15 @@
-/* ═══ TASKS ═════════════════════════════════════════════════════════ */
+/* ═══ TASKS ═════════════════════════════════════════════════════════
+   Three groups: Today, Upcoming, Someday. Add from the box at the top in
+   plain words; swipe a row right to finish it or left to move it to
+   tomorrow; tap a title to rename it in place. */
 var taskFilter = null;
 TITLES.tasks = 'Tasks';
 VIEWS.tasks = function () {
   var open = Store.all('tasks').filter(function (t) { return !t.done; });
-  var h = '<div class="scrollx" role="group" aria-label="Filter by area"><button class="chip' + (!taskFilter ? ' on' : '') + '" data-act="tfilter" data-id="">All · ' + open.length + '</button>'
+  var h = '<form class="addtask" data-form="quickadd"><label class="sr" for="qadd">Add a task</label>'
+    + '<input id="qadd" class="input" placeholder="Add a task: &quot;gym 6pm every Mon, Thu&quot;" autocomplete="off" enterkeyhint="done">'
+    + '<button class="btn accent" type="submit" aria-label="Add">' + icon('plus', 'sm') + '</button></form>';
+  h += '<div class="scrollx" role="group" aria-label="Filter by area"><button class="chip' + (!taskFilter ? ' on' : '') + '" data-act="tfilter" data-id="">All · ' + open.length + '</button>'
     + areasSorted().map(function (a) {
       var n = open.filter(function (t) { return t.area === a.id; }).length;
       return '<button class="chip' + (taskFilter === a.id ? ' on' : '') + '" data-act="tfilter" data-id="' + a.id + '"><i style="background:' + esc(a.color) + '"></i>' + esc(a.short) + (n ? ' · ' + n : '') + '</button>';
@@ -11,47 +17,118 @@ VIEWS.tasks = function () {
   var sl = slipped().filter(function (t) { return !taskFilter || t.area === taskFilter; });
   if (sl.length) h += '<button class="sweepbar" data-act="open" data-v="sweep">' + icon('broom') + '<span class="grow"><b style="font-weight:500">'
     + sl.length + ' slipped</b><span class="muted small"> · sweep them onto real days</span></span>' + icon('chev', 'sm chev') + '</button>';
-  var any = false;
-  BUCKETS.forEach(function (b) {
-    var list = tasksIn(b[0], taskFilter);
-    if (!list.length) return; any = true;
-    h += '<section><div class="grouph">' + b[1] + ' <span class="c">' + list.filter(function (t) { return !t.done; }).length + '</span><span class="ln"></span></div>'
-      + '<div class="list">' + list.map(taskRow).join('') + '</div></section>';
+  GROUPS.forEach(function (g) {
+    var list = tasksInGroup(g[0], taskFilter), openN = list.filter(function (t) { return !t.done; }).length;
+    h += '<section><div class="grouph">' + g[1] + ' <span class="c">' + openN + '</span><span class="ln"></span></div>'
+      + (list.length ? '<div class="tlist">' + list.map(taskRow).join('') + '</div>'
+        : '<p class="note small" style="padding:6px 2px">' + { today: 'Nothing due today.', upcoming: 'Nothing scheduled.', someday: 'Nothing parked here.' }[g[0]] + '</p>')
+      + '</section>';
   });
   var wk = Date.now() - 7 * 864e5;
   var older = Store.all('tasks').filter(function (t) { return bucket(t) === 'done' && t.doneAt > wk && (!taskFilter || t.area === taskFilter); })
     .sort(function (a, b) { return b.doneAt - a.doneAt; });
-  if (older.length) h += '<details class="donegrp"><summary>Done this week · ' + older.length + '</summary><div class="list">' + older.map(taskRow).join('') + '</div></details>';
-  if (!any && !sl.length) h += '<div class="empty">No tasks' + (taskFilter ? ' in ' + esc(areaName(taskFilter)) : '') + '. Tap ＋ to capture one.</div>';
-  h += '<button class="btn soft block" data-act="newtask">' + icon('plus', 'sm') + 'New task</button>';
+  if (older.length) h += '<details class="donegrp"><summary>Done this week · ' + older.length + '</summary><div class="tlist">' + older.map(taskRow).join('') + '</div></details>';
+  h += '<p class="note small">Swipe a task right to finish it, left to move it to tomorrow. Tap a name to rename it.</p>';
   return h;
 };
+VIEWS.tasks.after = function () { wireSwipes(); };
+function whenText(t) {
+  var g = listGroup(t), out = [];
+  if (t.due && g !== 'today') out.push(shortDate(t.due));
+  if (t.time) out.push(fmtTime(t.time));
+  return out.join(' ');
+}
 function taskRow(t) {
-  var steps = t.steps || [], sd = steps.filter(function (s) { return s.done; }).length;
   var meta = [];
   if (t.area) meta.push(areaDot(t.area) + esc(areaName(t.area)));
-  if (t.prio && t.prioDay === today()) meta.push('<span class="pill ' + t.prio.toLowerCase() + '">' + t.prio + '</span>');
-  if (t.due && bucket(t) !== 'today') meta.push(esc(shortDate(t.due)));
-  if (t.est) meta.push(esc(t.est));
-  if (steps.length) meta.push(sd + '/' + steps.length + ' steps');
-  return '<div class="row' + (t.done ? ' done' : '') + '">'
+  var w = whenText(t); if (w) meta.push(esc(w));
+  if (t.repeat) meta.push('↻ ' + esc(repeatLabel(t.repeat)));
+  var st = t.steps || []; if (st.length) meta.push(st.filter(function (x) { return x.done; }).length + '/' + st.length);
+  return '<div class="trow' + (t.done ? ' done' : '') + '" data-swipe="' + t.id + '">'
+    + '<div class="swbg" aria-hidden="true"><span class="l">' + (t.repeat ? '↻ Done' : '✓ Done') + '</span><span class="r">Tomorrow →</span></div>'
+    + '<div class="trin">'
     + '<button class="ck' + (t.done ? ' on' : '') + '" data-act="toggle" data-id="' + t.id + '" aria-label="' + (t.done ? 'Mark not done' : 'Mark done') + '"><span></span></button>'
-    + '<button class="grow" style="text-align:left" data-act="open" data-v="task" data-id="' + t.id + '"><div class="t">' + esc(t.ic ? t.ic + ' ' : '') + esc(t.t) + '</div>'
-    + '<div class="s">' + meta.join('<span class="faint">·</span>') + ' ' + exPill(t) + '</div></button></div>';
+    + '<div class="grow"><button class="tt" data-act="rename" data-id="' + t.id + '" aria-label="Rename ' + esc(t.t) + '">' + esc(t.ic ? t.ic + ' ' : '') + esc(t.t) + '</button>'
+    + (meta.length || t.example ? '<div class="s">' + meta.join('<span class="faint">·</span>') + ' ' + exPill(t) + '</div>' : '') + '</div>'
+    + '<button class="iconbtn" data-act="open" data-v="task" data-id="' + t.id + '" aria-label="Open ' + esc(t.t) + '">' + icon('chev', 'sm') + '</button>'
+    + '</div></div>';
 }
 ACTS.tfilter = function (d) { taskFilter = d.id || null; render(); };
+ACTS.form_quickadd = function (d, f) {
+  var inp = $('input', f), v = inp.value.trim(); if (!v) return;
+  var p = parseTaskText(v);
+  var t = Store.put('tasks', { t: p.title, ic: '', area: p.area || taskFilter, project: p.project, due: p.due || today(), time: p.time, repeat: p.repeat, done: false, steps: [], note: '' });
+  inp.value = ''; logEvent('New task: ' + t.t, t.area);
+  render(false, true); var n = $('#qadd'); if (n) n.focus();
+  toast('Added: ' + esc([t.t, shortDate(t.due), t.time ? fmtTime(t.time) : '', t.repeat ? '↻ ' + repeatLabel(t.repeat) : ''].filter(Boolean).join(' · ')), function () { Store.del('tasks', t.id); });
+};
 ACTS.newtask = function () {
   var t = Store.put('tasks', { t: 'New task', ic: '', area: taskFilter, due: today(), done: false, steps: [], note: '' });
   push('task', t.id);
   setTimeout(function () { var el = $('#ttitle'); if (el) { el.focus(); el.select(); } }, 50);
 };
+/* Rename in place: the title becomes a text field. */
+ACTS.rename = function (d, el) {
+  if (el.dataset.moved) { delete el.dataset.moved; return; }
+  var t = Store.get('tasks', d.id); if (!t) return;
+  var inp = document.createElement('input');
+  inp.className = 'input ttedit'; inp.value = t.t; inp.setAttribute('aria-label', 'Task name'); inp.id = 'ren' + t.id;
+  el.replaceWith(inp); inp.focus(); inp.select();
+  var done = false;
+  var finish = function (save) {
+    if (done) return; done = true;
+    var v = inp.value.trim();
+    if (save && v && v !== t.t) { Store.patch('tasks', t.id, { t: v }); toast('Renamed'); }
+    inp.blur(); render(false, true);
+  };
+  inp.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); finish(true); } else if (e.key === 'Escape') { e.stopPropagation(); finish(false); } });
+  inp.addEventListener('blur', function () { finish(true); });
+};
+/* Swipe right: done. Swipe left: tomorrow. Vertical drags scroll as usual. */
+function wireSwipes() {
+  $$('[data-swipe]').forEach(function (row) {
+    var inner = $('.trin', row), id = row.dataset.swipe, x0 = 0, y0 = 0, dx = 0, on = false, locked = null, pid = null;
+    inner.addEventListener('pointerdown', function (e) {
+      if (e.pointerType === 'mouse' && e.button !== 0) return;
+      if (e.target.closest('input')) return;
+      on = true; locked = null; dx = 0; x0 = e.clientX; y0 = e.clientY; pid = e.pointerId;
+    });
+    inner.addEventListener('pointermove', function (e) {
+      if (!on || e.pointerId !== pid) return;
+      var mx = e.clientX - x0, my = e.clientY - y0;
+      if (locked === null && (Math.abs(mx) > 8 || Math.abs(my) > 8)) {
+        locked = Math.abs(mx) > Math.abs(my) ? 'x' : 'y';
+        if (locked === 'x') { try { inner.setPointerCapture(pid); } catch (er) {} row.classList.add('swiping'); }
+      }
+      if (locked !== 'x') return;
+      dx = mx; inner.style.transform = 'translateX(' + dx + 'px)';
+      row.classList.toggle('goR', dx > 70); row.classList.toggle('goL', dx < -70);
+    });
+    var end = function () {
+      if (!on) return; on = false;
+      row.classList.remove('swiping', 'goR', 'goL'); inner.style.transform = '';
+      if (locked !== 'x') return;
+      // a swipe isn't a tap: don't let the click that follows rename or open
+      $$('[data-act]', inner).forEach(function (b) { b.dataset.moved = '1'; setTimeout(function () { delete b.dataset.moved; }, 400); });
+      var t = Store.get('tasks', id); if (!t) return;
+      var undo = snapshot(id), wasDone = !!t.done, rep = !!t.repeat;
+      if (dx > 70) { completeTask(id, !wasDone); var n = Store.get('tasks', id); toast(wasDone ? 'Marked not done' : rep ? 'Done. Next: ' + esc(shortDate(n.due)) : 'Done', undo); }
+      else if (dx < -70 && !wasDone) { moveTask(id, 'tomorrow'); toast('Moved to tomorrow', undo); }
+    };
+    inner.addEventListener('pointerup', end); inner.addEventListener('pointercancel', end);
+  });
+}
+/* Clicks that end a swipe are swallowed (see data-moved above). */
+document.addEventListener('click', function (e) {
+  var el = e.target.closest('[data-moved]'); if (el && el.dataset.act !== 'rename') { e.stopImmediatePropagation(); e.preventDefault(); delete el.dataset.moved; }
+}, true);
 
 /* ── task detail ───────────────────────────────────────────────────── */
 TITLES.task = function (id) { var t = Store.get('tasks', id); return t ? (areaName(t.area) || 'Task') : 'Task'; };
 VIEWS.task = function (id) {
   var t = Store.get('tasks', id);
   if (!t) return '<div class="empty">This task was deleted.</div>';
-  var d = today(), isP = t.prio && t.prioDay === d, steps = t.steps || [];
+  var d = today(), steps = t.steps || [], rep = t.repeat || null;
   var whenChips = [['today', 'Today', t.due === d], ['tomorrow', 'Tomorrow', t.due === addDays(d, 1)], ['nextweek', 'Next week', t.due === addDays(d, 7)],
     ['whenever', 'Whenever', !t.due && !t.drifted], ['drifted', 'Drifted', !!t.drifted]];
   var h = '<div class="dhead"><div class="ic">' + esc(t.ic || '•') + '</div><div style="flex:1;min-width:0;display:grid;gap:6px">'
@@ -82,12 +159,16 @@ VIEWS.task = function (id) {
       return '<button class="chip' + (c[2] ? ' on' : '') + '" data-act="when" data-id="' + t.id + '" data-to="' + c[0] + '">' + c[1] + '</button>';
     }).join('') + '<label class="chip" style="position:relative">Pick a day<input type="date" data-act-change="whendate" data-id="' + t.id + '" style="position:absolute;inset:0;opacity:0" aria-label="Pick a day"></label>'
     + (t.due && whenChips.every(function (c) { return !c[2]; }) ? '<span class="pill">' + esc(shortDate(t.due)) + '</span>' : '') + '</span></div>'
-    + '<div class="prop"><span class="k">Priority</span><span class="v">' + ['P1', 'P2'].map(function (l) {
-      return '<button class="chip' + (isP && t.prio === l ? ' on' : '') + '" data-act="taskprio" data-id="' + t.id + '" data-l="' + l + '">' + l + ' today</button>';
-    }).join('') + (isP ? '<button class="chip" data-act="taskprio" data-id="' + t.id + '" data-l="">None</button>' : '') + '</span></div>'
-    + '<div class="prop"><span class="k">Area</span><span class="v">' + areasSorted().map(function (a) {
-      return '<button class="chip' + (t.area === a.id ? ' on' : '') + '" data-act="taskarea" data-id="' + t.id + '" data-a="' + a.id + '"><i style="background:' + esc(a.color) + '"></i>' + esc(a.short) + '</button>';
+    + '<div class="prop"><span class="k">Time</span><span class="v"><label class="sr" for="ttime">Time</label><input id="ttime" type="time" class="input" style="max-width:150px;min-height:40px" value="' + esc(t.time || '') + '" data-act-change="tasktime" data-id="' + t.id + '">'
+    + (t.time ? '<button class="chip" data-act="tasktimeclear" data-id="' + t.id + '">No time</button>' : '') + '</span></div>'
+    + '<div class="prop"><span class="k">Repeat</span><span class="v">' + [['', 'None'], ['day', 'Daily'], ['weekday', 'Weekdays'], ['week', 'Weekly'], ['month', 'Monthly']].map(function (r) {
+      var on = (rep ? rep.every : '') === r[0];
+      return '<button class="chip' + (on ? ' on' : '') + '" data-act="taskrep" data-id="' + t.id + '" data-r="' + r[0] + '" aria-pressed="' + on + '">' + r[1] + '</button>';
     }).join('') + '</span></div>'
+    + (rep && rep.every === 'week' ? '<div class="prop"><span class="k">On</span><span class="v">' + ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(function (n, i) {
+      return '<button class="chip' + (rep.days && rep.days[i] ? ' on' : '') + '" data-act="taskrepday" data-id="' + t.id + '" data-i="' + i + '">' + n + '</button>';
+    }).join('') + '</span></div>' : '')
+    + (rep && rep.every === 'month' ? '<div class="prop"><span class="k">Day</span><span class="v"><label class="sr" for="tdom">Day of the month</label><input id="tdom" class="input" type="number" min="1" max="31" style="max-width:90px;min-height:40px" value="' + (rep.dom || 1) + '" data-act-change="taskdom" data-id="' + t.id + '"><span class="faint small">of each month</span></span></div>' : '')
     + (projectsAll('active').length || t.project ? '<div class="prop"><span class="k">Project</span><span class="v">' + projectsAll('active').concat(t.project && Store.get('projects', t.project) && Store.get('projects', t.project).status !== 'active' ? [Store.get('projects', t.project)] : []).map(function (p) {
       return '<button class="chip' + (t.project === p.id ? ' on' : '') + '" data-act="taskproj" data-id="' + t.id + '" data-p="' + p.id + '">' + esc(p.ic || '📁') + ' ' + esc(p.t) + '</button>';
     }).join('') + '</span></div>' : '')
@@ -126,12 +207,27 @@ ACTS.when = function (d) { moveTask(d.id, d.to); toast('Moved to ' + { today: 't
 ACTS.whendate = function (d, el) { if (el.value) { moveTask(d.id, el.value); toast('Moved to ' + shortDate(el.value)); } };
 ACTS.taskproj = function (d) { var t = Store.get('tasks', d.id), p = Store.get('projects', d.p); Store.patch('tasks', d.id, { project: t.project === d.p ? null : d.p, area: t.area || (p && p.area) || null }); };
 ACTS.taskarea = function (d) { var t = Store.get('tasks', d.id); Store.patch('tasks', d.id, { area: t.area === d.a ? null : d.a }); };
-ACTS.taskprio = function (d) {
-  if (!d.l) { Store.patch('tasks', d.id, { prio: null, prioDay: null }); return; }
-  var t = Store.get('tasks', d.id);
-  if (t.prio === d.l && t.prioDay === today()) return;
-  if (prioCount(d.l) >= CAP[d.l]) { swapSheet(d.l); return; }
-  setPrio(d.id, d.l); toast(d.l + ' set for today');
+ACTS.tasktime = function (d, el) { Store.patch('tasks', d.id, { time: el.value || null }); };
+ACTS.tasktimeclear = function (d) { Store.patch('tasks', d.id, { time: null }); };
+ACTS.taskrep = function (d) {
+  var t = Store.get('tasks', d.id), r = d.r ? { every: d.r } : null, base = t.due || today();
+  if (r && r.every === 'week') { r.days = [0, 0, 0, 0, 0, 0, 0]; r.days[(parseYmd(base).getDay() + 6) % 7] = 1; }
+  if (r && r.every === 'month') r.dom = parseYmd(base).getDate();
+  var f = { repeat: r };
+  if (r && !repeatsOn(r, base)) f.due = nextOccurrence(r, addDays(today(), -1));
+  if (r && !t.due) f.due = nextOccurrence(r, addDays(today(), -1));
+  Store.patch('tasks', d.id, f);
+  if (r) toast('Repeats ' + esc(repeatLabel(r)));
+};
+ACTS.taskrepday = function (d) {
+  var t = Store.get('tasks', d.id), r = Object.assign({}, t.repeat), days = (r.days || [0, 0, 0, 0, 0, 0, 0]).slice();
+  days[+d.i] = days[+d.i] ? 0 : 1; if (!days.some(Boolean)) { toast('Pick at least one day'); return; }
+  r.days = days; var f = { repeat: r }; if (t.due && !repeatsOn(r, t.due)) f.due = nextOccurrence(r, addDays(today(), -1));
+  Store.patch('tasks', d.id, f);
+};
+ACTS.taskdom = function (d, el) {
+  var v = Math.max(1, Math.min(31, parseInt(el.value, 10) || 1)), t = Store.get('tasks', d.id), r = Object.assign({}, t.repeat, { dom: v });
+  Store.patch('tasks', d.id, { repeat: r, due: nextOccurrence(r, addDays(today(), -1)) });
 };
 ACTS.startthis = function (d) {
   var t = Store.get('tasks', d.id);
@@ -169,7 +265,7 @@ VIEWS.sweep = function () {
   h += '<div class="sweepcard"><div class="small faint">' + list.length + ' left · was ' + esc(shortDate(t.due)) + '</div>'
     + '<div class="t">' + esc(t.ic ? t.ic + ' ' : '') + esc(t.t) + '</div>'
     + '<div class="small muted">' + areaDot(t.area) + ' ' + esc(areaName(t.area) || 'No area') + (t.est ? ' · ' + esc(t.est) : '') + '</div>'
-    + '<div class="dest">' + [['today', 'Today'], ['tomorrow', 'Tomorrow'], ['whenever', 'Whenever'], ['drifted', 'Drifted']].map(function (x) {
+    + '<div class="dest">' + [['today', 'Today'], t.repeat ? ['next', 'Next time · ' + shortDate(nextOccurrence(t.repeat, today()))] : ['tomorrow', 'Tomorrow'], ['whenever', 'Whenever'], ['drifted', 'Drifted']].map(function (x) {
       return '<button class="btn ' + (x[0] === 'today' ? 'accent' : 'soft') + '" data-act="sweepto" data-id="' + t.id + '" data-to="' + x[0] + '">' + x[1] + '</button>';
     }).join('') + '</div>'
     + '<button class="link" style="justify-self:start" data-act="sweepdone" data-id="' + t.id + '">It\'s actually done</button></div>';

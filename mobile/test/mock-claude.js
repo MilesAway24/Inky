@@ -60,5 +60,14 @@
   };
   sample.limits = function () { return Promise.resolve({ maxPromptBytes: 100000 }); };
   var caps = { db: db, user: user, sample: sample, assets: null };
-  window.claude = { use: function (n) { return new Promise(function (r) { setTimeout(function () { r(caps[n] || null); }, 30); }); } };
+  // A test can hand the next page load an exact copy of the db
+  // (window.__mockSeed), instead of trusting sessionStorage to carry over.
+  var seeded = false;
+  function seed() {
+    if (seeded || !window.__mockSeed || sessionStorage.getItem('__seedUsed') === String(window.__mockSeedId)) return;
+    seeded = true; sessionStorage.setItem('__seedUsed', String(window.__mockSeedId));
+    Object.keys(docs).forEach(function (k) { delete docs[k]; });
+    Object.keys(window.__mockSeed).forEach(function (k) { docs[k] = window.__mockSeed[k]; }); save();
+  }
+  window.claude = { use: function (n) { seed(); return new Promise(function (r) { setTimeout(function () { r(caps[n] || null); }, 30); }); } };
 })();

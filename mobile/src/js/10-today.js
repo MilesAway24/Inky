@@ -1,11 +1,9 @@
 /* ═══ TODAY ═════════════════════════════════════════════════════════
-   Order from the Status design: priorities, then the Play card, then
-   life areas, then the day's log. */
+   Money, then the Play card (one thing at a time), habits, life areas,
+   and the day's log. */
 TITLES.today = 'Today';
 VIEWS.today = function () {
   var d = new Date(), t = today();
-  var ps = prios(), p1 = ps.filter(function (x) { return x.prio === 'P1'; }), p2 = ps.filter(function (x) { return x.prio === 'P2'; });
-  var doneN = ps.filter(function (x) { return x.done; }).length;
   var inboxN = Store.all('inbox').length, slipN = slipped().length;
   var h = '<div class="dateline">' + DOWL[d.getDay()] + ' · ' + d.getDate() + ' ' + MON[d.getMonth()] + '</div>';
   h += jumpTiles(['habits', 'goals', 'notes', 'projects', 'tools', 'calendar']);
@@ -23,12 +21,7 @@ VIEWS.today = function () {
     h += '</div>';
   }
 
-  // Priorities
-  h += '<section><div class="sechead"><h2>Priorities</h2><span class="meta">' + doneN + '/' + ps.length + ' done</span></div><div class="prios">';
-  h += p1.length ? p1.map(prioRow).join('') : '<button class="slot" data-act="pickprio" data-l="P1">+ Choose your P1</button>';
-  h += p2.map(prioRow).join('');
-  for (var i = p2.length; i < CAP.P2; i++) h += '<button class="slot" data-act="pickprio" data-l="P2">+ Add a P2</button>';
-  h += '</div></section>';
+  if (typeof moneyStrip === 'function') h += moneyStrip();
 
   // Play
   var q = playQueue();
@@ -36,7 +29,7 @@ VIEWS.today = function () {
   if (q.length) {
     var x = q[0];
     h += '<div class="play"><div class="k"><span>' + areaDot(x.area) + ' ' + esc(areaName(x.area) || 'No area')
-      + (x.tag ? ' · ' + esc(x.tag) : '') + '</span><span>' + esc(x.est ? '~' + x.est : '') + '</span></div>'
+      + (x.tag ? ' · ' + esc(x.tag) : '') + '</span><span>' + esc([x.time ? fmtTime(x.time) : '', x.est ? '~' + x.est : ''].filter(Boolean).join(' · ')) + '</span></div>'
       + '<div class="t"><span>' + esc(x.ic || '•') + '</span><span>' + esc(x.t) + '</span></div>'
       + '<div class="w">' + esc(x.why) + '</div>'
       + '<div class="acts"><button class="btn accent" data-act="playdo" data-k="' + x.kind + '" data-id="' + x.id + '">' + (x.kind === 'habit' ? 'Mark done' : 'Do it') + '</button>'
@@ -78,18 +71,11 @@ VIEWS.today = function () {
   h += '<section><div class="sechead"><h2>Today\'s log</h2><span class="meta">writes itself</span></div>'
     + (log.length ? '<div class="log">' + log.slice(0, 12).map(function (l) {
       return '<div class="logrow"><time>' + clock(l.at) + '</time>' + areaDot(l.area) + '<span>' + esc(l.text) + '</span></div>';
-    }).join('') + '</div>' : '<div class="empty">Nothing yet. Finishing a task, setting a priority or capturing something adds a line here.</div>')
+    }).join('') + '</div>' : '<div class="empty">Nothing yet. Finishing a task, marking a habit or capturing something adds a line here.</div>')
     + '</section>';
   return h;
 };
 
-function prioRow(tk) {
-  return '<div class="prio ' + (tk.prio === 'P1' ? 'p1' : '') + (tk.done ? ' done' : '') + '">'
-    + '<span class="pill ' + tk.prio.toLowerCase() + '">' + tk.prio + '</span>'
-    + '<button class="grow" style="text-align:left" data-act="open" data-v="task" data-id="' + tk.id + '"><div class="t">' + esc(tk.t) + '</div>'
-    + '<div class="s">' + areaDot(tk.area) + esc(areaName(tk.area) || 'No area') + (tk.est ? ' · ' + esc(tk.est) : '') + ' ' + exPill(tk) + '</div></button>'
-    + '<button class="ck' + (tk.done ? ' on' : '') + '" data-act="toggle" data-id="' + tk.id + '" aria-label="' + (tk.done ? 'Mark not done' : 'Mark done') + '"><span></span></button></div>';
-}
 function slipRow(tk) {
   var now = tk.slip.now === 'drifted' ? 'Drifted' : tk.slip.now === 'whenever' ? 'Whenever' : shortDate(tk.slip.now);
   return '<button class="slip" data-act="open" data-v="task" data-id="' + tk.id + '">' + areaDot(tk.area)
@@ -98,48 +84,20 @@ function slipRow(tk) {
 
 ACTS.clearex = function () { clearExamples(); toast('Examples cleared'); };
 ACTS.toggle = function (d) {
-  var on = completeTask(d.id);
-  toast(on ? 'Done' : 'Marked not done', function () { completeTask(d.id, !on); });
+  var undo = snapshot(d.id), rep = !!(Store.get('tasks', d.id) || {}).repeat, on = completeTask(d.id), n = Store.get('tasks', d.id);
+  toast(on ? (rep ? 'Done. Next: ' + esc(shortDate(n.due)) : 'Done') : 'Marked not done', undo);
 };
 ACTS.playdo = function (d) {
   if (d.k === 'habit') return toggleToday(d.id);
   if (d.k === 'goal') return ACTS.goalnextdone({ id: d.id });
+  var undo = snapshot(d.id);
   completeTask(d.id, true);
-  toast('Done. Next one is up.', function () { completeTask(d.id, false); });
+  toast('Done. Next one is up.', undo);
 };
 ACTS.playskip = function (d) {
   var k = today(); playSkips[k] = playSkips[k] || {}; playSkips[k][(d.k || 'task') + d.id] = 1; render();
 };
 
-/* Pick a priority: choose from today's and this week's tasks, or swap. */
-ACTS.pickprio = function (d) {
-  var level = d.l, full = prioCount(level) >= CAP[level];
-  if (full) return swapSheet(level);
-  var cands = candidates();
-  var pool = ['today', 'slipped', 'tomorrow', 'week', 'whenever'].reduce(function (a, b) { return a.concat(tasksIn(b)); }, [])
-    .filter(function (t) { return !t.done && !(t.prio && t.prioDay === today()) && cands.indexOf(t) < 0; });
-  var row = function (t, why) {
-    return '<button class="row" data-act="setprio" data-id="' + t.id + '" data-l="' + level + '"><span class="ic">' + esc(t.ic || '•') + '</span>'
-      + '<span class="grow"><div class="t">' + esc(t.t) + '</div><div class="s">' + areaDot(t.area) + esc(areaName(t.area) || 'No area')
-      + ' · ' + esc(why || (t.due ? shortDate(t.due) : 'Whenever')) + '</div></span></button>';
-  };
-  openSheet('<div class="shead"><h2>Choose a ' + level + '</h2><button class="iconbtn" data-act="close" aria-label="Close">' + icon('x') + '</button></div>'
-    + '<p class="note">' + (level === 'P1' ? 'The one thing that makes today count.' : 'Two more that matter. That\'s the whole list.') + '</p>'
-    + (cands.length ? '<div class="lbl">Swapped out yesterday</div><div class="list">' + cands.map(function (t) { return row(t, 'from yesterday'); }).join('') + '</div>' : '')
-    + '<div class="list">' + pool.slice(0, 30).map(function (t) { return row(t); }).join('') + '</div>'
-    + (pool.length ? '' : '<div class="empty">No open tasks yet. Capture one first.</div>'));
-};
-ACTS.setprio = function (d) { setPrio(d.id, d.l); closeSheet(); toast(d.l + ' set'); };
-function swapSheet(level) {
-  var cur = prios().filter(function (t) { return t.prio === level; });
-  openSheet('<div class="shead"><h2>Cap reached</h2><button class="iconbtn" data-act="close" aria-label="Close">' + icon('x') + '</button></div>'
-    + '<p class="note">Today holds 1 P1 and 2 P2. Swap one out to add something new. It moves to tomorrow\'s candidates.</p>'
-    + '<div class="list">' + cur.map(function (t) {
-      return '<button class="row" data-act="swap" data-id="' + t.id + '" data-l="' + level + '"><span class="pill ' + level.toLowerCase() + '">' + level + '</span>'
-        + '<span class="grow"><div class="t">' + esc(t.t) + '</div><div class="s">Swap out to tomorrow</div></span></button>';
-    }).join('') + '</div>');
-}
-ACTS.swap = function (d) { swapOut(d.id); closeSheet(); ACTS.pickprio({ l: d.l }); };
 
 /* One-tap tiles to the other sections, each with a live count. */
 function sectionCount(k) {

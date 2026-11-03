@@ -18,6 +18,11 @@ const URL = 'file://' + file;
 const mock = fs.readFileSync(path.join(__dirname, 'mock-claude.js'), 'utf8');
 
 let failures = 0;
+async function reloadKeeping(p, ctx) {
+  const d = await p.evaluate(() => JSON.stringify(window.__mock.docs));
+  await ctx.addInitScript('window.__mockSeed = ' + d + '; window.__mockSeedId = ' + Date.now() + ';');
+  await p.reload(); await p.waitForTimeout(700);
+}
 const ok = (cond, msg) => { console.log((cond ? 'ok   ' : 'FAIL ') + msg); if (!cond) failures++; };
 
 (async () => {
@@ -30,8 +35,8 @@ const ok = (cond, msg) => { console.log((cond ? 'ok   ' : 'FAIL ') + msg); if (!
   await ctx.addInitScript(mock);
   let p = await ctx.newPage(); watch(p, 'phone');
   await p.goto(URL); await p.waitForTimeout(600);
-  ok(await p.isVisible('text=Priorities'), 'Today shows Priorities');
-  ok((await p.$$('.prio')).length === 3, 'example data seeds 1 P1 + 2 P2');
+  ok(!(await p.isVisible('text=Priorities')) && !(await p.$('[data-act=pickprio]')), 'Today has no Priorities section');
+  ok(await p.isVisible('.play'), 'example data fills the Play card');
   ok(await p.isVisible('.sync.on'), 'sync badge shows Synced');
   const paths = await p.evaluate(() => Object.keys(window.__mock.docs));
   ok(paths.length > 10 && paths.every((k) => k.startsWith('data/users/u_test/m/')), 'writes go to the private per-user subtree (' + paths.length + ' docs)');
@@ -43,14 +48,51 @@ const ok = (cond, msg) => { console.log((cond ? 'ok   ' : 'FAIL ') + msg); if (!
   ok(!(await p.textContent('.play .t span:last-child')).includes(first) , 'Play "Do it" moves to the next card');
   ok(await p.isVisible('#toast >> text=Undo'), 'done shows an Undo toast');
 
-  // Priority cap: P2 slots are full, so the swap sheet appears from a task
+  // ── Tasks: three groups, add in words, swipe, rename, repeat ─────
   await p.click('.tabs [data-v=tasks]'); await p.waitForTimeout(150);
-  await p.click('text=Send Sam the revised invoice'); await p.waitForTimeout(150);
-  await p.click('[data-act=taskprio][data-l=P2]'); await p.waitForTimeout(150);
-  ok(await p.isVisible('text=Cap reached'), 'adding a third P2 opens the swap sheet');
-  await p.click('#sheet [data-act=swap] >> nth=0'); await p.waitForTimeout(150);
-  ok(await p.isVisible('text=Choose a P2'), 'swapping one out lets you choose a replacement');
-  await p.click('#sheet [data-act=close]'); await p.waitForTimeout(100);
+  const groups = await p.$$eval('.grouph', (x) => x.map((e) => e.childNodes[0].textContent.trim()));
+  ok(groups.join(',') === 'Today,Upcoming,Someday', 'the list has Today, Upcoming and Someday (' + groups.join(',') + ')');
+  ok(!(await p.isVisible('text=P1')), 'no P1/P2 anywhere in the list');
+  const task = (title) => p.evaluate((t) => Object.values(window.__mock.docs).filter((d) => d.t === t)[0], title);
+  await p.fill('#qadd', 'Pay the storage unit every month on the 15th at 9am'); await p.press('#qadd', 'Enter'); await p.waitForTimeout(500);
+  let tk = await task('Pay the storage unit');
+  ok(tk && tk.repeat && tk.repeat.every === 'month' && tk.repeat.dom === 15 && tk.time === '09:00' && tk.due.endsWith('-15'),
+    'the add box reads "every month on the 15th at 9am" (' + JSON.stringify(tk && { r: tk.repeat, time: tk.time, due: tk.due }) + ')');
+  await p.fill('#qadd', 'Call mom at 8am today'); await p.press('#qadd', 'Enter'); await p.waitForTimeout(400);
+  const openToday = await p.$$eval('section:has(.grouph:text-is("Today")) .trow:not(.done) .tt', (x) => x.map((e) => e.textContent));
+  ok(/Call mom/.test(openToday[0] || ''), 'a timed task sorts first among open tasks on Today (' + (openToday[0] || '') + ')');
+  await p.fill('#qadd', 'gym 6pm every Mon, Thu'); await p.press('#qadd', 'Enter'); await p.waitForTimeout(500);
+  tk = await task('Gym');
+  ok(tk && tk.time === '18:00' && tk.repeat && tk.repeat.days.join('') === '1001000', 'and "gym 6pm every Mon, Thu" (' + JSON.stringify(tk && tk.repeat) + ')');
+  const swipe = async (title, dx) => {
+    const el = await p.$('.trow:has-text("' + title + '") .trin'); await el.evaluate((e) => e.scrollIntoView({ block: 'center' })); await p.waitForTimeout(150);
+    const b = await el.boundingBox();
+    await p.mouse.move(b.x + b.width / 2, b.y + b.height / 2); await p.mouse.down();
+    for (let i = 1; i <= 6; i++) await p.mouse.move(b.x + b.width / 2 + dx * i / 6, b.y + b.height / 2 + 2);
+    await p.mouse.up(); await p.waitForTimeout(600);
+  };
+  await swipe('Plan the date night', 140);
+  ok((await task('Plan the date night')).done === true, 'swiping right ticks a task off');
+  await p.click('#toast [data-act=undo]'); await p.waitForTimeout(500);
+  ok((await task('Plan the date night')).done === false, 'and Undo puts it back');
+  await swipe('Back up the photo drive', -140); await p.waitForTimeout(400);
+  ok((await task('Back up the photo drive')).due === await p.evaluate(() => { const d = new Date(); d.setDate(d.getDate() + 1); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }),
+    'swiping left moves it to tomorrow');
+  await p.click('.trow:has-text("Schedule a dentist checkup") .tt'); await p.waitForTimeout(100);
+  await p.fill('.ttedit', 'Book the dentist'); await p.press('.ttedit', 'Enter'); await p.waitForTimeout(500);
+  ok(!!(await task('Book the dentist')), 'tapping a name renames it in place');
+  await p.click('.trow:has-text("Book the dentist") .tt'); await p.fill('.ttedit', 'Something else'); await p.press('.ttedit', 'Escape'); await p.waitForTimeout(300);
+  ok(!!(await task('Book the dentist')) && !(await task('Something else')), 'Esc cancels a rename');
+  const trash0 = await task('Take out the trash');
+  await p.click('.trow:has-text("Take out the trash") .ck'); await p.waitForTimeout(500);
+  const trash1 = await task('Take out the trash');
+  ok(!trash1.done && trash1.due > trash0.due && (trash1.doneDates || []).length === 1 && /every Thu/.test(await p.textContent('.trow:has-text("Take out the trash")')),
+    'finishing a weekly task rolls it to next week and records the day (' + trash0.due + ' → ' + trash1.due + ')');
+  await p.click('[data-act=open][aria-label="Open Send Sam the revised invoice"]'); await p.waitForTimeout(150);
+  ok(!(await p.$('[data-act=taskprio]')) && await p.isVisible('#ttime') && await p.isVisible('[data-act=taskrep][data-r=week]'), 'task detail has Time and Repeat, and no P1/P2');
+  await p.click('[data-act=taskrep][data-r=week]'); await p.waitForTimeout(150);
+  ok(await p.isVisible('[data-act=taskrepday]'), 'Weekly shows day chips');
+  await p.click('[data-act=taskrep][data-r=""]'); await p.waitForTimeout(100);
 
   // Steps + Break it down
   await p.fill('#newstep', 'Attach the PDF'); await p.press('#newstep', 'Enter'); await p.waitForTimeout(150);
@@ -87,18 +129,16 @@ const ok = (cond, msg) => { console.log((cond ? 'ok   ' : 'FAIL ') + msg); if (!
   const t = await p.evaluate(() => Object.values(window.__mock.docs).some((d) => d.t === 'Call the HCPD office about the packet' && d.steps && d.steps.length));
   ok(t, 'the sorted capture became a task with a first step');
 
-  // Reload: everything still there. The fake db keeps its data in
-  // sessionStorage; wait until that copy holds the latest writes, so the
-  // test checks the app and not the harness.
-  await p.waitForFunction(() => { const d = JSON.parse(sessionStorage.getItem('__mockdb') || '{}');
-    return Object.values(d).some((x) => x.note === 'Edited note text') && Object.values(d).some((x) => x.t === 'Call the HCPD office about the packet'); }, null, { timeout: 5000 });
-  await p.waitForTimeout(1500); // Chromium commits storage to the next page in batches
-  await p.reload(); await p.waitForTimeout(700);
+  // Reload: everything still there. The fake db is handed over explicitly
+  // so the check is about the app, not the browser's storage timing.
+  await p.waitForTimeout(600);
+  await reloadKeeping(p, ctx);
+
   await p.click('.tabs [data-v=tasks]'); await p.waitForTimeout(150);
   const survived = await p.isVisible('text=Call the HCPD office about the packet');
   if (!survived) { await p.screenshot({ path: shots + '/fail-reload.png', fullPage: true }); console.log(await p.evaluate(() => document.querySelector('#top').textContent + ' | ' + Object.values(window.__mock.docs).filter((d) => d.t).map((d) => d.t).join(' / '))); }
   ok(survived, 'tasks survive a reload');
-  await p.click('text=Send Sam the revised invoice'); await p.waitForTimeout(150);
+  await p.click('[data-act=open][aria-label="Open Send Sam the revised invoice"]'); await p.waitForTimeout(150);
   ok((await p.inputValue('#tnote')) === 'Edited note text', 'note edits survive a reload');
 
   // A save that never reached the server (app suspended) is re-sent next launch
@@ -154,7 +194,7 @@ const ok = (cond, msg) => { console.log((cond ? 'ok   ' : 'FAIL ') + msg); if (!
   ok(linked && linked.done, 'the goal\'s task was ticked off with it');
   await p.click('[data-act=goaltask]'); await p.waitForTimeout(150);
   await p.click('.back'); await p.click('.tabs [data-v=tasks]'); await p.waitForTimeout(150);
-  await p.click('.row:has-text("Book the PAT practice slot") .ck'); await p.waitForTimeout(150);
+  await p.click('.trow:has-text("Book the PAT practice slot") .ck'); await p.waitForTimeout(150);
   await p.click('.tabs [data-v=more]'); await p.click('#view [data-act=tab][data-v=goals]'); await p.waitForTimeout(150);
   ok(await p.isVisible('.goal:has-text("HCPD") >> text=No next action yet'), 'ticking a goal task from Tasks clears the goal\'s next action');
   await p.click('.tabs [data-v=today]'); await p.waitForTimeout(150);
@@ -168,7 +208,7 @@ const ok = (cond, msg) => { console.log((cond ? 'ok   ' : 'FAIL ') + msg); if (!
   await p.click('.pcard:has-text("Inky")'); await p.waitForTimeout(150);
   ok(await p.isVisible('text=Done when…') && await p.isVisible('text=Where I left off'), 'a project page shows Done when and Where I left off');
   ok(await p.isVisible('details[data-panel=checklist]') && await p.isVisible('details[data-panel=links]'), 'its panels follow its kind');
-  ok(await p.isVisible('.row:has-text("Fix the Generate Plan spinner")'), 'its tasks are listed on it');
+  ok(await p.isVisible('.trow:has-text("Fix the Generate Plan spinner")'), 'its tasks are listed on it');
   await p.fill('details[data-panel=checklist] input', 'Write the release notes'); await p.press('details[data-panel=checklist] input', 'Enter'); await p.waitForTimeout(150);
   ok(await p.isVisible('details[data-panel=checklist] >> text=Write the release notes'), 'adding a checklist item works');
   await p.click('[data-act=projnextdone]'); await p.waitForTimeout(150);
@@ -200,7 +240,7 @@ const ok = (cond, msg) => { console.log((cond ? 'ok   ' : 'FAIL ') + msg); if (!
   const tomorrowBtn = await p.$('.cal .day.today + .day');
   if (tomorrowBtn) { await tomorrowBtn.click(); await p.waitForTimeout(100); }
   await p.fill('#caladd', 'Pick up the uniform'); await p.press('#caladd', 'Enter'); await p.waitForTimeout(150);
-  ok(await p.isVisible('.card .row:has-text("Pick up the uniform")'), 'adding a task on a chosen day works');
+  ok(await p.isVisible('.card .trow:has-text("Pick up the uniform")'), 'adding a task on a chosen day works');
   await p.click('[data-act=calmode][data-v=week]'); await p.waitForTimeout(150);
   ok(await p.isVisible('.blk:has-text("Pick up the uniform")'), 'the week view shows it as a block');
   await p.screenshot({ path: shots + '/phone-week.png', fullPage: true });
@@ -340,7 +380,7 @@ const ok = (cond, msg) => { console.log((cond ? 'ok   ' : 'FAIL ') + msg); if (!
   await p.click('[data-act=suggall] >> nth=0'); await p.waitForTimeout(300);
   if (await p.isVisible('text=Which was better?')) await p.click('[data-act=rankstop]');
   ok(await p.isVisible('text=This device'), 'without Claude it runs on this device');
-  ok((await p.$$('.prio')).length === 3, 'and still seeds its examples');
+  ok(await p.isVisible('.play'), 'and still seeds its examples');
   ok(await p.isDisabled('[data-act=breakdown]').catch(() => true), 'Claude-only buttons are off when Claude is absent');
   await ctx.close();
 
