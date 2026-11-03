@@ -16,7 +16,7 @@ VIEWS.today = function () {
     h += '<div style="display:grid;gap:8px">';
     if (inboxN) h += '<button class="inboxbar" data-act="tab" data-v="inbox">' + icon('inbox') + '<span class="grow"><b>' + inboxN + ' captured</b>'
       + '<span class="muted small"> · waiting to be sorted</span></span>' + icon('chev', 'sm chev') + '</button>';
-    if (slipN) h += '<button class="sweepbar" data-act="open" data-v="sweep">' + icon('broom') + '<span class="grow"><b style="font-weight:500">'
+    if (slipN) h += '<button class="sweepbar" data-act="reschedule">' + icon('broom') + '<span class="grow"><b style="font-weight:500">'
       + slipN + ' slipped</b><span class="muted small"> · give each a new day</span></span>' + icon('chev', 'sm chev') + '</button>';
     h += '</div>';
   }

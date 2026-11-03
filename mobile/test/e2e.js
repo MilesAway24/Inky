@@ -132,14 +132,35 @@ const ok = (cond, msg) => { console.log((cond ? 'ok   ' : 'FAIL ') + msg); if (!
   await p.fill('#tnote', 'Edited note text'); await p.waitForTimeout(500);
   await p.click('.back'); await p.waitForTimeout(150);
 
-  // Sweep
+  // ── Reschedule sheet (replaces the one-at-a-time sweep) ─────────
   await p.click('.tabs [data-v=today]'); await p.waitForTimeout(150);
-  await p.click('.sweepbar'); await p.waitForTimeout(150);
-  const before = await p.$$eval('.sweepcard', (x) => x.length);
-  await p.click('[data-act=sweepto][data-to=tomorrow]'); await p.waitForTimeout(150);
-  await p.click('[data-act=sweepto][data-to=drifted]'); await p.waitForTimeout(150);
-  ok(before === 1 && await p.isVisible('text=All swept'), 'sweep moves every slipped task to a real day');
-  await p.click('.back'); await p.waitForTimeout(150);
+  const tk2 = (title) => p.evaluate((t) => Object.values(window.__mock.docs).filter((d) => d.t === t)[0], title);
+  await p.click('.sweepbar'); await p.waitForTimeout(200);
+  ok(await p.isVisible('#rsbox') && (await p.$$('.odrow input:checked')).length === 2 && /2 of 2 overdue/.test(await p.textContent('#rsbox .shead')),
+    'Reschedule lists every overdue task, all ticked');
+  await p.uncheck('.odrow >> nth=1 >> input'); await p.waitForTimeout(150);
+  ok(/1 of 2/.test(await p.textContent('#rsbox .shead')) && /Reschedule 1 task/.test(await p.textContent('[data-act=rsgo]')), 'unticking one updates both counts');
+  ok(await p.isDisabled('[data-act=rsgo]'), 'Reschedule waits for a date');
+  const todayCell = await p.$('.cal.mini .day.today .dots i');
+  ok(!!todayCell, 'the month grid dots days that already have tasks');
+  await p.click('[data-act=rsdelete]'); await p.waitForTimeout(600);
+  ok(!(await tk2('Order the replacement cable')) && !(await p.isVisible('#rsbox')), 'Delete removes the ticked task');
+  await p.click('#toast [data-act=undo]'); await p.waitForTimeout(600);
+  ok(!!(await tk2('Order the replacement cable')), 'and Undo brings it back');
+  await p.click('.sweepbar'); await p.waitForTimeout(200);
+  await p.click('[data-act=rsspread]'); await p.waitForTimeout(600);
+  const sp = [await tk2('Order the replacement cable'), await tk2('Reply to the important emails')];
+  const tday = await p.evaluate(() => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); });
+  ok(sp.every((x) => x.due >= tday) && /Spread over/.test(await p.textContent('#toast')), 'Spread puts them on days this week (' + sp.map((x) => x.due).join(', ') + ')');
+  await p.click('#toast [data-act=undo]'); await p.waitForTimeout(600);
+  await p.click('.sweepbar'); await p.waitForTimeout(200);
+  await p.click('.sweep3 [data-act=rsday] >> nth=1'); await p.waitForTimeout(100);
+  await p.click('[data-act=rspreset][data-t="19:00"]'); await p.waitForTimeout(100);
+  ok((await p.textContent('#rsbig')).replace(/\s/g, '') === '7PM', 'the ruler presets set 7 PM');
+  await p.fill('#rsremark', 'Long shift, no energy');
+  await p.click('[data-act=rsgo]'); await p.waitForTimeout(600);
+  const moved = [await tk2('Order the replacement cable'), await tk2('Reply to the important emails')];
+  ok(moved.every((x) => x.due > tday && x.time === '19:00' && x.slip && x.slip.remark === 'Long shift, no energy'), 'Reschedule moves them with the time and the remark');
   ok(await p.isVisible('text=Slipped, rescheduled'), 'Today lists slipped, rescheduled tasks');
 
   // Capture two lines → inbox → sort with Claude

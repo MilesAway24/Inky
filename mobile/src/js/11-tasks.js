@@ -15,7 +15,7 @@ VIEWS.tasks = function () {
       return '<button class="chip' + (taskFilter === a.id ? ' on' : '') + '" data-act="tfilter" data-id="' + a.id + '"><i style="background:' + esc(a.color) + '"></i>' + esc(a.short) + (n ? ' · ' + n : '') + '</button>';
     }).join('') + '</div>';
   var sl = slipped().filter(function (t) { return !taskFilter || t.area === taskFilter; });
-  if (sl.length) h += '<button class="sweepbar" data-act="open" data-v="sweep">' + icon('broom') + '<span class="grow"><b style="font-weight:500">'
+  if (sl.length) h += '<button class="sweepbar" data-act="reschedule">' + icon('broom') + '<span class="grow"><b style="font-weight:500">'
     + sl.length + ' slipped</b><span class="muted small"> · sweep them onto real days</span></span>' + icon('chev', 'sm chev') + '</button>';
   GROUPS.forEach(function (g) {
     var list = tasksInGroup(g[0], taskFilter), openN = list.filter(function (t) { return !t.done; }).length;
@@ -170,7 +170,7 @@ VIEWS.task = function (id) {
     + '<div class="prop"><span class="k">Time</span><span class="v"><label class="sr" for="test">Time estimate</label><input id="test" class="input" style="max-width:160px;min-height:40px" data-field="est" value="' + esc(t.est || '') + '" placeholder="e.g. 20 min"></span></div>'
     + '<div class="prop"><span class="k">Icon</span><span class="v"><label class="sr" for="tic">Icon</label><input id="tic" class="input" style="max-width:80px;min-height:40px;text-align:center" data-field="ic" value="' + esc(t.ic || '') + '" maxlength="4"></span></div>'
     + '</div></section>';
-  if (t.slip) h += '<p class="note">Slipped from ' + esc(shortDate(t.slip.was)) + ', moved to ' + esc(t.slip.now === 'drifted' ? 'Drifted' : t.slip.now === 'whenever' ? 'Whenever' : shortDate(t.slip.now)) + '.</p>';
+  if (t.slip) h += '<p class="note">Slipped from ' + esc(shortDate(t.slip.was)) + ', moved to ' + esc(t.slip.now === 'drifted' ? 'Drifted' : t.slip.now === 'whenever' ? 'Someday' : shortDate(t.slip.now)) + '.' + (t.slip.remark ? ' <i>“' + esc(t.slip.remark) + '”</i>' : '') + '</p>';
   h += '<button class="btn ghost" style="color:var(--bad);justify-self:start" data-act="deltask" data-id="' + t.id + '">Delete task</button>';
   return h;
 };
@@ -258,24 +258,3 @@ ACTS.breakdown = function (d, el) {
       toast(add.length + ' steps added');
     }).catch(function (e) { toast(aiError(e)); render(); });
 };
-
-/* ── sweep: give every slipped task a real day ─────────────────────── */
-TITLES.sweep = 'Sweep';
-VIEWS.sweep = function () {
-  var list = slipped();
-  var h = '<p class="note">These had a day that passed. Nothing here is overdue. Each one just needs a new day, or permission to drift.</p>';
-  if (!list.length) return h + '<div class="empty">All swept. Every task has a real day.</div><button class="btn soft" data-act="back">Back</button>';
-  var t = list[0];
-  h += '<div class="sweepcard"><div class="small faint">' + list.length + ' left · was ' + esc(shortDate(t.due)) + '</div>'
-    + '<div class="t">' + esc(t.ic ? t.ic + ' ' : '') + esc(t.t) + '</div>'
-    + '<div class="small muted">' + areaDot(t.area) + ' ' + esc(areaName(t.area) || 'No area') + (t.est ? ' · ' + esc(t.est) : '') + '</div>'
-    + '<div class="dest">' + [['today', 'Today'], t.repeat ? ['next', 'Next time · ' + shortDate(nextOccurrence(t.repeat, today()))] : ['tomorrow', 'Tomorrow'], ['whenever', 'Whenever'], ['drifted', 'Drifted']].map(function (x) {
-      return '<button class="btn ' + (x[0] === 'today' ? 'accent' : 'soft') + '" data-act="sweepto" data-id="' + t.id + '" data-to="' + x[0] + '">' + x[1] + '</button>';
-    }).join('') + '</div>'
-    + '<button class="link" style="justify-self:start" data-act="sweepdone" data-id="' + t.id + '">It\'s actually done</button></div>';
-  if (list.length > 1) h += '<button class="btn ghost" data-act="sweepall">Move all ' + list.length + ' to Whenever</button>';
-  return h;
-};
-ACTS.sweepto = function (d) { moveTask(d.id, d.to); render(); };
-ACTS.sweepdone = function (d) { completeTask(d.id, true); render(); };
-ACTS.sweepall = function () { slipped().forEach(function (t) { moveTask(t.id, 'whenever'); }); logEvent('Swept slipped tasks to Whenever'); toast('All moved to Whenever'); };

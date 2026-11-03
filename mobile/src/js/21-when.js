@@ -42,7 +42,7 @@ function whenPaint() {
   var w = when, t = today(), box = $('#whenbox'); if (!box || !w) return;
   var tm = w.time ? fmtTime(w.time) : null;
   var h = '<div class="shead"><h2>' + esc(w.title) + '</h2><button class="iconbtn" data-act="close" aria-label="Cancel">' + icon('x') + '</button></div>'
-    + '<div class="readout" aria-live="polite"><div class="big2" id="wbig">' + (tm ? esc(tm.replace(/(am|pm)$/, '')) + '<small>' + tm.slice(-2).toUpperCase() + '</small>' : 'All day') + '</div>'
+    + '<div class="readout" aria-live="polite"><div class="big2" id="wbig">' + bigTime(w.time) + '</div>'
     + '<div class="muted">' + (w.due ? esc(longDate(w.due)) + (w.due === t ? ' · <b class="todaytag">today</b>' : '') : 'No date · Someday') + '</div></div>';
   // dates
   h += '<div class="wlab"><span>Date</span><button type="button" class="link" data-act="wfull">' + (w.full ? 'Hide month' : 'Full month') + '</button></div>'
@@ -54,9 +54,7 @@ function whenPaint() {
   h += '<p class="note small">• dot = other tasks already that day</p>';
   // time ruler
   h += '<div class="wlab"><span>Time</span><span class="faint">5 min steps</span></div>'
-    + '<div class="ruler' + (w.time ? '' : ' allday') + '" id="ruler" tabindex="0" role="slider" aria-label="Time" aria-valuemin="0" aria-valuemax="1435" aria-valuenow="' + (w.time ? mins(w.time) : 540) + '" aria-valuetext="' + esc(tm || 'All day') + '">'
-    + '<div class="rstrip" id="rstrip">' + rulerTicks() + '</div><span class="rline" aria-hidden="true"></span></div>'
-    + '<p class="note small" style="text-align:center">Drag the rail. It snaps every 5 minutes.</p>'
+    + rulerHtml('ruler', w.time)
     + '<div class="scrollx">' + [['06:00'], ['09:00'], ['12:00'], ['17:00'], ['20:00'], ['', 'All day']].map(function (p) {
       var on = (p[0] || null) === (w.time || null);
       return '<button type="button" class="chip' + (on ? ' on' : '') + '" data-act="wpreset" data-t="' + p[0] + '">' + esc(p[1] || fmtTime(p[0]).replace(/^(\d+)(am|pm)$/, '$1:00$2').toUpperCase().replace(/(AM|PM)$/, ' $1')) + '</button>';
@@ -87,22 +85,24 @@ function rulerTicks() {
   }
   return h;
 }
-function wireRuler() {
-  var r = $('#ruler'), strip = $('#rstrip'); if (!r) return;
-  var cur = when.time ? mins(when.time) : 540, x0 = 0, base = 0, on = false, last = [], pid = null;
+/* A ruler you drag sideways; snaps every 5 minutes. Shared by the When
+   picker and the Reschedule sheet.
+   cfg: {ruler, strip, start (minutes), onMove(min), onSet(min)} */
+function makeRuler(cfg) {
+  var r = cfg.ruler, strip = cfg.strip; if (!r || !strip) return;
+  var cur = cfg.start, x0 = 0, base = 0, on = false, last = [], pid = null;
   var place = function (m, anim) { strip.style.transition = anim ? 'transform .25s cubic-bezier(.2,.8,.3,1)' : 'none'; strip.style.transform = 'translateX(' + (r.clientWidth / 2 - m / 5 * TICK) + 'px)'; };
   var setT = function (m, final) {
     m = Math.max(0, Math.min(1435, Math.round(m / 5) * 5)); cur = m;
-    when.time = hm(m); r.classList.remove('allday');
-    var tm = fmtTime(when.time); $('#wbig').innerHTML = esc(tm.replace(/(am|pm)$/, '')) + '<small>' + tm.slice(-2).toUpperCase() + '</small>';
-    r.setAttribute('aria-valuenow', m); r.setAttribute('aria-valuetext', tm);
-    if (final) { place(m, true); $$('[data-act=wpreset]').forEach(function (b) { b.classList.toggle('on', b.dataset.t === when.time); }); }
+    r.classList.remove('allday'); r.setAttribute('aria-valuenow', m); r.setAttribute('aria-valuetext', fmtTime(hm(m)));
+    if (cfg.onMove) cfg.onMove(m);
+    if (final) { place(m, true); if (cfg.onSet) cfg.onSet(m); }
   };
   place(cur, false);
   r.addEventListener('pointerdown', function (e) { on = true; pid = e.pointerId; x0 = e.clientX; base = cur; last = [[e.clientX, e.timeStamp]]; try { r.setPointerCapture(pid); } catch (er) {} });
   r.addEventListener('pointermove', function (e) {
     if (!on || e.pointerId !== pid) return;
-    var m = base - (e.clientX - x0) / TICK * 5; m = Math.max(0, Math.min(1435, m));
+    var m = Math.max(0, Math.min(1435, base - (e.clientX - x0) / TICK * 5));
     strip.style.transition = 'none'; strip.style.transform = 'translateX(' + (r.clientWidth / 2 - m / 5 * TICK) + 'px)';
     setT(m, false); last.push([e.clientX, e.timeStamp]); if (last.length > 5) last.shift();
   });
@@ -119,7 +119,18 @@ function wireRuler() {
     if (e.key === 'ArrowRight' || e.key === 'ArrowUp') { e.preventDefault(); setT(cur + 5, true); }
     else if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') { e.preventDefault(); setT(cur - 5, true); }
   });
-  addEventListener('resize', function () { if ($('#ruler')) place(cur, false); }, { once: true });
+}
+function rulerHtml(id, time) {
+  var tm = time ? fmtTime(time) : 'All day';
+  return '<div class="ruler' + (time ? '' : ' allday') + '" id="' + id + '" tabindex="0" role="slider" aria-label="Time" aria-valuemin="0" aria-valuemax="1435" aria-valuenow="' + (time ? mins(time) : 540) + '" aria-valuetext="' + esc(tm) + '">'
+    + '<div class="rstrip">' + rulerTicks() + '</div><span class="rline" aria-hidden="true"></span></div>'
+    + '<p class="note small" style="text-align:center">Drag the rail. It snaps every 5 minutes.</p>';
+}
+function bigTime(t) { if (!t) return 'All day'; var tm = fmtTime(t); return esc(tm.replace(/(am|pm)$/, '')) + '<small>' + tm.slice(-2).toUpperCase() + '</small>'; }
+function wireRuler() {
+  makeRuler({ ruler: $('#ruler'), strip: $('#ruler .rstrip'), start: when.time ? mins(when.time) : 540,
+    onMove: function (m) { when.time = hm(m); $('#wbig').innerHTML = bigTime(when.time); },
+    onSet: function () { $$('[data-act=wpreset]').forEach(function (b) { b.classList.toggle('on', b.dataset.t === when.time); }); } });
 }
 ACTS.wfull = function () { when.full = !when.full; whenPaint(); };
 ACTS.wday = function (d) { when.due = d.d || null; if (d.d) when.month = d.d.slice(0, 8) + '01'; whenPaint(); };

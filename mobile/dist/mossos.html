@@ -488,6 +488,23 @@ select.input.sel{min-height:40px;padding:6px 10px;font-size:15px;width:auto;max-
 .sheet>*{min-width:0}
 #whenbox{display:grid;gap:14px;min-width:0}
 #whenbox .scrollx{margin:0 -16px;padding:0 16px}
+
+/* ── reschedule sheet ─────────────────────────────────────────────── */
+#rsbox{display:grid;gap:14px;min-width:0}
+#rsbox .scrollx{margin:0 -16px;padding:0 16px}
+.odbox{border:1px solid color-mix(in srgb,var(--bad) 45%,transparent);background:color-mix(in srgb,var(--bad) 7%,var(--surface));border-radius:16px;overflow:hidden}
+.odhead{display:flex;justify-content:space-between;align-items:center;width:100%;min-height:52px;padding:0 16px;color:var(--bad);font-weight:600}
+.odlinks{display:flex;gap:10px;align-items:center;padding:0 16px 6px;border-top:1px solid var(--line)}
+.odrow{display:flex;align-items:center;gap:12px;min-height:52px;padding:6px 16px;border-top:1px solid var(--line);cursor:pointer}
+.odrow input{width:22px;height:22px;accent-color:var(--accent);flex:none}
+.odrow .grow{flex:1;min-width:0;font-weight:500}
+.od{font-size:12.5px;color:var(--bad);font-weight:600;white-space:nowrap}
+.sweep3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.sweep3 .btn{padding:0 8px;min-height:50px}
+.sweep3 .btn.on{box-shadow:inset 0 0 0 1.5px var(--accent)}
+.btn.danger{color:var(--bad);border-color:color-mix(in srgb,var(--bad) 60%,transparent)}
+.big2.sm{font-size:34px}
+.big3{min-height:56px;font-size:17px}
 </style>
 
 <div class="app" id="app">
@@ -1238,7 +1255,7 @@ VIEWS.today = function () {
     h += '<div style="display:grid;gap:8px">';
     if (inboxN) h += '<button class="inboxbar" data-act="tab" data-v="inbox">' + icon('inbox') + '<span class="grow"><b>' + inboxN + ' captured</b>'
       + '<span class="muted small"> · waiting to be sorted</span></span>' + icon('chev', 'sm chev') + '</button>';
-    if (slipN) h += '<button class="sweepbar" data-act="open" data-v="sweep">' + icon('broom') + '<span class="grow"><b style="font-weight:500">'
+    if (slipN) h += '<button class="sweepbar" data-act="reschedule">' + icon('broom') + '<span class="grow"><b style="font-weight:500">'
       + slipN + ' slipped</b><span class="muted small"> · give each a new day</span></span>' + icon('chev', 'sm chev') + '</button>';
     h += '</div>';
   }
@@ -1360,7 +1377,7 @@ VIEWS.tasks = function () {
       return '<button class="chip' + (taskFilter === a.id ? ' on' : '') + '" data-act="tfilter" data-id="' + a.id + '"><i style="background:' + esc(a.color) + '"></i>' + esc(a.short) + (n ? ' · ' + n : '') + '</button>';
     }).join('') + '</div>';
   var sl = slipped().filter(function (t) { return !taskFilter || t.area === taskFilter; });
-  if (sl.length) h += '<button class="sweepbar" data-act="open" data-v="sweep">' + icon('broom') + '<span class="grow"><b style="font-weight:500">'
+  if (sl.length) h += '<button class="sweepbar" data-act="reschedule">' + icon('broom') + '<span class="grow"><b style="font-weight:500">'
     + sl.length + ' slipped</b><span class="muted small"> · sweep them onto real days</span></span>' + icon('chev', 'sm chev') + '</button>';
   GROUPS.forEach(function (g) {
     var list = tasksInGroup(g[0], taskFilter), openN = list.filter(function (t) { return !t.done; }).length;
@@ -1515,7 +1532,7 @@ VIEWS.task = function (id) {
     + '<div class="prop"><span class="k">Time</span><span class="v"><label class="sr" for="test">Time estimate</label><input id="test" class="input" style="max-width:160px;min-height:40px" data-field="est" value="' + esc(t.est || '') + '" placeholder="e.g. 20 min"></span></div>'
     + '<div class="prop"><span class="k">Icon</span><span class="v"><label class="sr" for="tic">Icon</label><input id="tic" class="input" style="max-width:80px;min-height:40px;text-align:center" data-field="ic" value="' + esc(t.ic || '') + '" maxlength="4"></span></div>'
     + '</div></section>';
-  if (t.slip) h += '<p class="note">Slipped from ' + esc(shortDate(t.slip.was)) + ', moved to ' + esc(t.slip.now === 'drifted' ? 'Drifted' : t.slip.now === 'whenever' ? 'Whenever' : shortDate(t.slip.now)) + '.</p>';
+  if (t.slip) h += '<p class="note">Slipped from ' + esc(shortDate(t.slip.was)) + ', moved to ' + esc(t.slip.now === 'drifted' ? 'Drifted' : t.slip.now === 'whenever' ? 'Someday' : shortDate(t.slip.now)) + '.' + (t.slip.remark ? ' <i>“' + esc(t.slip.remark) + '”</i>' : '') + '</p>';
   h += '<button class="btn ghost" style="color:var(--bad);justify-self:start" data-act="deltask" data-id="' + t.id + '">Delete task</button>';
   return h;
 };
@@ -1603,27 +1620,6 @@ ACTS.breakdown = function (d, el) {
       toast(add.length + ' steps added');
     }).catch(function (e) { toast(aiError(e)); render(); });
 };
-
-/* ── sweep: give every slipped task a real day ─────────────────────── */
-TITLES.sweep = 'Sweep';
-VIEWS.sweep = function () {
-  var list = slipped();
-  var h = '<p class="note">These had a day that passed. Nothing here is overdue. Each one just needs a new day, or permission to drift.</p>';
-  if (!list.length) return h + '<div class="empty">All swept. Every task has a real day.</div><button class="btn soft" data-act="back">Back</button>';
-  var t = list[0];
-  h += '<div class="sweepcard"><div class="small faint">' + list.length + ' left · was ' + esc(shortDate(t.due)) + '</div>'
-    + '<div class="t">' + esc(t.ic ? t.ic + ' ' : '') + esc(t.t) + '</div>'
-    + '<div class="small muted">' + areaDot(t.area) + ' ' + esc(areaName(t.area) || 'No area') + (t.est ? ' · ' + esc(t.est) : '') + '</div>'
-    + '<div class="dest">' + [['today', 'Today'], t.repeat ? ['next', 'Next time · ' + shortDate(nextOccurrence(t.repeat, today()))] : ['tomorrow', 'Tomorrow'], ['whenever', 'Whenever'], ['drifted', 'Drifted']].map(function (x) {
-      return '<button class="btn ' + (x[0] === 'today' ? 'accent' : 'soft') + '" data-act="sweepto" data-id="' + t.id + '" data-to="' + x[0] + '">' + x[1] + '</button>';
-    }).join('') + '</div>'
-    + '<button class="link" style="justify-self:start" data-act="sweepdone" data-id="' + t.id + '">It\'s actually done</button></div>';
-  if (list.length > 1) h += '<button class="btn ghost" data-act="sweepall">Move all ' + list.length + ' to Whenever</button>';
-  return h;
-};
-ACTS.sweepto = function (d) { moveTask(d.id, d.to); render(); };
-ACTS.sweepdone = function (d) { completeTask(d.id, true); render(); };
-ACTS.sweepall = function () { slipped().forEach(function (t) { moveTask(t.id, 'whenever'); }); logEvent('Swept slipped tasks to Whenever'); toast('All moved to Whenever'); };
 
 /* ── 12-capture.js ── */
 /* ═══ SMART CAPTURE ═════════════════════════════════════════════════
@@ -3211,7 +3207,7 @@ function whenPaint() {
   var w = when, t = today(), box = $('#whenbox'); if (!box || !w) return;
   var tm = w.time ? fmtTime(w.time) : null;
   var h = '<div class="shead"><h2>' + esc(w.title) + '</h2><button class="iconbtn" data-act="close" aria-label="Cancel">' + icon('x') + '</button></div>'
-    + '<div class="readout" aria-live="polite"><div class="big2" id="wbig">' + (tm ? esc(tm.replace(/(am|pm)$/, '')) + '<small>' + tm.slice(-2).toUpperCase() + '</small>' : 'All day') + '</div>'
+    + '<div class="readout" aria-live="polite"><div class="big2" id="wbig">' + bigTime(w.time) + '</div>'
     + '<div class="muted">' + (w.due ? esc(longDate(w.due)) + (w.due === t ? ' · <b class="todaytag">today</b>' : '') : 'No date · Someday') + '</div></div>';
   // dates
   h += '<div class="wlab"><span>Date</span><button type="button" class="link" data-act="wfull">' + (w.full ? 'Hide month' : 'Full month') + '</button></div>'
@@ -3223,9 +3219,7 @@ function whenPaint() {
   h += '<p class="note small">• dot = other tasks already that day</p>';
   // time ruler
   h += '<div class="wlab"><span>Time</span><span class="faint">5 min steps</span></div>'
-    + '<div class="ruler' + (w.time ? '' : ' allday') + '" id="ruler" tabindex="0" role="slider" aria-label="Time" aria-valuemin="0" aria-valuemax="1435" aria-valuenow="' + (w.time ? mins(w.time) : 540) + '" aria-valuetext="' + esc(tm || 'All day') + '">'
-    + '<div class="rstrip" id="rstrip">' + rulerTicks() + '</div><span class="rline" aria-hidden="true"></span></div>'
-    + '<p class="note small" style="text-align:center">Drag the rail. It snaps every 5 minutes.</p>'
+    + rulerHtml('ruler', w.time)
     + '<div class="scrollx">' + [['06:00'], ['09:00'], ['12:00'], ['17:00'], ['20:00'], ['', 'All day']].map(function (p) {
       var on = (p[0] || null) === (w.time || null);
       return '<button type="button" class="chip' + (on ? ' on' : '') + '" data-act="wpreset" data-t="' + p[0] + '">' + esc(p[1] || fmtTime(p[0]).replace(/^(\d+)(am|pm)$/, '$1:00$2').toUpperCase().replace(/(AM|PM)$/, ' $1')) + '</button>';
@@ -3256,22 +3250,24 @@ function rulerTicks() {
   }
   return h;
 }
-function wireRuler() {
-  var r = $('#ruler'), strip = $('#rstrip'); if (!r) return;
-  var cur = when.time ? mins(when.time) : 540, x0 = 0, base = 0, on = false, last = [], pid = null;
+/* A ruler you drag sideways; snaps every 5 minutes. Shared by the When
+   picker and the Reschedule sheet.
+   cfg: {ruler, strip, start (minutes), onMove(min), onSet(min)} */
+function makeRuler(cfg) {
+  var r = cfg.ruler, strip = cfg.strip; if (!r || !strip) return;
+  var cur = cfg.start, x0 = 0, base = 0, on = false, last = [], pid = null;
   var place = function (m, anim) { strip.style.transition = anim ? 'transform .25s cubic-bezier(.2,.8,.3,1)' : 'none'; strip.style.transform = 'translateX(' + (r.clientWidth / 2 - m / 5 * TICK) + 'px)'; };
   var setT = function (m, final) {
     m = Math.max(0, Math.min(1435, Math.round(m / 5) * 5)); cur = m;
-    when.time = hm(m); r.classList.remove('allday');
-    var tm = fmtTime(when.time); $('#wbig').innerHTML = esc(tm.replace(/(am|pm)$/, '')) + '<small>' + tm.slice(-2).toUpperCase() + '</small>';
-    r.setAttribute('aria-valuenow', m); r.setAttribute('aria-valuetext', tm);
-    if (final) { place(m, true); $$('[data-act=wpreset]').forEach(function (b) { b.classList.toggle('on', b.dataset.t === when.time); }); }
+    r.classList.remove('allday'); r.setAttribute('aria-valuenow', m); r.setAttribute('aria-valuetext', fmtTime(hm(m)));
+    if (cfg.onMove) cfg.onMove(m);
+    if (final) { place(m, true); if (cfg.onSet) cfg.onSet(m); }
   };
   place(cur, false);
   r.addEventListener('pointerdown', function (e) { on = true; pid = e.pointerId; x0 = e.clientX; base = cur; last = [[e.clientX, e.timeStamp]]; try { r.setPointerCapture(pid); } catch (er) {} });
   r.addEventListener('pointermove', function (e) {
     if (!on || e.pointerId !== pid) return;
-    var m = base - (e.clientX - x0) / TICK * 5; m = Math.max(0, Math.min(1435, m));
+    var m = Math.max(0, Math.min(1435, base - (e.clientX - x0) / TICK * 5));
     strip.style.transition = 'none'; strip.style.transform = 'translateX(' + (r.clientWidth / 2 - m / 5 * TICK) + 'px)';
     setT(m, false); last.push([e.clientX, e.timeStamp]); if (last.length > 5) last.shift();
   });
@@ -3288,7 +3284,18 @@ function wireRuler() {
     if (e.key === 'ArrowRight' || e.key === 'ArrowUp') { e.preventDefault(); setT(cur + 5, true); }
     else if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') { e.preventDefault(); setT(cur - 5, true); }
   });
-  addEventListener('resize', function () { if ($('#ruler')) place(cur, false); }, { once: true });
+}
+function rulerHtml(id, time) {
+  var tm = time ? fmtTime(time) : 'All day';
+  return '<div class="ruler' + (time ? '' : ' allday') + '" id="' + id + '" tabindex="0" role="slider" aria-label="Time" aria-valuemin="0" aria-valuemax="1435" aria-valuenow="' + (time ? mins(time) : 540) + '" aria-valuetext="' + esc(tm) + '">'
+    + '<div class="rstrip">' + rulerTicks() + '</div><span class="rline" aria-hidden="true"></span></div>'
+    + '<p class="note small" style="text-align:center">Drag the rail. It snaps every 5 minutes.</p>';
+}
+function bigTime(t) { if (!t) return 'All day'; var tm = fmtTime(t); return esc(tm.replace(/(am|pm)$/, '')) + '<small>' + tm.slice(-2).toUpperCase() + '</small>'; }
+function wireRuler() {
+  makeRuler({ ruler: $('#ruler'), strip: $('#ruler .rstrip'), start: when.time ? mins(when.time) : 540,
+    onMove: function (m) { when.time = hm(m); $('#wbig').innerHTML = bigTime(when.time); },
+    onSet: function () { $$('[data-act=wpreset]').forEach(function (b) { b.classList.toggle('on', b.dataset.t === when.time); }); } });
 }
 ACTS.wfull = function () { when.full = !when.full; whenPaint(); };
 ACTS.wday = function (d) { when.due = d.d || null; if (d.d) when.month = d.d.slice(0, 8) + '01'; whenPaint(); };
@@ -3319,6 +3326,122 @@ function untilText(t) {
   if (m < 60) return 'in ' + m + ' min'; if (m < 1440) return 'in ' + Math.round(m / 60) + ' h';
   return shortDate(t.due).toLowerCase() === 'tomorrow' ? 'tomorrow' + (t.time ? ' at ' + fmtTime(t.time) : '') : 'in ' + Math.round(m / 1440) + ' days';
 }
+
+/* ── 22-reschedule.js ── */
+/* ═══ RESCHEDULE ════════════════════════════════════════════════════
+   From Miles's screenshots: every overdue task in one sheet. Tick the
+   ones to move, then Spread / Someday / Delete them, or give them a new
+   date (and a time on the ruler) with an optional note about what
+   happened. One Undo covers the whole batch. */
+var rs = null; // {sel:{id:1}, open, due, month, time, remark}
+
+function rsTasks() { return slipped().sort(function (a, b) { return (a.due || '').localeCompare(b.due || '') || (a.created || 0) - (b.created || 0); }); }
+function rsSelected() { return rsTasks().filter(function (t) { return rs.sel[t.id]; }); }
+function batchUndo(ids) { var u = ids.map(snapshot); return function () { u.forEach(function (f) { f(); }); }; }
+
+ACTS.reschedule = function () {
+  var list = rsTasks();
+  if (!list.length) { toast('Nothing overdue'); return; }
+  rs = { sel: {}, open: true, due: null, month: today().slice(0, 8) + '01', time: null, remark: '' };
+  list.forEach(function (t) { rs.sel[t.id] = 1; });
+  openSheet('<div id="rsbox"></div>', function () { rsPaint(); }, function () { rs = null; });
+};
+function rsPaint() {
+  var box = $('#rsbox'); if (!box || !rs) return;
+  var scroller = $('#sheet'), keep = scroller.scrollTop;
+  var all = rsTasks(), sel = rsSelected(), n = sel.length, t = today();
+  if (!all.length) { closeSheet(); return; }
+  var h = '<div class="shead"><div><h2>Reschedule</h2><div class="small muted">' + n + ' of ' + all.length + ' overdue task' + (all.length === 1 ? '' : 's') + '</div></div>'
+    + '<button type="button" class="link" data-act="close">Cancel</button></div>';
+  // the list
+  h += '<div class="odbox"><button type="button" class="odhead" data-act="rsopen" aria-expanded="' + rs.open + '"><span>⚠️ Overdue tasks · ' + n + ' selected</span><span aria-hidden="true">' + (rs.open ? '▴' : '▾') + '</span></button>';
+  if (rs.open) h += '<div class="odlinks"><button type="button" class="link" data-act="rsall">Select all</button><span class="faint">·</span><button type="button" class="link" data-act="rsnone">Clear</button></div>'
+    + all.map(function (x) {
+      var on = !!rs.sel[x.id];
+      return '<label class="odrow"><input type="checkbox" data-act-change="rspick" data-id="' + x.id + '"' + (on ? ' checked' : '') + '><span class="grow">' + esc(x.t) + '</span>'
+        + '<span class="od">Overdue · ' + esc(shortDate(x.due)) + '</span></label>';
+    }).join('');
+  h += '</div>';
+  // quick sweep
+  h += '<div class="wlab"><span>⚡ ADHD overdue sweep</span></div>'
+    + '<div class="sweep3"><button type="button" class="btn soft" data-act="rsspread"' + (n ? '' : ' disabled') + '>🔀 Spread</button>'
+    + '<button type="button" class="btn soft" data-act="rssomeday"' + (n ? '' : ' disabled') + '>📥 Someday</button>'
+    + '<button type="button" class="btn ghost danger" data-act="rsdelete"' + (n ? '' : ' disabled') + '>🗑 Delete</button></div>'
+    + '<p class="note small">Spread puts them on the emptiest days this week, at most two a day.</p>';
+  // new date
+  h += '<div class="wlab"><span>New date</span>' + (rs.due ? '<b class="small" style="text-transform:none;letter-spacing:0;color:var(--ink)">' + esc(shortDate(rs.due)) + '</b>' : '') + '</div>'
+    + monthGrid(rs.month, rs.due, { pick: 'rsday', nav: 'rsmonth', exceptId: null })
+    + '<div class="sweep3"><button type="button" class="btn soft' + (rs.due === t ? ' on' : '') + '" data-act="rsday" data-d="' + t + '">Today</button>'
+    + '<button type="button" class="btn soft' + (rs.due === addDays(t, 1) ? ' on' : '') + '" data-act="rsday" data-d="' + addDays(t, 1) + '">Tomorrow</button>'
+    + '<button type="button" class="btn soft" data-act="rsday" data-d="">Clear</button></div>'
+    + '<p class="note small">• dot = other tasks already scheduled that day</p>';
+  // new time
+  h += '<div class="wlab"><span>New time</span>' + (rs.time ? '<button type="button" class="link" data-act="rsnotime">No time</button>' : '<span class="faint" style="text-transform:none;letter-spacing:0">optional · keeps each task\'s own</span>') + '</div>'
+    + '<div class="big2 sm" id="rsbig">' + (rs.time ? bigTime(rs.time) : '—') + '</div>'
+    + rulerHtml('rsruler', rs.time)
+    + '<div class="scrollx">' + ['07:00', '09:00', '12:00', '17:00', '19:00', '21:00'].map(function (p) {
+      return '<button type="button" class="chip' + (rs.time === p ? ' on' : '') + '" data-act="rspreset" data-t="' + p + '">' + esc(fmtTime(p).toUpperCase().replace(/(AM|PM)$/, ' $1')) + '</button>';
+    }).join('') + '</div>';
+  // remark
+  h += '<div class="field"><label for="rsremark" class="wlab" style="margin:0"><span>Overdue remark (optional)</span></label>'
+    + '<textarea id="rsremark" class="input" style="min-height:80px" placeholder="Why was this missed? What changed?">' + esc(rs.remark) + '</textarea></div>';
+  h += '<button type="button" class="btn accent block big3" data-act="rsgo"' + (n && rs.due ? '' : ' disabled') + '>Reschedule ' + n + ' task' + (n === 1 ? '' : 's') + '</button>'
+    + (n && !rs.due ? '<p class="note small" style="text-align:center">Pick a new date, or use Spread or Someday.</p>' : '');
+  box.innerHTML = h;
+  scroller.scrollTop = keep;
+  $('#rsremark').addEventListener('input', function (e) { rs.remark = e.target.value; });
+  makeRuler({ ruler: $('#rsruler'), strip: $('#rsruler .rstrip'), start: rs.time ? mins(rs.time) : 540,
+    onMove: function (m) { rs.time = hm(m); $('#rsbig').innerHTML = bigTime(rs.time); },
+    onSet: function () { $$('[data-act=rspreset]').forEach(function (b) { b.classList.toggle('on', b.dataset.t === rs.time); }); } });
+}
+ACTS.rsopen = function () { rs.open = !rs.open; rsPaint(); };
+ACTS.rsall = function () { rsTasks().forEach(function (t) { rs.sel[t.id] = 1; }); rsPaint(); };
+ACTS.rsnone = function () { rs.sel = {}; rsPaint(); };
+ACTS.rspick = function (d, el) { if (el.checked) rs.sel[d.id] = 1; else delete rs.sel[d.id]; rsPaint(); };
+ACTS.rsday = function (d) { rs.due = d.d || null; if (d.d) rs.month = d.d.slice(0, 8) + '01'; rsPaint(); };
+ACTS.rsmonth = function (d) { var f = parseYmd(rs.month); f.setMonth(f.getMonth() + (+d.n)); rs.month = ymd(f); rsPaint(); };
+ACTS.rspreset = function (d) { rs.time = d.t; rsPaint(); };
+ACTS.rsnotime = function () { rs.time = null; rsPaint(); };
+
+function rsFinish(msg, undo) { rs = null; sheetOnClose = null; closeSheet(); toast(msg, undo); }
+ACTS.rsspread = function () {
+  var sel = rsSelected(), ids = sel.map(function (t) { return t.id; }), undo = batchUndo(ids), t = today();
+  var days = range(7).map(function (i) { var d = addDays(t, i); return { d: d, n: busyOn(d), added: 0 }; });
+  var used = {};
+  sel.forEach(function (x) {
+    var open = days.filter(function (d) { return d.added < 2; });
+    if (!open.length) open = days;
+    open.sort(function (a, b) { return (a.n + a.added) - (b.n + b.added) || a.d.localeCompare(b.d); });
+    var day = open[0]; day.added++; used[day.d] = 1;
+    moveTask(x.id, day.d);
+  });
+  var ds = Object.keys(used).sort();
+  logEvent('Spread ' + sel.length + ' overdue task' + (sel.length === 1 ? '' : 's') + ' over the week');
+  rsFinish('Spread over ' + DOW[parseYmd(ds[0]).getDay()] + (ds.length > 1 ? '–' + DOW[parseYmd(ds[ds.length - 1]).getDay()] : ''), undo);
+};
+ACTS.rssomeday = function () {
+  var sel = rsSelected(), undo = batchUndo(sel.map(function (t) { return t.id; }));
+  sel.forEach(function (x) { moveTask(x.id, 'whenever'); });
+  rsFinish(sel.length + ' moved to Someday', undo);
+};
+ACTS.rsdelete = function () {
+  var sel = rsSelected(), undo = batchUndo(sel.map(function (t) { return t.id; }));
+  sel.forEach(function (x) { Store.del('tasks', x.id); });
+  rsFinish(sel.length + ' deleted', undo);
+};
+ACTS.rsgo = function () {
+  if (!rs || !rs.due) return;
+  var sel = rsSelected(), undo = batchUndo(sel.map(function (t) { return t.id; })), remark = rs.remark.trim(), due = rs.due, time = rs.time;
+  sel.forEach(function (x) {
+    moveTask(x.id, due);
+    var cur = Store.get('tasks', x.id), f = {};
+    if (time) f.time = time;
+    if (remark && cur.slip) f.slip = Object.assign({}, cur.slip, { remark: remark });
+    if (Object.keys(f).length) Store.patch('tasks', x.id, f);
+  });
+  logEvent('Rescheduled ' + sel.length + ' to ' + shortDate(due) + (remark ? ': ' + remark : ''));
+  rsFinish(sel.length + ' moved to ' + shortDate(due) + (time ? ' at ' + fmtTime(time) : ''), undo);
+};
 
 /* ── 99-boot.js ── */
 /* ═══ BOOT ══════════════════════════════════════════════════════════ */
