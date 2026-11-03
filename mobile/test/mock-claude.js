@@ -46,6 +46,7 @@
       var items = JSON.parse(m[1]), ctx = cm ? JSON.parse(cm[1]) : { habits: [], tasks: [] };
       return Promise.resolve({ items: items.map(function (it, i) {
         var t = it.text, low = t.toLowerCase();
+        if (/^want to watch /.test(low)) return { id: it.id, type: 'movie', status: 'want', title: t.replace(/^want to watch /i, '') };
         if (/^watched /.test(low)) { var sc = /(\d+)\/10/.exec(t); return { id: it.id, type: 'movie', title: t.replace(/^watched /i, '').replace(/\s*\d+\/10.*/, ''), score: sc ? +sc[1] : null, icon: '🎬' }; }
         var hb = (ctx.habits || []).filter(function (h) { return low.indexOf(h.name.toLowerCase()) > -1; })[0];
         if (hb) return { id: it.id, type: 'habit_done', targetId: hb.id, title: hb.name };

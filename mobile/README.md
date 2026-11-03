@@ -26,7 +26,7 @@ Opened anywhere else, such as a plain browser, it still works, but saves on that
 | **Journal** | One entry a day: mood plus words, prompted from today's log. A week of moods at a glance |
 | **Calendar** | Month grid with a dot per task in its area's colour; week view as blocks coloured by area (the Status design); tap a day to see it and add to it |
 | **Notes** | Search, filter by kind or area, pin, link to a project, turn into a task |
-| **Tools** | **Rank**: Movies and any list you make (books, burgers…), ranked head-to-head by binary insertion (about 7 taps for a list of 100), re-rank or nudge anything. **Flashcards**: decks with five-box spaced review. **Bored**: pick one thing. **Gym**: sets, reps, last time, a weight trend. **Focus timer**: 25 / 5 / 15 |
+| **Tools** | **Rank**: Movies (with a watchlist: Want to watch / Watching / Watched; only watched ones are ranked) and any list you make (books, burgers…), ranked head-to-head by binary insertion (about 7 taps for a list of 100), re-rank or nudge anything. **Flashcards**: decks with five-box spaced review. **Bored**: pick one thing. **Gym**: sets, reps, last time, a weight trend. **Focus timer**: 25 / 5 / 15 |
 | **Getting around** | Today and More open with one-tap tiles (Habits, Goals, Notes, Projects, Tools, Calendar…) with live counts. The bottom bar is Today · Tasks · ＋ · Habits · More by default; Settings lets you pick any three sections around ＋ |
 | **Settings** | Sync status, bottom bar, theme, clear examples, erase |
 

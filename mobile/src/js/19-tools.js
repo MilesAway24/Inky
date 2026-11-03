@@ -28,7 +28,12 @@ VIEWS.tools = function () {
    better?" against the middle of the remaining range: binary insertion,
    so a list of 100 takes about 7 taps. */
 function rankList(id) { return Store.get('ranks', id); }
-function rankPending(l) { var o = {}; (l.order || []).forEach(function (x) { o[x] = 1; }); return (l.items || []).filter(function (i) { return !o[i.id]; }); }
+/* Watchlist: a movie is 'want', 'watching' or 'watched' (the default).
+   Only watched ones are ranked. */
+function mStatus(i) { return i.status || 'watched'; }
+function rankPending(l) { var o = {}; (l.order || []).forEach(function (x) { o[x] = 1; }); return (l.items || []).filter(function (i) { return !o[i.id] && mStatus(i) === 'watched'; }); }
+var MSTAT = [['want', 'Want to watch'], ['watching', 'Watching'], ['watched', 'Watched']];
+var mTab = 'all';
 function rankItem(l, iid) { return (l.items || []).filter(function (i) { return i.id === iid; })[0]; }
 function moviesList() {
   var l = Store.all('ranks').filter(function (x) { return x.kind === 'movies'; })[0];
@@ -61,9 +66,30 @@ VIEWS.rank = function (id) {
   var l = rankList(id); if (!l) return '<div class="empty">This list was deleted.</div>';
   var pend = rankPending(l), isM = l.kind === 'movies';
   var h = '';
-  if (pend.length) h += '<button class="inboxbar" data-act="rankgo" data-id="' + id + '">' + icon('sparkle') + '<span class="grow"><b>' + pend.length + ' to rank</b><span class="muted small"> · ' + esc(pend.map(function (p) { return p.t; }).slice(0, 3).join(', ')) + '</span></span>' + icon('chev', 'sm chev') + '</button>';
-  h += '<form class="addstep" data-form="rankadd" data-id="' + id + '"><label class="sr" for="radd">' + (isM ? 'A movie you watched' : 'Add to this list') + '</label><input id="radd" class="input" placeholder="' + (isM ? 'A movie you watched' : 'Add something') + '" autocomplete="off"><button class="btn accent" type="submit">Add</button></form>';
+  if (pend.length && !(isM && (mTab === 'want' || mTab === 'watching'))) h += '<button class="inboxbar" data-act="rankgo" data-id="' + id + '">' + icon('sparkle') + '<span class="grow"><b>' + pend.length + ' to rank</b><span class="muted small"> · ' + esc(pend.map(function (p) { return p.t; }).slice(0, 3).join(', ')) + '</span></span>' + icon('chev', 'sm chev') + '</button>';
+  h += '<form class="addstep" data-form="rankadd" data-id="' + id + '"><label class="sr" for="radd">' + (isM ? 'A movie or show' : 'Add to this list') + '</label><input id="radd" class="input" placeholder="' + (isM ? 'A movie or show' : 'Add something') + '" autocomplete="off">'
+    + (isM ? '<label class="sr" for="rstat">Status</label><select id="rstat" name="st" class="input sel">' + MSTAT.slice().reverse().map(function (x) { return '<option value="' + x[0] + '">' + x[1] + '</option>'; }).join('') + '</select>' : '')
+    + '<button class="btn accent" type="submit">Add</button></form>';
   var order = l.order || [];
+  if (isM) {
+    var items = l.items || [], cnt = function (k) { return items.filter(function (i) { return mStatus(i) === k; }).length; };
+    h += '<div class="small muted">' + cnt('want') + ' to watch · ' + cnt('watching') + ' watching · ' + cnt('watched') + ' watched</div>';
+    h += '<div class="scrollx" role="tablist">' + [['all', 'All']].concat(MSTAT).map(function (x) {
+      return '<button role="tab" aria-selected="' + (mTab === x[0]) + '" class="chip' + (mTab === x[0] ? ' on' : '') + '" data-act="mtab" data-t="' + x[0] + '">' + x[1] + (x[0] !== 'all' ? ' · ' + cnt(x[0]) : '') + '</button>';
+    }).join('') + '</div>';
+    ['watching', 'want'].forEach(function (k) {
+      if (mTab !== 'all' && mTab !== k) return;
+      var list = items.filter(function (i) { return mStatus(i) === k; });
+      if (!list.length) { if (mTab === k) h += '<div class="empty">Nothing ' + (k === 'want' ? 'on the watchlist' : 'in progress') + '.</div>'; return; }
+      h += '<section><div class="grouph">' + (k === 'want' ? 'Want to watch' : 'Watching') + ' <span class="c">' + list.length + '</span><span class="ln"></span></div><div class="list">'
+        + list.map(function (i) {
+          return '<div class="row"><span class="grow"><div class="t">' + esc(i.t) + (i.year ? ' <span class="faint">(' + esc(i.year) + ')</span>' : '') + '</div>' + (i.note ? '<div class="s">' + esc(i.note) + '</div>' : '') + '</span>'
+            + (k === 'want' ? '<button class="btn sm soft" data-act="mset" data-id="' + id + '" data-i="' + i.id + '" data-s="watching">Watching</button>' : '')
+            + '<button class="btn sm accent" data-act="mset" data-id="' + id + '" data-i="' + i.id + '" data-s="watched">Watched</button></div>';
+        }).join('') + '</div></section>';
+    });
+    if (mTab === 'want' || mTab === 'watching') { order = []; pend = []; }
+  }
   if (!order.length && !pend.length) h += '<div class="empty">' + (isM ? 'Add a movie you\'ve seen. The second one asks which was better, and the list builds itself from there.' : 'Add two things and the comparing starts.') + '</div>';
   if (order.length) h += '<ol class="ranked">' + order.map(function (iid, i) {
     var it = rankItem(l, iid); if (!it) return '';
@@ -82,10 +108,18 @@ VIEWS.rank.after = function (id) {
 ACTS.form_rankadd = function (d, f) {
   var inp = $('input', f), v = inp.value.trim(); if (!v) return;
   var l = rankList(d.id), m = /^(.*?)\s*\((\d{4})\)\s*$/.exec(v);
-  var it = addToRank(d.id, { t: m ? m[1] : v, year: m ? m[2] : '', watched: l.kind === 'movies' ? today() : null });
+  var st = l.kind === 'movies' ? (($('select', f) || {}).value || 'watched') : 'watched';
+  var it = addToRank(d.id, { t: m ? m[1] : v, year: m ? m[2] : '', status: l.kind === 'movies' ? st : undefined, watched: l.kind === 'movies' && st === 'watched' ? today() : null });
   inp.value = '';
+  if (st !== 'watched') { render(false, true); var r2 = $('#radd'); if (r2) r2.focus(); toast(esc(it.t) + (st === 'want' ? ' is on the watchlist' : ' marked as watching')); return; }
   if (l.kind === 'movies') logEvent('Watched ' + it.t);
   startRanking(d.id, it.id);
+};
+ACTS.mtab = function (d) { mTab = d.t; render(); };
+ACTS.mset = function (d) {
+  var l = rankList(d.id), it = rankItem(l, d.i); if (!it) return;
+  Store.patch('ranks', d.id, { items: l.items.map(function (x) { return x.id === d.i ? Object.assign({}, x, { status: d.s, watched: d.s === 'watched' ? today() : x.watched }) : x; }) });
+  if (d.s === 'watched') { logEvent('Watched ' + it.t); startRanking(d.id, d.i); } else toast(esc(it.t) + ' marked as watching');
 };
 ACTS.rankgo = function (d) { var l = rankList(d.id), p = rankPending(l)[0]; if (p) startRanking(d.id, p.id); };
 ACTS.delrank = function (d) {

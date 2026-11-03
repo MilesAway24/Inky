@@ -123,12 +123,12 @@ function smartSort(items) {
     + '- "habit_new": wants to start doing something regularly ("start stretching every morning"). Give title (short, like "Stretch").\n'
     + '- "note": information to keep (a fact, a number, a reference). "idea": a thought to develop later.\n'
     + '- "journal": about how the day or the person is going ("rough shift, tired").\n'
-    + '- "movie": a film or show they watched. Give title (clean, no score), year if stated, score (0-10) if stated, note (any opinion).\n'
+    + '- "movie": a film or show. Give title (clean, no score), status ("watched", "watching", or "want" for something they want to see / add to their watchlist), year if stated, score (0-10) if stated, note (any opinion).\n'
     + '- "rank": something to add to one of context.lists. Give targetId and title.\n'
     + '- "drop": empty or meaningless.\n'
     + 'Use only ids that appear in the context. area, project, due (YYYY-MM-DD, only if a day is named or clearly implied) may be null. icon: one emoji.\n'
     + 'Items: ' + JSON.stringify(items.map(function (i) { return { id: i.id, text: i.text || '(photo with no text)' }; })) + '\n'
-    + 'Reply with JSON only: {"items":[{"id":"…","type":"task","title":"…","area":null,"project":null,"due":null,"firstStep":null,"targetId":null,"time":null,"repeat":null,"year":null,"score":null,"note":null,"icon":"📝"}]}')
+    + 'Reply with JSON only: {"items":[{"id":"…","type":"task","title":"…","area":null,"project":null,"due":null,"firstStep":null,"targetId":null,"time":null,"repeat":null,"year":null,"status":null,"score":null,"note":null,"icon":"📝"}]}')
     .then(function (r) {
       var byId = {}; (r && r.items || []).forEach(function (s) { if (s && s.id) byId[s.id] = s; });
       return items.map(function (i) { return byId[i.id] ? cleanSugg(byId[i.id], i, ctx) : guessSort(i, ctx); });
@@ -144,6 +144,7 @@ function cleanSugg(s, item, ctx) {
     area: idIn(ctx.areas, s.area), project: idIn(ctx.projects, s.project),
     due: /^\d{4}-\d\d-\d\d$/.test(s.due || '') ? s.due : null, firstStep: s.firstStep ? String(s.firstStep).slice(0, 120) : null,
     year: s.year ? String(s.year).slice(0, 4) : '', score: s.score != null && !isNaN(+s.score) ? Math.max(0, Math.min(10, +s.score)) : null,
+    status: ['want', 'watching', 'watched'].indexOf(s.status) > -1 ? s.status : 'watched',
     note: s.note ? String(s.note).slice(0, 200) : '', icon: typeof s.icon === 'string' ? s.icon.slice(0, 4) : '', targetId: null };
   if (type === 'done') o.targetId = idIn(ctx.tasks, s.targetId);
   if (type === 'habit_done') o.targetId = idIn(ctx.habits, s.targetId);
@@ -169,7 +170,14 @@ function cleanSugg(s, item, ctx) {
 /* Rule-based sorter: used without Claude, or when Claude fails. */
 function guessSort(item, ctx) {
   var text = item.text || '', low = text.toLowerCase().trim();
-  var o = { id: item.id, raw: text, type: 'task', title: text, area: null, project: null, due: null, time: null, repeat: null, firstStep: null, year: '', score: null, note: '', icon: '', targetId: null };
+  var o = { id: item.id, raw: text, type: 'task', title: text, area: null, project: null, due: null, time: null, repeat: null, firstStep: null, year: '', score: null, note: '', icon: '', targetId: null, status: 'watched' };
+  var wm = /^(?:i\s+)?(?:want to (?:watch|see)|add\s+(.+?)\s+to\s+(?:my\s+)?watch\s?list$|to watch[:\s]+|watchlist[:\s]+)/i.exec(text) || /^(?:i'?m\s+|currently\s+|started\s+)?watching\s+/i.exec(text);
+  if (wm) {
+    var want = !/watching/i.test(wm[0]);
+    o.type = 'movie'; o.status = want ? 'want' : 'watching';
+    o.title = (wm[1] || text.slice(wm[0].length)).replace(/\s+to\s+(my\s+)?watch\s?list$/i, '').trim().replace(/^\w/, function (c) { return c.toUpperCase(); });
+    return o;
+  }
   var sc = low.match(/\b(\d{1,2}(?:\.\d)?)\s*(?:\/\s*10|out of 10)\b/);
   if (/^(i\s+)?(just\s+)?(watched|saw|rewatched|finished watching)\s+/.test(low) || /\b(movie|film)\b/.test(low) && sc) {
     var title = text.replace(/^(i\s+)?(just\s+)?(watched|saw|rewatched|finished watching)\s+/i, '').replace(/\b\d{1,2}(\.\d)?\s*(\/\s*10|out of 10)\b/i, '').replace(/\b(movie|film)\b/i, '').trim();
@@ -203,7 +211,7 @@ function suggCards(list, where) {
     var line = s.type === 'done' ? 'Tick off: ' + (target ? target.t : '')
       : s.type === 'habit_done' ? 'Mark done today: ' + (target ? target.ic + ' ' + target.n : '')
       : s.type === 'rank' ? 'Add to ' + (target ? target.name : '') + ': ' + s.title
-      : s.type === 'movie' ? s.title + (s.year ? ' (' + s.year + ')' : '')
+      : s.type === 'movie' ? s.title + (s.year ? ' (' + s.year + ')' : '') + (s.status === 'want' ? ' · want to watch' : s.status === 'watching' ? ' · watching' : '')
       : s.title;
     var meta = '<span class="pill">' + STYPES[s.type][1] + ' ' + STYPES[s.type][0] + '</span>'
       + (s.area ? '<span class="pill">' + areaDot(s.area) + '&nbsp;' + esc(areaName(s.area)) + '</span>' : '')
@@ -217,7 +225,7 @@ function suggCards(list, where) {
       + '<div class="t">' + esc(s.icon ? s.icon + ' ' : '') + esc(line) + '</div>'
       + '<div class="meta">' + meta + '</div>'
       + (s.firstStep ? '<div class="first">' + 'First step: ' + esc(s.firstStep) + '</div>' : '')
-      + (s.type === 'movie' ? '<div class="first">Goes into Movies, then a few "which was better?" taps rank it.' + (s.note ? ' Note: ' + esc(s.note) : '') + '</div>' : '')
+      + (s.type === 'movie' ? '<div class="first">' + (s.status === 'watched' ? 'Goes into Movies, then a few "which was better?" taps rank it.' : 'Goes on your watchlist in Movies.') + (s.note ? ' Note: ' + esc(s.note) : '') + '</div>' : '')
       + '<div class="btnrow"><button class="btn sm accent" data-act="suggone" data-w="' + where + '" data-id="' + s.id + '">File it</button>'
       + '<label class="sr" for="st' + s.id + '">Change type</label><select id="st' + s.id + '" class="input sel" data-act-change="suggtype" data-w="' + where + '" data-id="' + s.id + '">'
       + opts.map(function (k) { return '<option value="' + k + '"' + (k === s.type ? ' selected' : '') + '>' + STYPES[k][0] + '</option>'; }).join('') + '</select></div></div>';
@@ -266,8 +274,9 @@ function applySuggestion(it, s) {
     saveEntry(today(), { text: (e && e.text ? e.text + '\n' : '') + it.text }); msg = 'Added to today\'s journal';
   } else if (s.type === 'movie') {
     var m = moviesList();
-    addToRank(m.id, { t: title, year: s.year || '', note: [s.score != null ? 'said ' + s.score + '/10' : '', s.note || ''].filter(Boolean).join(' · '), watched: today() });
-    logEvent('Watched ' + title); msg = esc(title) + ' added to Movies';
+    var mst = s.status || 'watched';
+    addToRank(m.id, { t: title, year: s.year || '', status: mst, note: [s.score != null ? 'said ' + s.score + '/10' : '', s.note || ''].filter(Boolean).join(' · '), watched: mst === 'watched' ? today() : null });
+    if (mst === 'watched') { logEvent('Watched ' + title); msg = esc(title) + ' added to Movies'; } else msg = esc(title) + (mst === 'want' ? ' added to your watchlist' : ' marked as watching');
   } else if (s.type === 'rank') {
     var l = Store.get('ranks', s.targetId);
     if (l) { addToRank(l.id, { t: title }); msg = 'Added to ' + esc(l.name); }

@@ -421,6 +421,23 @@ const ok = (cond, msg) => { console.log((cond ? 'ok   ' : 'FAIL ') + msg); if (!
   w = await water();
   ok(w.amounts[td] === 3 && w.marks[td] === 1, 'logging another 1.5 reaches the target and marks it done (' + w.amounts[td] + ')');
 
+  // ── Watchlist in Rank ───────────────────────────────────────────
+  await p.click('.tabs [data-v=today]'); await p.click('.jump [data-v=tools]'); await p.click('.tool:has-text("Rank")'); await p.click('.row:has-text("Movies")'); await p.waitForTimeout(150);
+  const ranked0 = (await p.$$('.ranked .rrow')).length;
+  await p.fill('#radd', 'Dune: Part Two (2024)'); await p.selectOption('#rstat', 'want'); await p.press('#radd', 'Enter'); await p.waitForTimeout(300);
+  ok(!(await p.isVisible('text=Which was better?')) && (await p.$$('.ranked .rrow')).length === ranked0, 'a Want-to-watch movie isn\'t ranked');
+  ok(/1 to watch · 0 watching/.test(await p.textContent('#view .small.muted')), 'the watchlist counts are right (' + (await p.textContent('#view .small.muted')) + ')');
+  await p.click('[data-act=mtab][data-t=want]'); await p.waitForTimeout(100);
+  ok(await p.isVisible('.row:has-text("Dune: Part Two")') && !(await p.$('.ranked')), 'the Want to watch tab shows it, without ranks');
+  await p.click('.row:has-text("Dune: Part Two") [data-act=mset][data-s=watched]'); await p.waitForTimeout(250);
+  ok(await p.isVisible('text=Which was better?'), 'moving it to Watched starts the comparisons');
+  while (await p.isVisible('text=Which was better?')) { await p.click('#sheet .vs >> nth=0'); await p.waitForTimeout(120); }
+  await p.click('[data-act=mtab][data-t=all]'); await p.waitForTimeout(100);
+  ok((await p.$$('.ranked .rrow')).length === ranked0 + 1, 'and then it\'s ranked');
+  await p.click('.tabs .cap'); await p.fill('#captext', 'want to watch Oppenheimer'); await p.click('[data-act=capsave]'); await p.waitForTimeout(400);
+  ok(/want to watch/.test(await p.textContent('#sheet .sugg')), 'smart capture puts "want to watch X" on the watchlist');
+  await p.click('[data-act=suggall] >> nth=0'); await p.waitForTimeout(300);
+
   // Every screen: no sideways scrolling
   const views = ['tools', 'ranks', 'decks', 'bored', 'gym', 'timer','today', 'tasks', 'more', 'areas', 'inbox', 'notes', 'settings', 'money', 'habits', 'goals', 'projects', 'journal', 'calendar'];
   let wide = [];
@@ -478,6 +495,11 @@ const ok = (cond, msg) => { console.log((cond ? 'ok   ' : 'FAIL ') + msg); if (!
   ok(/Movie/.test(offl[0]) && /Habit ✓/.test(offl[1]) && /Done/.test(offl[2]) && /Journal/.test(offl[3]) && /New habit/.test(offl[4]) && /Task/.test(offl[5]),
     'without Claude, rules still sort movie / habit done / task done / journal / new habit / task (' + offl.join(' | ') + ')');
   ok(/Tomorrow/.test(await p.textContent('#sheet .sugg >> nth=5')), 'and pick up "tomorrow" as the day');
+  await p.click('[data-act=suggall] >> nth=0'); await p.waitForTimeout(300);
+  if (await p.isVisible('text=Which was better?')) await p.click('[data-act=rankstop]');
+  await p.click('.tabs .cap'); await p.fill('#captext', 'want to watch Oppenheimer\nwatching Severance'); await p.click('[data-act=capsave]'); await p.waitForTimeout(300);
+  const wl = await p.$$eval('#sheet .sugg .t', (x) => x.map((e) => e.textContent));
+  ok(/Oppenheimer · want to watch/.test(wl[0]) && /Severance · watching/.test(wl[1]), 'rules spot watchlist and watching without Claude (' + wl.join(' | ') + ')');
   await p.click('[data-act=suggall] >> nth=0'); await p.waitForTimeout(300);
   if (await p.isVisible('text=Which was better?')) await p.click('[data-act=rankstop]');
   ok(await p.isVisible('text=This device'), 'without Claude it runs on this device');
