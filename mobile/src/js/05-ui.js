@@ -50,6 +50,7 @@ function render(scrollTop, force) {
   $('#view').innerHTML = v(c.arg);
   if (v.after) v.after(c.arg);
   paintChrome();
+  if (typeof finLayout === 'function') finLayout();
   var key = c.view + ':' + (c.arg || '');
   if (scrollTop || key !== lastKey) window.scrollTo(0, 0);
   lastKey = key;

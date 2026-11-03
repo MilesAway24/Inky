@@ -28,7 +28,8 @@
         // __mockDrop: simulate the app being suspended before a write lands.
         set: function (v) { if (sessionStorage.getItem('__mockDrop')) return new Promise(function () {}); docs[path] = v; save(); window.__mock.writes++; notify(path); return Promise.resolve(); },
         delete: function () { delete docs[path]; save(); window.__mock.writes++; notify(path); return Promise.resolve(); },
-        get: function () { return Promise.resolve({ exists: !!docs[path], data: function () { return docs[path]; } }); }
+        get: function () { return Promise.resolve({ exists: !!docs[path], data: function () { return docs[path]; } }); },
+        onSnapshot: function (fn) { return function () {}; }
       };
     },
     collection: function (col) {
@@ -46,6 +47,8 @@
       var items = JSON.parse(m[1]), ctx = cm ? JSON.parse(cm[1]) : { habits: [], tasks: [] };
       return Promise.resolve({ items: items.map(function (it, i) {
         var t = it.text, low = t.toLowerCase();
+        var spm = /^spent \$(\d+(?:\.\d+)?) at (.+)$/i.exec(t);
+        if (spm) return { id: it.id, type: 'spent', amount: +spm[1], title: spm[2], bucket: 'allow' };
         if (/^want to watch /.test(low)) return { id: it.id, type: 'movie', status: 'want', title: t.replace(/^want to watch /i, '') };
         if (/^watched /.test(low)) { var sc = /(\d+)\/10/.exec(t); return { id: it.id, type: 'movie', title: t.replace(/^watched /i, '').replace(/\s*\d+\/10.*/, ''), score: sc ? +sc[1] : null, icon: '🎬' }; }
         var hb = (ctx.habits || []).filter(function (h) { return low.indexOf(h.name.toLowerCase()) > -1; })[0];

@@ -2,7 +2,7 @@
    Month: a grid with a dot per task (in its area's colour) and a mark
    for journal days. Week: the Status design's view, each day a column of
    blocks coloured by area. Tap a day to see and add to it. Money
-   (paydays, bills) joins in the Finance update. */
+   adds paydays (green) and bills (amber) from Payday OS. */
 var cal = { mode: 'month', sel: null, month: null };
 function monthStart(s) { return s.slice(0, 8) + '01'; }
 function tasksOn(d) {
@@ -26,12 +26,13 @@ function monthView() {
     + '<button class="iconbtn" data-act="calnav" data-n="1" aria-label="Next month">' + icon('chev') + '</button></div>'
     + '<div class="cal">' + ['M', 'T', 'W', 'T', 'F', 'S', 'S'].map(function (x) { return '<span class="wdh">' + x + '</span>'; }).join('');
   for (var i = 0; i < lead; i++) h += '<span></span>';
+  var fe = typeof finEventsFor === 'function' ? finEventsFor(m) : {};
   for (var dnum = 1; dnum <= days; dnum++) {
     var d = m.slice(0, 8) + String(dnum).padStart(2, '0'), ts = tasksOn(d), j = entryFor(d);
     h += '<button class="day' + (d === t ? ' today' : '') + (d === cal.sel ? ' sel' : '') + '" data-act="calday" data-d="' + d + '" aria-label="' + esc(shortDate(d)) + ', ' + ts.length + ' tasks">'
       + '<span class="n">' + dnum + '</span><span class="dots">' + ts.slice(0, 4).map(function (x) {
         return '<i style="background:' + areaColor(x.area) + (x.done ? ';opacity:.4' : '') + '"></i>';
-      }).join('') + '</span>' + (j && j.mood ? '<span class="mood">' + MOODS[j.mood][0] + '</span>' : '') + '</button>';
+      }).join('') + (fe[dnum] ? fe[dnum].map(function (e) { return '<i class="fin ' + e.type + '" title="' + esc(e.title) + '"></i>'; }).join('') : '') + '</span>' + (j && j.mood ? '<span class="mood">' + MOODS[j.mood][0] + '</span>' : '') + '</button>';
   }
   return h + '</div>';
 }
@@ -57,6 +58,10 @@ function dayDetail(d) {
   var h = '<section class="card" style="display:grid;gap:10px"><div class="sechead" style="margin:0"><h2>' + esc(shortDate(d)) + '</h2>'
     + '<span class="meta">' + ts.filter(function (x) { return !x.done; }).length + ' open</span></div>';
   h += ts.length ? '<div class="list">' + ts.map(taskRow).join('') + '</div>' : '<p class="note">Nothing due.</p>';
+  var fe = typeof finEventsFor === 'function' ? (finEventsFor(monthStart(d))[parseYmd(d).getDate()] || []) : [];
+  if (fe.length) h += '<div class="list">' + fe.map(function (e) {
+    return '<button class="row" data-act="tab" data-v="money"><span class="dot fin ' + e.type + '"></span><span class="grow t">' + esc(e.title) + '</span><span class="amt' + (e.type === 'pay' ? ' good' : '') + '">' + (e.type === 'pay' ? '+' : '−') + esc(fmtMoney(e.amount)) + '</span></button>';
+  }).join('') + '</div>';
   h += '<form class="addstep" data-form="caladd" data-d="' + d + '"><label class="sr" for="caladd">Add a task on this day</label><input id="caladd" class="input" placeholder="Add a task on ' + esc(shortDate(d)) + '" autocomplete="off"><button class="btn soft" type="submit">Add</button></form>';
   if (hs.length && d <= t) h += '<div class="small muted">Habits: ' + hs.map(function (x) { var m = mark(x, d); return esc(x.ic) + (m === 1 ? '✓' : m === 2 ? '–' : '·'); }).join('  ') + '</div>';
   if (j && (j.mood || j.text)) h += '<button class="row" data-act="open" data-v="entry" data-id="' + j.id + '"><span class="grow"><div class="s">Journal' + (j.mood ? ' · ' + MOODS[j.mood][0] + ' ' + MOODS[j.mood][1] : '') + '</div><div class="t jt">' + esc(j.text || '') + '</div></span></button>';

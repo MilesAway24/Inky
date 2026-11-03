@@ -548,3 +548,24 @@ h2.bad{color:var(--bad)}
 .hcard .btnrow .hmark{flex:1}
 .amtnow{display:flex;align-items:center;gap:14px}
 .amtnow b{font-size:22px;font-weight:400}
+
+/* ── money (Payday OS in a frame) ─────────────────────────────────── */
+body.finmode{overflow:hidden}
+body.finmode .main{min-height:0}
+.finnav{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin:0 -16px;padding:0 16px 2px;-webkit-overflow-scrolling:touch}
+.finnav::-webkit-scrollbar{display:none}
+.finnav .chip{flex:none}
+.finbar{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:6px 6px 6px 12px;gap:8px;min-height:0}
+p.finbar{padding:10px 12px;margin:0}
+.finslot{min-height:40px}
+.view:has(#finslot){gap:10px}
+#fin{position:fixed;z-index:15;border:0;display:block;background:var(--bg);width:100%}
+#fin[hidden]{display:none}
+.cal .dots i.fin,.dot.fin{border-radius:2px}
+.dots i.fin.pay,.dot.fin.pay{background:var(--good,#3fa66b)!important}
+.dots i.fin.bill,.dot.fin.bill{background:var(--warn,#d9a03f)!important}
+.dot.fin{display:inline-block;width:9px;height:9px;flex:none}
+.fin3>button{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:10px 12px;display:grid;gap:4px;min-width:0;text-align:left;color:var(--ink)}
+.fin3 b{font-size:24px;font-weight:300;letter-spacing:-.03em;line-height:1;font-variant-numeric:tabular-nums}
+.fin3 b.bad{color:var(--bad)}
+section.money .list{margin-top:10px}

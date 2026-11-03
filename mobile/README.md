@@ -20,6 +20,7 @@ Opened anywhere else, such as a plain browser, it still works, but saves on that
 | **Inbox** | Anything you saved for later, sorted the same way when you're ready |
 | **Tasks** | Today / Upcoming / Someday, area filter. An add box that reads plain words ("gym 6pm every Mon, Thu", "pay rent every month on the 1st at 9am"). Swipe right to finish, left for tomorrow, both with Undo; tap a name to rename it. Repeating tasks roll forward when done. Detail: notes before steps, Break it down, time, repeat, area, project. Sweep for slipped tasks. Times show in the app only: the Claude app can't send phone notifications |
 | **Life areas** | Work (EMS · iCare), HCPD, Gym, Inky, School, Partner, Money. State, focus, open tasks. Editable |
+| **Money** | Payday OS: pay stub and Friday plan, allowance, budget, debts, savings, Month, "Can I afford this?", Benji, live Monarch. Import your Payday OS backup once |
 | **Habits** | Mark done (on Today or the Habits page), skip a day on purpose without breaking the streak, week strip, 30-day grid, daily sparkline, streak and best run, a builder with templates, any days of the week |
 | **Goals** | Rebuilt from the old demo: each goal owns a colour and shows exactly one next action. *Done* records a session and asks for the next one; *Something else* swaps it (pick an unfinished step or type one) with nothing logged as missed. *Last seven weeks* counts sessions; no percentages, nothing turns red, no week is a failure. No Claude-generated goals |
 | **Projects** | Active / Parked / Finished. Each has *Done when…*, one **Next** step (*Start* puts it on today; *Done* logs it and asks for the next), *Where I left off* (asked for when you leave after time spent), its tasks, and panels by kind: checklist, log, links, notes, people, budget |
@@ -30,7 +31,24 @@ Opened anywhere else, such as a plain browser, it still works, but saves on that
 | **Getting around** | Today and More open with one-tap tiles (Habits, Goals, Notes, Projects, Tools, Calendar…) with live counts. The bottom bar is Today · Tasks · ＋ · Habits · More by default; Settings lets you pick any three sections around ＋ |
 | **Settings** | Sync status, bottom bar, theme, clear examples, erase |
 
-Money is the next phase: Payday OS moves into it. Until then the Money tab links to Payday OS. The full plan is in the repo history and in `/root/.claude/plans/`.
+### Money (Payday OS)
+
+The Money tab runs Payday OS **unchanged** (`mobile/finance/payday.html`) inside a frame on the MossOS page. `build.mjs` makes three checked edits to it, and the build fails if any of them stops matching:
+
+1. A bridge, so the frame uses the page's Claude connection (sync, Monarch, Benji).
+2. Payday's own header and tabs are hidden; MossOS's section row (Today · Plan Friday · Budget · Debts · Savings · Month · Monarch · More · Can I afford this?) drives it instead.
+3. The glue in `mobile/finance/glue.js`: `__finSummary`, `__finEvents`, `__finLog`, `__finImport`, `__finTheme`, `__finInfo`. Each is built from Payday's own functions, so the numbers match.
+
+Money also shows up across MossOS:
+
+- **Today:** left today, left until Friday, and the next bills.
+- **Calendar:** marks for paydays and bills.
+- **Capture:** a **Spent** type ("spent $12 at Wawa") goes into Payday's purchase log.
+- **Money life area:** shows the next bill.
+
+Payday's data lives in this artifact's database at `data/users/<id>/state`. To bring over the old Payday OS link's data, use **Money → Import** (or Settings → Import from Payday OS) and paste Payday OS → Settings → *Copy JSON backup*. After that the old link keeps working but no longer syncs with MossOS.
+
+Not in the section row yet (second pass): Groceries, Roadmap/IRA, What if, plan-vs-actual and swipe-sort. All of them still run inside Payday and can be reached from its More screen.
 
 ## Build and test
 

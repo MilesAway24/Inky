@@ -438,6 +438,55 @@ const ok = (cond, msg) => { console.log((cond ? 'ok   ' : 'FAIL ') + msg); if (!
   ok(/want to watch/.test(await p.textContent('#sheet .sugg')), 'smart capture puts "want to watch X" on the watchlist');
   await p.click('[data-act=suggall] >> nth=0'); await p.waitForTimeout(300);
 
+  // ── Money: Payday OS in the Money tab ───────────────────────────
+  await p.click('.tabs [data-v=today]'); await p.waitForTimeout(1500);
+  const fin = () => p.frames().find((f) => f !== p.mainFrame());
+  ok(!!fin(), 'Payday OS loads in a frame after the first paint');
+  const fsum = await fin().evaluate(() => __finSummary());
+  ok(fsum && fsum.bills.length > 0, 'Payday answers with its summary (' + (fsum && fsum.bills.length) + ' bills)');
+  const todayLeft = await p.textContent('section.money .fin3 button:first-child b');
+  ok(todayLeft === '$' + fsum.leftToday, 'Today\'s Money strip shows Payday\'s own allowance (' + todayLeft + ' vs ' + fsum.leftToday + ')');
+  ok(await fin().evaluate(() => __finInfo().bridge && __finInfo().sync === 'cloud'), 'the frame uses the page\'s Claude connection and syncs');
+  await p.click('section.money [data-act=tab][data-v=money] >> nth=0'); await p.waitForTimeout(400);
+  const fbox = await p.evaluate(() => { const r = document.getElementById('fin').getBoundingClientRect(); return { h: r.height, top: r.top, hidden: document.getElementById('fin').hidden }; });
+  ok(!fbox.hidden && fbox.h > 400, 'the Money tab shows Payday filling the screen (' + Math.round(fbox.h) + 'px)');
+  await p.screenshot({ path: shots + '/phone-money.png' });
+  for (const v of ['budget', 'debts', 'savings']) {
+    await p.click('[data-fv=' + v + ']'); await p.waitForTimeout(200);
+    const cur = await fin().evaluate(() => current);
+    const hl = await p.getAttribute('[data-fv=' + v + ']', 'aria-current');
+    ok(cur === v && hl === 'page', 'Money nav "' + v + '" switches Payday and highlights itself');
+  }
+  await p.click('[data-fv=today]'); await p.waitForTimeout(200);
+  await p.click('#finnav [data-act=afford]'); await p.waitForTimeout(300);
+  await fin().fill('#affAmt', '8'); await fin().dispatchEvent('#affAmt', 'input'); await p.waitForTimeout(150);
+  ok(await fin().isVisible('#affSheet') && /fits|Yes|Almost|Not/.test(await fin().textContent('#affOut')), '"Can I afford this?" opens in Money and gives a verdict');
+  await fin().evaluate(() => closeAfford());
+  // Import a backup made by Payday's own export, with a different pay
+  const backup = await fin().evaluate(() => JSON.stringify({ version: 3, exportedAt: new Date().toISOString(), state: { ...state, pay: 1234 }, monarch }));
+  await p.click('[data-act=finimport]'); await p.waitForTimeout(150);
+  await p.fill('#finpaste', 'not a backup'); await p.click('#sheet [type=submit]'); await p.waitForTimeout(100);
+  ok(/isn't a Payday OS backup/.test(await p.textContent('#finmsg')), 'a bad paste is refused with a plain message');
+  await p.fill('#finpaste', backup); await p.click('#sheet [type=submit]'); await p.waitForTimeout(1200);
+  ok(await fin().evaluate(() => state.pay) === 1234, 'importing a Payday OS backup replaces the plan');
+  ok(!(await p.isVisible('[data-act=finhideimport]')), 'the import card goes away once imported');
+  const payDoc = await p.evaluate(() => window.__mock.docs['data/users/u_test/state']);
+  ok(payDoc && payDoc.pay === 1234, 'the imported plan syncs to this artifact\'s database');
+  // Calendar: paydays and bills
+  await p.click('.tabs [data-v=more]'); await p.click('#view [data-act=tab][data-v=calendar]'); await p.waitForTimeout(200);
+  await p.click('[data-act=calmode][data-v=month]'); await p.waitForTimeout(150);
+  ok((await p.$$('.cal .dots i.fin.pay')).length >= 4 && (await p.$$('.cal .dots i.fin.bill')).length >= 1, 'the calendar shows payday and bill marks');
+  ok(await p.evaluate(() => document.getElementById('fin').hidden), 'the frame hides when you leave Money');
+  // Smart capture: spent
+  const ql0 = await fin().evaluate(() => state.quickLog.length);
+  await p.click('.tabs .cap'); await p.waitForTimeout(100);
+  await p.fill('#captext', 'spent $12 at Wawa'); await p.click('[data-act=capsave]'); await p.waitForTimeout(400);
+  ok(/Spent/.test(await p.textContent('#sheet .sugg .meta .pill:first-child')), 'capture sorts "spent $12 at Wawa" as Spent');
+  await p.click('#sheet [data-act=suggone]'); await p.waitForTimeout(200);
+  const ql = await fin().evaluate(() => state.quickLog.slice(-1)[0]);
+  ok(await fin().evaluate(() => state.quickLog.length) === ql0 + 1 && ql.amt === 12 && /Wawa/.test(ql.merchant), 'it lands in Payday\'s purchase log (' + JSON.stringify(ql) + ')');
+  if (await p.isVisible('#sheetbg')) await p.keyboard.press('Escape');
+
   // Every screen: no sideways scrolling
   const views = ['tools', 'ranks', 'decks', 'bored', 'gym', 'timer','today', 'tasks', 'more', 'areas', 'inbox', 'notes', 'settings', 'money', 'habits', 'goals', 'projects', 'journal', 'calendar'];
   let wide = [];

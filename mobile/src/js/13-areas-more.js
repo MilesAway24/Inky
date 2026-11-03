@@ -8,7 +8,7 @@ VIEWS.areas = function () {
       + '<div class="h"><b><span class="dot" style="background:' + esc(a.color) + '"></span>' + esc(a.name) + '</b>'
       + '<span class="st st-' + a.state.toLowerCase().replace(/\s/g, '') + '">' + esc(a.state) + '</span></div>'
       + '<div>' + esc(a.focus || 'No focus set') + '</div>'
-      + '<div class="kv"><span>Next</span><span>' + esc(next ? next.t + ' · ' + shortDate(next.due) : (a.next || '—')) + '</span></div>'
+      + '<div class="kv"><span>Next</span><span>' + esc((a.id === 'money' && typeof finNextBill === 'function' && finNextBill()) || (next ? next.t + ' · ' + shortDate(next.due) : (a.next || '—'))) + '</span></div>'
       + '<div class="kv"><span>Open</span><span>' + (open.length ? open.length + ' task' + (open.length === 1 ? '' : 's') : esc(a.open || 'Nothing open')) + '</span></div></button>';
   }).join('') + '</div>';
 };
@@ -128,14 +128,6 @@ VIEWS.soon = function () {
   return '<div class="empty">' + esc(SOON[c.view] || 'Coming soon.') + '</div>';
 };
 
-TITLES.money = 'Money';
-VIEWS.money = function () {
-  return '<div class="card"><h2 style="margin-bottom:8px">Payday OS moves in here next</h2>'
-    + '<p class="note">The Finance update brings your pay stub, daily allowance, debt ladder, savings, "Can I afford this?", Benji and live Monarch data into this tab, '
-    + 'with your existing Payday OS data carried over. Until then, Payday OS keeps working as it is.</p>'
-    + '<div class="btnrow" style="margin-top:14px"><a class="btn soft" href="https://claude.ai/artifact/QwpmDA1mcVAk9UvC9dgqyb" target="_blank" rel="noopener">Open Payday OS</a></div></div>';
-};
-
 /* ═══ SETTINGS ═══════════════════════════════════════════════════════ */
 TITLES.settings = 'Settings';
 VIEWS.settings = function () {
@@ -154,6 +146,7 @@ VIEWS.settings = function () {
       return '<button class="chip' + ((document.documentElement.dataset.theme || '') === o[0] ? ' on' : '') + '" data-act="theme" data-t="' + o[0] + '">' + o[1] + '</button>';
     }).join('') + '</div></section>'
     + '<section><div class="sechead"><h2>Data</h2></div><div class="btnrow">'
+    + '<button class="btn soft" data-act="finimport">Import from Payday OS</button>'
     + (hasExamples() ? '<button class="btn soft" data-act="clearex">Clear examples</button>' : '')
     + '<button class="btn ghost" data-act="resetall">Erase everything</button></div></section>';
 };
