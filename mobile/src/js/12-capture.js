@@ -14,7 +14,7 @@ var CAP_KINDS = [['smart', 'Smart sort'], ['inbox', 'Inbox'], ['task', 'Task'], 
 var STYPES = {
   task: ['Task', '✅'], done: ['Done ✓', '☑️'], habit_done: ['Habit ✓', '🔁'], habit_new: ['New habit', '🔁'],
   note: ['Note', '📝'], idea: ['Idea', '💡'], journal: ['Journal', '📔'],
-  movie: ['Movie watched', '🎬'], rank: ['Rank list', '🏆'], spent: ['Spent', '💵'], drop: ['Delete', '🗑']
+  movie: ['Movie watched', '🎬'], rank: ['Rank list', '🏆'], spent: ['Spent', '💵'], grocery: ['Grocery list', '🛒'], drop: ['Delete', '🗑']
 };
 
 ACTS.capture = function () {
@@ -125,11 +125,12 @@ function smartSort(items) {
     + '- "journal": about how the day or the person is going ("rough shift, tired").\n'
     + '- "movie": a film or show. Give title (clean, no score), status ("watched", "watching", or "want" for something they want to see / add to their watchlist), year if stated, score (0-10) if stated, note (any opinion).\n'
     + '- "rank": something to add to one of context.lists. Give targetId and title.\n'
+    + '- "grocery": things to add to the grocery list ("add eggs and milk to the grocery list", "groceries: bread, rice"). Give items: an array of short item names.\n'
     + '- "spent": money already spent ("spent $12 at Wawa", "$8 chipotle"). Give amount (number), title (the store or what it was) and bucket: "allow" (eating out, snacks, drinks), "gas" (fuel), "groc" (grocery shopping), "fun", "cloth" (clothes), "misc" (toiletries, small needs) or "need" (bills, health, other).\n'
     + '- "drop": empty or meaningless.\n'
     + 'Use only ids that appear in the context. area, project, due (YYYY-MM-DD, only if a day is named or clearly implied) may be null. icon: one emoji.\n'
     + 'Items: ' + JSON.stringify(items.map(function (i) { return { id: i.id, text: i.text || '(photo with no text)' }; })) + '\n'
-    + 'Reply with JSON only: {"items":[{"id":"…","type":"task","title":"…","area":null,"project":null,"due":null,"firstStep":null,"targetId":null,"time":null,"repeat":null,"year":null,"status":null,"score":null,"note":null,"amount":null,"bucket":null,"icon":"📝"}]}')
+    + 'Reply with JSON only: {"items":[{"id":"…","type":"task","title":"…","area":null,"project":null,"due":null,"firstStep":null,"targetId":null,"time":null,"repeat":null,"year":null,"status":null,"score":null,"note":null,"amount":null,"bucket":null,"items":null,"icon":"📝"}]}')
     .then(function (r) {
       var byId = {}; (r && r.items || []).forEach(function (s) { if (s && s.id) byId[s.id] = s; });
       return items.map(function (i) { return byId[i.id] ? cleanSugg(byId[i.id], i, ctx) : guessSort(i, ctx); });
@@ -147,6 +148,10 @@ function cleanSugg(s, item, ctx) {
     year: s.year ? String(s.year).slice(0, 4) : '', score: s.score != null && !isNaN(+s.score) ? Math.max(0, Math.min(10, +s.score)) : null,
     status: ['want', 'watching', 'watched'].indexOf(s.status) > -1 ? s.status : 'watched',
     note: s.note ? String(s.note).slice(0, 200) : '', icon: typeof s.icon === 'string' ? s.icon.slice(0, 4) : '', targetId: null };
+  if (type === 'grocery') {
+    o.items = Array.isArray(s.items) ? s.items.map(function (x) { return String(x).trim().slice(0, 60).replace(/^\w/, function (c) { return c.toUpperCase(); }); }).filter(Boolean).slice(0, 20) : parseGrocery(item.text || '');
+    if (!o.items || !o.items.length) o.type = 'task';
+  }
   if (type === 'spent') {
     var ps = parseSpent(item.text || '');
     o.amount = +s.amount > 0 ? Math.round(+s.amount * 100) / 100 : ps ? ps.amount : null;
@@ -185,6 +190,8 @@ function guessSort(item, ctx) {
     o.title = (wm[1] || text.slice(wm[0].length)).replace(/\s+to\s+(my\s+)?watch\s?list$/i, '').trim().replace(/^\w/, function (c) { return c.toUpperCase(); });
     return o;
   }
+  var gr = parseGrocery(text);
+  if (gr) { o.type = 'grocery'; o.items = gr; o.title = gr.join(', '); return o; }
   var sp = parseSpent(text);
   if (sp) { o.type = 'spent'; o.title = sp.merchant; o.amount = sp.amount; o.bucket = sp.bucket; return o; }
   var sc = low.match(/\b(\d{1,2}(?:\.\d)?)\s*(?:\/\s*10|out of 10)\b/);
@@ -222,6 +229,7 @@ function suggCards(list, where) {
       : s.type === 'rank' ? 'Add to ' + (target ? target.name : '') + ': ' + s.title
       : s.type === 'movie' ? s.title + (s.year ? ' (' + s.year + ')' : '') + (s.status === 'want' ? ' · want to watch' : s.status === 'watching' ? ' · watching' : '')
       : s.type === 'spent' ? fmtMoney(s.amount || 0) + ' · ' + s.title
+      : s.type === 'grocery' ? 'Add to groceries: ' + (s.items || parseGrocery(it.text || '') || [s.title]).join(', ')
       : s.title;
     var meta = '<span class="pill">' + STYPES[s.type][1] + ' ' + STYPES[s.type][0] + '</span>'
       + (s.area ? '<span class="pill">' + areaDot(s.area) + '&nbsp;' + esc(areaName(s.area)) + '</span>' : '')
@@ -237,6 +245,7 @@ function suggCards(list, where) {
       + '<div class="meta">' + meta + '</div>'
       + (s.firstStep ? '<div class="first">' + 'First step: ' + esc(s.firstStep) + '</div>' : '')
       + (s.type === 'movie' ? '<div class="first">' + (s.status === 'watched' ? 'Goes into Movies, then a few "which was better?" taps rank it.' : 'Goes on your watchlist in Movies.') + (s.note ? ' Note: ' + esc(s.note) : '') + '</div>' : '')
+      + (s.type === 'grocery' ? '<div class="first">Goes on this week\'s list in Money → Groceries.</div>' : '')
       + (s.type === 'spent' ? '<div class="first">Goes into Money and counts toward this week straight away.</div>' : '')
       + '<div class="btnrow"><button class="btn sm accent" data-act="suggone" data-w="' + where + '" data-id="' + s.id + '">File it</button>'
       + '<label class="sr" for="st' + s.id + '">Change type</label><select id="st' + s.id + '" class="input sel" data-act-change="suggtype" data-w="' + where + '" data-id="' + s.id + '">'
@@ -289,6 +298,11 @@ function applySuggestion(it, s) {
     var mst = s.status || 'watched';
     addToRank(m.id, { t: title, year: s.year || '', status: mst, note: [s.score != null ? 'said ' + s.score + '/10' : '', s.note || ''].filter(Boolean).join(' · '), watched: mst === 'watched' ? today() : null });
     if (mst === 'watched') { logEvent('Watched ' + title); msg = esc(title) + ' added to Movies'; } else msg = esc(title) + (mst === 'want' ? ' added to your watchlist' : ' marked as watching');
+  } else if (s.type === 'grocery') {
+    var gi = s.items && s.items.length ? s.items : parseGrocery(it.text || '') || [title];
+    var gn = finGrocAdd(gi);
+    msg = gi.length === 1 ? esc(gi[0]) + ' added to groceries' : gi.length + ' items added to groceries';
+    if (!gn) msg += ' · it reaches Money in a moment';
   } else if (s.type === 'spent') {
     var amt = s.amount || (parseSpent(it.text || '') || {}).amount;
     if (!(amt > 0)) return 'Add the amount, like "spent $12 at Wawa"';

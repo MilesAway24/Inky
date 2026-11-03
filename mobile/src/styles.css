@@ -569,3 +569,7 @@ p.finbar{padding:10px 12px;margin:0}
 .fin3 b{font-size:24px;font-weight:300;letter-spacing:-.03em;line-height:1;font-variant-numeric:tabular-nums}
 .fin3 b.bad{color:var(--bad)}
 section.money .list{margin-top:10px}
+svg.i.chevdown{transform:rotate(90deg);width:14px;height:14px}
+.finnav .chip svg{margin-right:-4px}
+p.finline{margin:10px 2px 0}
+p.finline .bad{color:var(--bad)}

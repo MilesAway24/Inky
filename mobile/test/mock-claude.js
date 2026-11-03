@@ -47,6 +47,8 @@
       var items = JSON.parse(m[1]), ctx = cm ? JSON.parse(cm[1]) : { habits: [], tasks: [] };
       return Promise.resolve({ items: items.map(function (it, i) {
         var t = it.text, low = t.toLowerCase();
+        var grm = /^add (.+) to the grocery list$/i.exec(t);
+        if (grm) return { id: it.id, type: 'grocery', items: grm[1].split(/ and |, /), title: grm[1] };
         var spm = /^spent \$(\d+(?:\.\d+)?) at (.+)$/i.exec(t);
         if (spm) return { id: it.id, type: 'spent', amount: +spm[1], title: spm[2], bucket: 'allow' };
         if (/^want to watch /.test(low)) return { id: it.id, type: 'movie', status: 'want', title: t.replace(/^want to watch /i, '') };

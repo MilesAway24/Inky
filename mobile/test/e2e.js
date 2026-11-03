@@ -486,6 +486,39 @@ const ok = (cond, msg) => { console.log((cond ? 'ok   ' : 'FAIL ') + msg); if (!
   const ql = await fin().evaluate(() => state.quickLog.slice(-1)[0]);
   ok(await fin().evaluate(() => state.quickLog.length) === ql0 + 1 && ql.amt === 12 && /Wawa/.test(ql.merchant), 'it lands in Payday\'s purchase log (' + JSON.stringify(ql) + ')');
   if (await p.isVisible('#sheetbg')) await p.keyboard.press('Escape');
+  // Second pass: groceries, more screens, Heads up
+  await p.click('.tabs .cap'); await p.waitForTimeout(100);
+  await p.fill('#captext', 'add eggs and milk to the grocery list'); await p.click('[data-act=capsave]'); await p.waitForTimeout(400);
+  ok(/Grocery list/.test(await p.textContent('#sheet .sugg .meta .pill:first-child')), 'capture sorts "add eggs and milk to the grocery list" as Grocery list');
+  await p.click('#sheet [data-act=suggone]'); await p.waitForTimeout(200);
+  if (await p.isVisible('#sheetbg')) await p.keyboard.press('Escape');
+  const gx = await fin().evaluate(() => state.grocExtra.map((x) => x[1]));
+  ok(gx.includes('Eggs') && gx.includes('Milk'), 'both items land on Payday\'s grocery list (' + gx.join(', ') + ')');
+  await p.click('.tabs [data-v=more]'); await p.click('#view [data-act=tab][data-v=money]'); await p.waitForTimeout(300);
+  await p.click('[data-fv=food]'); await p.waitForTimeout(300);
+  ok(await fin().evaluate(() => current) === 'food' && await p.isVisible('[data-act=fingroctask]'), 'Groceries opens Payday\'s grocery screen with a send-to-Tasks bar');
+  const nG = await fin().evaluate(() => __finGroceries().length);
+  await p.click('[data-act=fingroctask]'); await p.waitForTimeout(600);
+  const run = await p.evaluate(() => Object.values(window.__mock.docs).filter((d) => d.grocery && !d.done)[0]);
+  ok(run && run.t === 'Grocery run' && run.steps.length === nG && run.steps.some((x) => /Eggs/.test(x.t)), 'the shopping list becomes a "Grocery run" task, one step per item (' + (run && run.steps.length) + '/' + nG + ')');
+  await p.click('[data-act=fingroctask]'); await p.waitForTimeout(600);
+  ok(await p.evaluate(() => Object.values(window.__mock.docs).filter((d) => d.grocery && !d.done).length) === 1, 'sending again updates the same task instead of adding another');
+  await p.click('[data-act=finmore]'); await p.waitForTimeout(150);
+  const moreItems = await p.$$eval('#sheet [data-act=fingoto]', (x) => x.map((e) => e.dataset.fv));
+  ok(['roadmap', 'data', 'sort', 'future'].every((v) => moreItems.includes(v)), 'More in Money lists Roadmap, Spending, Sort purchases and What if');
+  await p.click('#sheet [data-fv=roadmap]'); await p.waitForTimeout(300);
+  ok(await fin().evaluate(() => current) === 'roadmap' && /Roadmap/.test(await p.textContent('#finmorebtn')) && await p.$eval('#finmorebtn', (e) => e.classList.contains('on')), 'picking Roadmap opens it and the More chip names it');
+  ok(await fin().isVisible('#rmHero .display'), 'the Roadmap shows a debt-free date');
+  for (const v of ['future', 'data', 'sort']) {
+    await p.click('[data-act=finmore]'); await p.waitForTimeout(100); await p.click('#sheet [data-fv=' + v + ']'); await p.waitForTimeout(250);
+    ok(await fin().evaluate(() => current) === v, 'More → ' + v + ' opens it');
+  }
+  await p.screenshot({ path: shots + '/phone-money-sort.png' });
+  // A wishlist item whose 72 hours are up shows in Heads up
+  await fin().evaluate(() => { state.wish.unshift({ id: 'w1', name: 'PS6 controller', amt: 79, kind: 'fun', at: Date.now() - 73 * 36e5 }); persist(); rerender(); });
+  await p.click('.tabs [data-v=today]'); await p.waitForTimeout(700);
+  ok(await p.isVisible('.headsup >> text=PS6 controller'), 'a wishlist item past 72 hours shows in Heads up');
+  ok(await p.isVisible('.finline'), 'Today\'s Money section shows the next card to go');
 
   // Every screen: no sideways scrolling
   const views = ['tools', 'ranks', 'decks', 'bored', 'gym', 'timer','today', 'tasks', 'more', 'areas', 'inbox', 'notes', 'settings', 'money', 'habits', 'goals', 'projects', 'journal', 'calendar'];

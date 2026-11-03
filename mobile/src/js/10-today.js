@@ -23,11 +23,13 @@ VIEWS.today = function () {
 
   // Heads up
   var rem = remindersNow(), hrem = habitRemindersNow();
-  if ((sl.length || rem.length || hrem.length || inbox.length) && !headsUpDismissed()) {
+  var finRows = typeof finHeadsUp === 'function' ? finHeadsUp() : [];
+  if ((sl.length || rem.length || hrem.length || inbox.length || finRows.length) && !headsUpDismissed()) {
     h += '<section class="headsup"><div class="sechead" style="margin:0"><h2>Heads up</h2><button class="iconbtn" data-act="hudismiss" aria-label="Hide for today">' + icon('x', 'sm') + '</button></div>';
     if (sl.length) h += '<div class="hurow"><span>🔥</span><span class="grow"><b>' + sl.length + ' task' + (sl.length === 1 ? '' : 's') + ' overdue</b></span><button class="btn sm soft" data-act="reschedule">Sweep</button></div>';
     rem.forEach(function (x) { h += '<div class="hurow"><span>🔔</span><button class="grow" style="text-align:left" data-act="open" data-v="task" data-id="' + x.id + '"><b>' + esc(x.t) + '</b> <span class="muted">' + esc(untilText(x)) + '</span></button></div>'; });
     hrem.forEach(function (x) { h += '<div class="hurow"><span>' + esc(x.ic) + '</span><span class="grow"><b>' + esc(x.n) + '</b> <span class="muted">reminder · ' + esc(fmtTime(x.remindAt)) + '</span></span><button class="btn sm soft" data-act="habtoggle" data-id="' + x.id + '">' + (x.target ? 'Log' : 'Done') + '</button></div>'; });
+    h += finRows.join('');
     if (inbox.length) h += '<div class="hurow"><span>📥</span><span class="grow"><b>' + inbox.length + ' to sort</b></span><button class="btn sm soft" data-act="tab" data-v="inbox">Sort</button></div>';
     h += '</section>';
   }

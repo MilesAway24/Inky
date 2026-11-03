@@ -5,8 +5,13 @@
    origin, so it uses the same Claude connection (sync, Monarch, Benji)
    and MossOS can ask it for numbers: __finSummary, __finEvents, __finLog,
    __finImport, __finTheme, __finInfo. */
-var FIN = { frame: null, ready: false, view: 'today', sum: null, sumKey: '' };
-var FIN_NAV = [['today', 'Today'], ['plan', 'Plan Friday'], ['budget', 'Budget'], ['debts', 'Debts'], ['savings', 'Savings'], ['calendar', 'Month'], ['monarch', 'Monarch'], ['more', 'More']];
+var FIN = { frame: null, ready: false, view: 'today', sum: null, extra: null, sumKey: '' };
+var FIN_NAV = [['today', 'Today'], ['plan', 'Plan Friday'], ['budget', 'Budget'], ['food', 'Groceries'], ['debts', 'Debts'], ['savings', 'Savings']];
+var FIN_MORE = [['roadmap', 'Roadmap', 'Card kill dates, decision day, big buys, Roth IRA'], ['data', 'Spending', 'Plan vs actual, interest saved, where it went'],
+  ['sort', 'Sort purchases', 'Swipe purchases into the right bucket'], ['calendar', 'Month', 'Every day\'s money, spending and bills'],
+  ['future', 'What if', 'A bigger check, a bigger payment: see the date move'], ['ask', 'Ask Payday', 'Step-by-step answers from your plan'],
+  ['monarch', 'Monarch', 'Live balances and spending'], ['settings', 'Settings', 'Backup, sync, reset'], ['more', 'Everything else', 'Payday\'s own menu']];
+function finMoreOn() { return FIN_MORE.some(function (x) { return x[0] === FIN.view; }); }
 var FIN_LINK = 'https://claude.ai/artifact/QwpmDA1mcVAk9UvC9dgqyb';
 
 function finWin() { try { return FIN.ready && FIN.frame ? FIN.frame.contentWindow : null; } catch (e) { return null; } }
@@ -32,10 +37,15 @@ setTimeout(ensureFin, 1000);
 /* The frame tells us when it repaints; keep Today and Calendar in step. */
 var finChangeT = null;
 window.__finChanged = function () { clearTimeout(finChangeT); finChangeT = setTimeout(function () { finRefresh(false); }, 300); };
-window.__finNav = function (id) { FIN.view = id; finPaintNav(); };
+window.__finNav = function (id) {
+  var was = FIN.view; FIN.view = id;
+  // The bar under the nav changes with the screen; repaint so it fits.
+  if (current().view === 'money' && (was === 'food') !== (id === 'food')) render(); else finPaintNav();
+};
 function finRefresh(quiet) {
   var s = finCall('__finSummary'); if (!s) return;
-  var key = JSON.stringify(s); FIN.sum = s;
+  var x = finCall('__finExtra') || null;
+  var key = JSON.stringify([s, x]); FIN.sum = s; FIN.extra = x;
   if (key === FIN.sumKey) return; FIN.sumKey = key;
   var v = current().view;
   if (!quiet && (v === 'today' || v === 'calendar' || v === 'area')) render();
@@ -62,14 +72,22 @@ function finPaintNav() {
   nav2.querySelectorAll('[data-fv]').forEach(function (b) {
     var on = b.dataset.fv === FIN.view; b.classList.toggle('on', on); b.setAttribute('aria-current', on ? 'page' : 'false');
   });
+  var mb = $('#finmorebtn');
+  setTimeout(finChipIntoView, 0);
+  if (mb) { var cur = FIN_MORE.filter(function (x) { return x[0] === FIN.view; })[0]; mb.classList.toggle('on', !!cur); mb.firstChild.textContent = cur ? cur[1] + ' ' : 'More '; }
 }
 
 TITLES.money = 'Money';
 VIEWS.money = function () {
   var meta = Store.get('meta', 'fin') || {}, info = finCall('__finInfo') || {};
   var h = '<nav class="finnav" id="finnav" aria-label="Money sections">' + FIN_NAV.map(function (x) {
-    return '<button class="chip' + (FIN.view === x[0] ? ' on' : '') + '" data-act="fingo" data-fv="' + x[0] + '">' + x[1] + '</button>';
-  }).join('') + '<button class="chip" data-act="afford">Can I afford this?</button></nav>';
+    return '<button class="chip' + (FIN.view === x[0] ? ' on' : '') + '" data-act="fingo" data-fv="' + x[0] + '" aria-current="' + (FIN.view === x[0] ? 'page' : 'false') + '">' + x[1] + '</button>';
+  }).join('') + (function () { var cur = FIN_MORE.filter(function (x) { return x[0] === FIN.view; })[0];
+    return '<button class="chip' + (cur ? ' on' : '') + '" id="finmorebtn" data-act="finmore" aria-haspopup="dialog">' + (cur ? cur[1] : 'More') + ' ' + icon('chev', 'sm chevdown') + '</button>'; })()
+    + '<button class="chip" data-act="afford">Can I afford this?</button></nav>';
+  if (FIN.view === 'food' && FIN.ready)
+    h += '<div class="finbar row"><span class="grow small"><b>Shopping list → Tasks</b><span class="muted"> · a "Grocery run" task with every item as a step</span></span>'
+      + '<button class="btn sm soft" data-act="fingroctask">Send</button></div>';
   if (FIN.ready && window.claude && window.claude.use && info.bridge === false)
     h += '<p class="note small finbar">Money can\'t reach your Claude connection here, so it is saved on this device only and Monarch is off. <a href="' + FIN_LINK + '" target="_blank" rel="noopener">Open Payday OS</a></p>';
   else if (!meta.imported && !meta.hideImport)
@@ -78,10 +96,40 @@ VIEWS.money = function () {
   h += '<div id="finslot" class="finslot">' + (FIN.ready ? '' : '<p class="note">Loading Payday OS…</p>') + '</div>';
   return h;
 };
-VIEWS.money.after = function () { ensureFin(); };
+function finChipIntoView() {
+  var n = $('#finnav'), on = n && n.querySelector('.chip.on'); if (!on) return;
+  var l = on.offsetLeft - n.offsetLeft, r = l + on.offsetWidth;
+  if (l < n.scrollLeft) n.scrollLeft = l - 16; else if (r > n.scrollLeft + n.clientWidth) n.scrollLeft = r - n.clientWidth + 16;
+}
+VIEWS.money.after = function () { ensureFin(); finChipIntoView(); };
 ACTS.fingo = function (d) {
-  FIN.view = d.fv; finPaintNav();
+  FIN.view = d.fv;
   if (finWin()) finCall('go', [d.fv]);
+  render();
+};
+ACTS.finmore = function () {
+  openSheet('<div class="shead"><h2>More in Money</h2><button class="iconbtn" data-act="close" aria-label="Close">' + icon('x') + '</button></div>'
+    + '<div class="list">' + FIN_MORE.map(function (x) {
+      return '<button class="row" data-act="fingoto" data-fv="' + x[0] + '"><span class="grow"><div class="t">' + x[1] + '</div><div class="s">' + x[2] + '</div></span>' + icon('chev', 'sm chev') + '</button>';
+    }).join('') + '</div>');
+};
+/* Open Money on one of Payday's screens, from anywhere in MossOS. */
+ACTS.fingoto = function (d) {
+  if (!$('#sheetbg').hidden) { $('#sheetbg').hidden = true; document.body.style.overflow = ''; sheetOnClose = null; }
+  FIN.view = d.fv;
+  if (finWin()) finCall('go', [d.fv]);
+  if (current().view !== 'money') go('money'); else render();
+};
+ACTS.fingroctask = function () {
+  var items = finCall('__finGroceries') || [];
+  if (!items.length) { toast('Nothing left on the list'); return; }
+  var steps = items.map(function (x) { return { t: x.name + (x.price ? ' · ' + fmtMoney(x.price) : '') + ' (' + x.store + ')', done: false }; });
+  var old = Store.all('tasks').filter(function (t) { return !t.done && t.grocery; })[0];
+  var t = old ? Store.put('tasks', Object.assign({}, old, { steps: steps, due: old.due || today() }))
+    : Store.put('tasks', { t: 'Grocery run', ic: '🛒', area: 'money', due: today(), done: false, grocery: true, est: '45 min', steps: steps, note: 'From Money → Groceries. Tick items off here or in Money.' });
+  logEvent((old ? 'Updated' : 'Made') + ' the grocery run: ' + steps.length + ' items', 'money');
+  var msg = (old ? 'Grocery run updated' : 'Grocery run added to Today') + ' · ' + steps.length + ' items';
+  if (old) toast(msg, function () { Store.put('tasks', old); }); else toast(msg, function () { Store.del('tasks', t.id); });
 };
 ACTS.afford = function () {
   if (!finWin()) { ensureFin(); toast('Money is still loading'); return; }
@@ -121,7 +169,26 @@ function billsSection() {
     + '<button data-act="tab" data-v="money"><b>' + esc(fmtMoney(s.weekLeft, true)) + '</b><span>until Friday</span></button>'
     + (s.isFriday ? '<button data-act="tab" data-v="money"><b>' + s.friday.done + '/' + s.friday.total + '</b><span>Friday checklist</span></button>'
       : '<button data-act="afford"><b>?</b><span>Can I afford it</span></button>') + '</div>'
+    + finExtraLine()
     + (rows ? '<div class="list">' + rows + '</div>' : '') + '</section>';
+}
+function finExtraLine() {
+  var x = FIN.extra; if (!x) return '';
+  var bits = [];
+  if (x.week) bits.push('<span class="' + (x.week.spent > x.week.plan ? 'bad' : '') + '">' + fmtMoney(x.week.spent, true) + ' of ' + fmtMoney(x.week.plan, true) + ' plan this week</span>');
+  if (x.nextKill) bits.push('next card gone: <b>' + esc(x.nextKill.name) + '</b> · ' + esc(x.nextKill.when));
+  return bits.length ? '<p class="note small finline">' + bits.join(' · ') + '</p>' : '';
+}
+/* Rows for Today's Heads up card. */
+function finHeadsUp() {
+  var x = FIN.extra, s = FIN.sum, out = [];
+  if (!x || !s) return out;
+  if (x.toSort) out.push('<div class="hurow"><span>🧾</span><span class="grow"><b>' + x.toSort + ' purchase' + (x.toSort === 1 ? '' : 's') + ' to sort</b></span><button class="btn sm soft" data-act="fingoto" data-fv="sort">Sort</button></div>');
+  x.wishReady.slice(0, 2).forEach(function (w) {
+    out.push('<div class="hurow"><span>🛍</span><span class="grow"><b>' + esc(w.name) + '</b> <span class="muted">' + esc(fmtMoney(w.amt, true)) + ' · 72 hours are up</span></span><button class="btn sm soft" data-act="afford">Decide</button></div>');
+  });
+  if (s.isFriday && s.friday.done < s.friday.total) out.push('<div class="hurow"><span>💵</span><span class="grow"><b>Friday plan</b> <span class="muted">' + s.friday.done + ' of ' + s.friday.total + ' done</span></span><button class="btn sm soft" data-act="fingoto" data-fv="today">Open</button></div>');
+  return out;
 }
 function fmtMoney(n, whole) {
   n = +n || 0; var neg = n < 0; n = Math.abs(n);
@@ -144,7 +211,7 @@ function finQueueSet(q) { try { localStorage.setItem('mossos.finq', JSON.stringi
 function finFlushQueue() {
   var q = finQueue(); if (!q.length) return;
   finQueueSet([]);
-  q.forEach(function (x) { finCall('__finLog', [x.amount, x.merchant, x.bucket, x.note]); });
+  q.forEach(function (x) { if (x.groc) finCall('__finGrocAdd', [x.groc]); else finCall('__finLog', [x.amount, x.merchant, x.bucket, x.note]); });
 }
 function finLog(amount, merchant, bucket, note) {
   var r = finCall('__finLog', [amount, merchant, bucket, note]);
@@ -172,4 +239,20 @@ function parseSpent(text) {
   var merchant = at ? at[1] : text.replace(m[0], '').replace(/^(i\s+)?(spent|paid|bought|got|grabbed|dropped|blew)\b/i, '').replace(/\b(on|for)\b/gi, ' ').trim();
   merchant = merchant.replace(/\s+/g, ' ').trim().replace(/^\w/, function (c) { return c.toUpperCase(); }) || 'Purchase';
   return { amount: amt, merchant: merchant.slice(0, 60), bucket: guessBucket(text, amt) };
+}
+
+/* "add eggs and milk to the grocery list", "groceries: eggs, bread" → ['Eggs', 'Bread'] */
+function parseGrocery(text) {
+  var m = /^(?:please\s+)?(?:add|put)\s+(.+?)\s+(?:to|on)\s+(?:the\s+|my\s+)?(?:grocery|groceries|shopping)\s*list\.?$/i.exec(text)
+    || /^(?:grocery|groceries|shopping)(?:\s+list)?\s*[:\-–]\s*(.+)$/i.exec(text)
+    || /^(.+?)\s+(?:to|on)\s+(?:the\s+|my\s+)?(?:grocery|shopping)\s+list\.?$/i.exec(text);
+  if (!m) return null;
+  var items = m[1].split(/\s*,\s*|\s+and\s+|\s*\+\s*/).map(function (x) { return x.trim().replace(/^(some|a|an)\s+/i, '').replace(/^\w/, function (c) { return c.toUpperCase(); }); }).filter(Boolean);
+  return items.length ? items.slice(0, 20) : null;
+}
+function finGrocAdd(items) {
+  var n = finCall('__finGrocAdd', [items]);
+  if (n) { finRefresh(true); return n; }
+  var q = finQueue(); q.push({ groc: items }); finQueueSet(q); ensureFin();
+  return 0;
 }
