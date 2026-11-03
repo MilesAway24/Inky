@@ -1,0 +1,133 @@
+/* ═══ SHELL ══════════════════════════════════════════════════════════
+   Navigation is a tab plus a stack of pushed pages (task detail, sweep…).
+   Views return HTML strings; clicks are handled by one delegated
+   listener that dispatches on data-act. */
+var nav = { tab: 'today', stack: [] };
+var VIEWS = {}, ACTS = {}, TITLES = {};
+var TABS = [['today', 'Today', 'today'], ['tasks', 'Tasks', 'tasks'], ['capture', 'Capture', 'plus'], ['money', 'Money', 'money'], ['more', 'More', 'more']];
+var SIDE_MORE = [['areas', 'Life areas', 'areas'], ['inbox', 'Inbox', 'inbox'], ['habits', 'Habits', 'habits'], ['goals', 'Goals', 'goals'],
+  ['notes', 'Notes', 'notes'], ['journal', 'Journal', 'journal'], ['projects', 'Projects', 'projects'],
+  ['calendar', 'Calendar', 'calendar'], ['settings', 'Settings', 'settings']];
+
+function go(tab) { nav.tab = tab; nav.stack = []; render(true); }
+function push(view, arg) { nav.stack.push({ view: view, arg: arg }); render(true); }
+function pop() { nav.stack.pop(); render(true); }
+function current() { return nav.stack.length ? nav.stack[nav.stack.length - 1] : { view: nav.tab, arg: null }; }
+
+function syncBadge() {
+  var s = Store.status();
+  var map = { synced: ['on', 'Synced'], connecting: ['', 'Connecting…'], slow: ['warn', 'Sync is slow'], error: ['warn', 'Sync stopped'], local: ['', 'This device'] };
+  var m = map[s] || map.local;
+  return '<span class="sync ' + m[0] + '" title="' + (s === 'local' ? 'Saved on this device only. Open MossOS in the Claude app, signed in, to sync between your phone and iPad.' : m[1]) + '"><i></i>' + m[1] + '</span>';
+}
+
+var lastKey = '';
+function render(scrollTop, force) {
+  var c = current(), v = VIEWS[c.view] || VIEWS.soon;
+  var sub = nav.stack.length > 0;
+  var title = typeof TITLES[c.view] === 'function' ? TITLES[c.view](c.arg) : (TITLES[c.view] || '');
+  $('#top').className = 'top' + (sub ? ' sub' : '');
+  $('#top').innerHTML = (sub ? '<button class="back" data-act="back" aria-label="Back">' + icon('back') + '</button>' : '')
+    + '<h1>' + esc(title) + '</h1>' + (sub ? '' : syncBadge());
+  // Keep focus and caret if the user is typing in this view.
+  var ae = document.activeElement, keep = ae && ae.id && $('#view').contains(ae) ? { id: ae.id, s: ae.selectionStart, e: ae.selectionEnd } : null;
+  if (keep && (ae.isContentEditable || ae.tagName === 'TEXTAREA' || ae.tagName === 'INPUT') && !scrollTop && !force) {
+    // Don't rebuild under someone's fingers; repaint when they leave the field.
+    render.stale = true; paintChrome(); return;
+  }
+  render.stale = false;
+  $('#view').innerHTML = v(c.arg);
+  if (v.after) v.after(c.arg);
+  paintChrome();
+  var key = c.view + ':' + (c.arg || '');
+  if (scrollTop || key !== lastKey) window.scrollTo(0, 0);
+  lastKey = key;
+}
+function paintChrome() {
+  var c = current(), active = nav.stack.length ? nav.tab : c.view;
+  $('#tabs').innerHTML = TABS.map(function (t) {
+    if (t[0] === 'capture') return '<button class="cap" data-act="capture" aria-label="Capture">' + '<span>' + icon('plus') + '</span></button>';
+    return '<button class="' + (active === t[0] ? 'on' : '') + '" data-act="tab" data-v="' + t[0] + '" aria-current="' + (active === t[0] ? 'page' : 'false') + '">' + icon(t[2]) + '<span>' + t[1] + '</span></button>';
+  }).join('');
+  var inboxN = Store.all('inbox').length;
+  $('#side').innerHTML = '<div class="brand">' + icon('moss') + 'MossOS</div>'
+    + '<button class="capbtn" data-act="capture">' + icon('plus', 'sm') + 'Capture</button>'
+    + TABS.filter(function (t) { return t[0] !== 'capture' && t[0] !== 'more'; }).map(function (t) {
+      return '<button class="' + (active === t[0] ? 'on' : '') + '" data-act="tab" data-v="' + t[0] + '">' + icon(t[2]) + t[1] + '</button>';
+    }).join('')
+    + '<div class="grp">More</div>'
+    + SIDE_MORE.map(function (t) {
+      return '<button class="' + (active === t[0] ? 'on' : '') + '" data-act="tab" data-v="' + t[0] + '">' + icon(t[2]) + t[1]
+        + (t[0] === 'inbox' && inboxN ? '<span class="pill" style="margin-left:auto">' + inboxN + '</span>' : '') + '</button>';
+    }).join('');
+}
+document.addEventListener('focusout', function () {
+  setTimeout(function () {
+    var ae = document.activeElement;
+    if (render.stale && !(ae && $('#view').contains(ae) && (ae.isContentEditable || /TEXTAREA|INPUT/.test(ae.tagName)))) render();
+  }, 0);
+});
+addEventListener('scroll', function () { $('#top').classList.toggle('edge', scrollY > 4); }, { passive: true });
+
+/* ── sheet ─────────────────────────────────────────────────────────── */
+var sheetOnClose = null;
+function openSheet(html, after, onClose) {
+  $('#sheet').innerHTML = '<div class="grab" aria-hidden="true"></div>' + html;
+  $('#sheetbg').hidden = false;
+  document.body.style.overflow = 'hidden';
+  sheetOnClose = onClose || null;
+  if (after) after($('#sheet'));
+}
+function closeSheet() {
+  if ($('#sheetbg').hidden) return;
+  $('#sheetbg').hidden = true; document.body.style.overflow = '';
+  var f = sheetOnClose; sheetOnClose = null; if (f) f();
+  render();
+}
+$('#sheetbg').addEventListener('click', function (e) { if (e.target === this) closeSheet(); });
+addEventListener('keydown', function (e) { if (e.key === 'Escape') closeSheet(); });
+
+/* ── toast with optional undo ───────────────────────────────────────── */
+var toastT = null;
+function toast(msg, undo) {
+  clearTimeout(toastT);
+  var el = $('#toast');
+  el.innerHTML = '<span>' + msg + '</span>' + (undo ? '<button data-act="undo">Undo</button>' : '');
+  el.hidden = false; toast.undo = undo || null;
+  toastT = setTimeout(function () { el.hidden = true; toast.undo = null; }, undo ? 5000 : 2600);
+}
+ACTS.undo = function () { var f = toast.undo; $('#toast').hidden = true; toast.undo = null; if (f) f(); };
+
+/* ── one listener for every button ─────────────────────────────────── */
+document.addEventListener('click', function (e) {
+  var el = e.target.closest('[data-act]'); if (!el) return;
+  var f = ACTS[el.dataset.act]; if (!f) return;
+  e.preventDefault(); f(el.dataset, el, e);
+});
+ACTS.tab = function (d) { go(d.v); };
+ACTS.back = function () { pop(); };
+ACTS.close = function () { closeSheet(); };
+ACTS.open = function (d) { push(d.v, d.id); };
+
+/* ── AI (Claude via the sample capability) ─────────────────────────── */
+var AI = { s: null, ready: false };
+function aiInit() {
+  if (!window.claude || !window.claude.use) return;
+  window.claude.use('sample').then(function (s) { AI.s = s; AI.ready = !!s; render(); });
+}
+function aiJson(prompt, opts) {
+  if (!AI.s) return Promise.reject({ code: 'not_granted' });
+  return AI.s.json(prompt, Object.assign({ modelTier: 'quick' }, opts || {}));
+}
+function aiError(e) {
+  var c = e && e.code;
+  if (c === 'not_granted') return 'Claude isn\'t available here. Open MossOS in the Claude app to use it.';
+  if (c === 'rate_limited') return 'Claude is busy. Try again in a minute.';
+  if (c === 'cancelled') return 'Stopped.';
+  return 'Claude couldn\'t answer that. Try again.';
+}
+
+/* Shared bits of markup. */
+function areaDot(id) { return '<span class="dot" style="background:' + areaColor(id) + '"></span>'; }
+function areaName(id) { var a = area(id); return a ? a.short : ''; }
+function exPill(o) { return o && o.example ? '<span class="pill ex">example</span>' : ''; }
