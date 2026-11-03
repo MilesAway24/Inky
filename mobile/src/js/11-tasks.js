@@ -88,6 +88,9 @@ VIEWS.task = function (id) {
     + '<div class="prop"><span class="k">Area</span><span class="v">' + areasSorted().map(function (a) {
       return '<button class="chip' + (t.area === a.id ? ' on' : '') + '" data-act="taskarea" data-id="' + t.id + '" data-a="' + a.id + '"><i style="background:' + esc(a.color) + '"></i>' + esc(a.short) + '</button>';
     }).join('') + '</span></div>'
+    + (projectsAll('active').length || t.project ? '<div class="prop"><span class="k">Project</span><span class="v">' + projectsAll('active').concat(t.project && Store.get('projects', t.project) && Store.get('projects', t.project).status !== 'active' ? [Store.get('projects', t.project)] : []).map(function (p) {
+      return '<button class="chip' + (t.project === p.id ? ' on' : '') + '" data-act="taskproj" data-id="' + t.id + '" data-p="' + p.id + '">' + esc(p.ic || '📁') + ' ' + esc(p.t) + '</button>';
+    }).join('') + '</span></div>' : '')
     + '<div class="prop"><span class="k">Time</span><span class="v"><label class="sr" for="test">Time estimate</label><input id="test" class="input" style="max-width:160px;min-height:40px" data-field="est" value="' + esc(t.est || '') + '" placeholder="e.g. 20 min"></span></div>'
     + '<div class="prop"><span class="k">Icon</span><span class="v"><label class="sr" for="tic">Icon</label><input id="tic" class="input" style="max-width:80px;min-height:40px;text-align:center" data-field="ic" value="' + esc(t.ic || '') + '" maxlength="4"></span></div>'
     + '</div></section>';
@@ -121,6 +124,7 @@ ACTS.step = function (d) {
 ACTS.delstep = function (d) { var t = Store.get('tasks', d.id), s = (t.steps || []).slice(); s.splice(+d.i, 1); Store.patch('tasks', d.id, { steps: s }); };
 ACTS.when = function (d) { moveTask(d.id, d.to); toast('Moved to ' + { today: 'today', tomorrow: 'tomorrow', nextweek: 'next week', whenever: 'Whenever', drifted: 'Drifted' }[d.to]); };
 ACTS.whendate = function (d, el) { if (el.value) { moveTask(d.id, el.value); toast('Moved to ' + shortDate(el.value)); } };
+ACTS.taskproj = function (d) { var t = Store.get('tasks', d.id), p = Store.get('projects', d.p); Store.patch('tasks', d.id, { project: t.project === d.p ? null : d.p, area: t.area || (p && p.area) || null }); };
 ACTS.taskarea = function (d) { var t = Store.get('tasks', d.id); Store.patch('tasks', d.id, { area: t.area === d.a ? null : d.a }); };
 ACTS.taskprio = function (d) {
   if (!d.l) { Store.patch('tasks', d.id, { prio: null, prioDay: null }); return; }

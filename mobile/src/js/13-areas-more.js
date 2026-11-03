@@ -37,17 +37,49 @@ VIEWS.area.after = function (id) {
 };
 ACTS.areastate = function (d) { Store.patch('areas', d.id, { state: d.s }); logEvent(areaName(d.id) + ' is ' + d.s.toLowerCase(), d.id); };
 
-/* ═══ NOTES (basic; the full editor arrives in Phase 3) ══════════════ */
+/* ═══ NOTES ═══════════════════════════════════════════════════════════
+   Plain text (it's what dictation and the iOS keyboard handle best), with
+   search, a filter by kind or area, pins, and links to a project. */
+var noteQ = '', noteF = 'all';
 TITLES.notes = 'Notes';
 VIEWS.notes = function () {
-  var ns = Store.all('notes').sort(function (a, b) { return b.updated - a.updated; });
-  return '<button class="btn soft block" data-act="newnote">' + icon('plus', 'sm') + 'New note</button>'
-    + (ns.length ? '<div class="list">' + ns.map(function (n) {
-      return '<button class="row" data-act="open" data-v="note" data-id="' + n.id + '"><span class="grow"><div class="t">' + esc(n.title || 'Untitled') + '</div>'
-        + '<div class="s">' + (n.area ? areaDot(n.area) + esc(areaName(n.area)) + ' · ' : '') + (n.kind === 'idea' ? 'Idea · ' : '') + esc(timeAgo(n.updated)) + ' ' + exPill(n) + '</div></span>'
-        + icon('chev', 'sm chev') + '</button>';
-    }).join('') + '</div>' : '<div class="empty">No notes yet. Capture one, or sort your inbox.</div>');
+  var q = noteQ.trim().toLowerCase();
+  var ns = Store.all('notes').filter(function (n) {
+    if (noteF === 'idea' && n.kind !== 'idea') return false;
+    if (noteF === 'note' && n.kind === 'idea') return false;
+    if (noteF.indexOf('a:') === 0 && n.area !== noteF.slice(2)) return false;
+    return !q || ((n.title || '') + ' ' + (n.body || '')).toLowerCase().indexOf(q) > -1;
+  }).sort(function (a, b) { return (!!b.pinned - !!a.pinned) || b.updated - a.updated; });
+  var all = Store.all('notes');
+  var f = [['all', 'All · ' + all.length], ['note', 'Notes'], ['idea', 'Ideas · ' + all.filter(function (n) { return n.kind === 'idea'; }).length]];
+  return '<div class="search"><label class="sr" for="nq">Search notes</label><input id="nq" class="input" type="search" placeholder="Search notes" value="' + esc(noteQ) + '" autocomplete="off"></div>'
+    + '<div class="scrollx" role="group" aria-label="Filter">' + f.map(function (x) {
+      return '<button class="chip' + (noteF === x[0] ? ' on' : '') + '" data-act="notef" data-f="' + x[0] + '">' + x[1] + '</button>';
+    }).join('') + areasSorted().map(function (a) {
+      return '<button class="chip' + (noteF === 'a:' + a.id ? ' on' : '') + '" data-act="notef" data-f="a:' + a.id + '"><i style="background:' + esc(a.color) + '"></i>' + esc(a.short) + '</button>';
+    }).join('') + '</div>'
+    + '<button class="btn soft block" data-act="newnote">' + icon('plus', 'sm') + 'New note</button>'
+    + '<div id="notelist">' + noteList(ns, q) + '</div>';
 };
+function noteList(ns, q) {
+  if (!ns.length) return '<div class="empty">' + (q ? 'No notes match "' + esc(q) + '".' : 'No notes here yet. Capture one, or sort your inbox.') + '</div>';
+  return '<div class="list">' + ns.map(function (n) {
+    var pr = n.project ? Store.get('projects', n.project) : null;
+    var snip = (n.body || '').replace(/\s+/g, ' ').slice(0, 90);
+    return '<button class="row" data-act="open" data-v="note" data-id="' + n.id + '"><span class="grow"><div class="t">' + (n.pinned ? '📌 ' : '') + esc(n.title || 'Untitled') + '</div>'
+      + (snip && snip !== n.title ? '<div class="s" style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(snip) + '</div>' : '')
+      + '<div class="s">' + (n.area ? areaDot(n.area) + esc(areaName(n.area)) + ' · ' : '') + (pr ? esc(pr.t) + ' · ' : '') + (n.kind === 'idea' ? 'Idea · ' : '') + esc(timeAgo(n.updated)) + ' ' + exPill(n) + '</div></span>'
+      + icon('chev', 'sm chev') + '</button>';
+  }).join('') + '</div>';
+}
+VIEWS.notes.after = function () {
+  var q = $('#nq'); if (!q) return;
+  q.addEventListener('input', function () {
+    noteQ = q.value; var html = VIEWS.notes(); var tmp = document.createElement('div'); tmp.innerHTML = html;
+    $('#notelist').innerHTML = $('#notelist', tmp).innerHTML;
+  });
+};
+ACTS.notef = function (d) { noteF = d.f; render(); };
 TITLES.note = 'Note';
 VIEWS.note = function (id) {
   var n = Store.get('notes', id); if (!n) return '<div class="empty">This note was deleted.</div>';
@@ -57,6 +89,11 @@ VIEWS.note = function (id) {
     + '<div class="scrollx" role="group" aria-label="Area">' + areasSorted().map(function (a) {
       return '<button class="chip' + (n.area === a.id ? ' on' : '') + '" data-act="notearea" data-id="' + id + '" data-a="' + a.id + '"><i style="background:' + esc(a.color) + '"></i>' + esc(a.short) + '</button>';
     }).join('') + '</div>'
+    + (projectsAll('active').length ? '<div class="scrollx" role="group" aria-label="Project">' + projectsAll('active').map(function (p) {
+      return '<button class="chip' + (n.project === p.id ? ' on' : '') + '" data-act="noteproj" data-id="' + id + '" data-p="' + p.id + '">' + esc(p.ic || '📁') + ' ' + esc(p.t) + '</button>';
+    }).join('') + '</div>' : '')
+    + '<div class="btnrow"><button class="btn soft" data-act="notepin" data-id="' + id + '">' + (n.pinned ? 'Unpin' : 'Pin to top') + '</button>'
+    + '<button class="btn soft" data-act="notekind" data-id="' + id + '">' + (n.kind === 'idea' ? 'Make it a note' : 'Mark as idea') + '</button></div>'
     + '<div class="btnrow"><button class="btn soft" data-act="notetotask" data-id="' + id + '">Make it a task</button>'
     + '<button class="btn ghost" style="color:var(--bad)" data-act="delnote" data-id="' + id + '">Delete</button></div>';
 };
@@ -66,20 +103,20 @@ VIEWS.note.after = function (id) {
   });
 };
 ACTS.newnote = function () { var n = Store.put('notes', { title: '', body: '' }); push('note', n.id); setTimeout(function () { var e = $('#ntitle'); if (e) e.focus(); }, 50); };
+ACTS.noteproj = function (d) { var n = Store.get('notes', d.id); Store.patch('notes', d.id, { project: n.project === d.p ? null : d.p }); };
+ACTS.notepin = function (d) { var n = Store.get('notes', d.id); Store.patch('notes', d.id, { pinned: !n.pinned }); };
+ACTS.notekind = function (d) { var n = Store.get('notes', d.id); Store.patch('notes', d.id, { kind: n.kind === 'idea' ? 'note' : 'idea' }); };
 ACTS.notearea = function (d) { var n = Store.get('notes', d.id); Store.patch('notes', d.id, { area: n.area === d.a ? null : d.a }); };
 ACTS.delnote = function (d) { var n = Store.get('notes', d.id); Store.del('notes', d.id); pop(); toast('Note deleted', function () { Store.put('notes', n); }); };
 ACTS.notetotask = function (d) {
   var n = Store.get('notes', d.id);
-  var t = Store.put('tasks', { t: n.title || 'From a note', note: n.body || '', area: n.area || null, due: today(), done: false, steps: [] });
+  var t = Store.put('tasks', { t: n.title || 'From a note', note: n.body || '', area: n.area || null, project: n.project || null, due: today(), done: false, steps: [] });
   logEvent('Turned a note into a task: ' + t.t, t.area); push('task', t.id);
 };
 
 /* ═══ MORE ═══════════════════════════════════════════════════════════ */
 TITLES.more = 'More';
-var SOON = {
-  journal: 'Journal arrives with Notes and Projects: mood plus an entry, prompted from today\'s log.',
-  projects: 'Projects arrive with the Phase 3 update: Done when, Next, Where I left off, and panels.',
-  calendar: 'Calendar arrives with the Phase 3 update: a month grid and a week view coloured by area.' };
+var SOON = {};
 VIEWS.more = function () {
   var inboxN = Store.all('inbox').length;
   return '<div class="menu">' + SIDE_MORE.map(function (m) {
@@ -92,9 +129,6 @@ VIEWS.soon = function () {
   var c = current();
   return '<div class="empty">' + esc(SOON[c.view] || 'Coming soon.') + '</div>';
 };
-['journal', 'projects', 'calendar'].forEach(function (k) {
-  TITLES[k] = k.charAt(0).toUpperCase() + k.slice(1); VIEWS[k] = VIEWS.soon;
-});
 
 TITLES.money = 'Money';
 VIEWS.money = function () {

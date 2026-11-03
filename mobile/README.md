@@ -11,7 +11,7 @@ Running inside the Claude app is what gives it, with no server of its own:
 
 Opened anywhere else, such as a plain browser, it still works, but saves on that device only.
 
-## What's in it (Phases 1–2)
+## What's in it (Phases 1–3)
 
 | Screen | What it does |
 |---|---|
@@ -22,10 +22,13 @@ Opened anywhere else, such as a plain browser, it still works, but saves on that
 | **Life areas** | Work (EMS · iCare), HCPD, Gym, Inky, School, Partner, Money. State, focus, open tasks. Editable |
 | **Habits** | Mark done (on Today or the Habits page), skip a day on purpose without breaking the streak, week strip, 30-day grid, daily sparkline, streak and best run, a builder with templates, any days of the week |
 | **Goals** | Why, steps that set the progress, and one next action. *Put it on today* makes it a task; finishing it asks for the next one, and Claude can suggest three |
-| **Notes** | Basic list and editor. The full version comes with Phase 3 |
+| **Projects** | Active / Parked / Finished. Each has *Done when…*, one **Next** step (*Start* puts it on today; *Done* logs it and asks for the next), *Where I left off* (asked for when you leave after time spent), its tasks, and panels by kind: checklist, log, links, notes, people, budget |
+| **Journal** | One entry a day: mood plus words, prompted from today's log. A week of moods at a glance |
+| **Calendar** | Month grid with a dot per task in its area's colour; week view as blocks coloured by area (the Status design); tap a day to see it and add to it |
+| **Notes** | Search, filter by kind or area, pin, link to a project, turn into a task |
 | **Settings** | Sync status, theme, clear examples, erase |
 
-Journal, Projects, Calendar and Money are marked *Soon* in the app. The full plan is in the repo history and in `/root/.claude/plans/`.
+Money is the next phase: Payday OS moves into it. Until then the Money tab links to Payday OS. The full plan is in the repo history and in `/root/.claude/plans/`.
 
 ## Build and test
 

@@ -9,9 +9,10 @@ var SIDE_MORE = [['areas', 'Life areas', 'areas'], ['inbox', 'Inbox', 'inbox'], 
   ['notes', 'Notes', 'notes'], ['journal', 'Journal', 'journal'], ['projects', 'Projects', 'projects'],
   ['calendar', 'Calendar', 'calendar'], ['settings', 'Settings', 'settings']];
 
-function go(tab) { nav.tab = tab; nav.stack = []; render(true); }
-function push(view, arg) { nav.stack.push({ view: view, arg: arg }); render(true); }
-function pop() { nav.stack.pop(); render(true); }
+function leaving() { if (current().view === 'project' && typeof maybeAskLeftOff === 'function') setTimeout(maybeAskLeftOff, 0); }
+function go(tab) { leaving(); nav.tab = tab; nav.stack = []; render(true); }
+function push(view, arg) { if (view !== 'task' && view !== 'note') leaving(); nav.stack.push({ view: view, arg: arg }); render(true); }
+function pop() { leaving(); nav.stack.pop(); render(true); }
 function current() { return nav.stack.length ? nav.stack[nav.stack.length - 1] : { view: nav.tab, arg: null }; }
 
 function syncBadge() {

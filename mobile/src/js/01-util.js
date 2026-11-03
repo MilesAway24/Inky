@@ -29,6 +29,7 @@ function shortDate(s) {
   if (n > 1 && n < 7) return DOW[d.getDay()];
   return DOW[d.getDay()] + ' ' + d.getDate() + ' ' + MON[d.getMonth()];
 }
+function absDate(s) { var d = parseYmd(s); return d.getDate() + ' ' + MON[d.getMonth()]; }
 function clock(ts) {
   var d = new Date(ts);
   return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');

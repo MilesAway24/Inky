@@ -86,7 +86,12 @@ const ok = (cond, msg) => { console.log((cond ? 'ok   ' : 'FAIL ') + msg); if (!
   const t = await p.evaluate(() => Object.values(window.__mock.docs).some((d) => d.t === 'Call the HCPD office about the packet' && d.steps && d.steps.length));
   ok(t, 'the sorted capture became a task with a first step');
 
-  // Reload: everything still there
+  // Reload: everything still there. The fake db keeps its data in
+  // sessionStorage; wait until that copy holds the latest writes, so the
+  // test checks the app and not the harness.
+  await p.waitForFunction(() => { const d = JSON.parse(sessionStorage.getItem('__mockdb') || '{}');
+    return Object.values(d).some((x) => x.note === 'Edited note text') && Object.values(d).some((x) => x.t === 'Call the HCPD office about the packet'); }, null, { timeout: 5000 });
+  await p.waitForTimeout(1500); // Chromium commits storage to the next page in batches
   await p.reload(); await p.waitForTimeout(700);
   await p.click('.tabs [data-v=tasks]'); await p.waitForTimeout(150);
   const survived = await p.isVisible('text=Call the HCPD office about the packet');
@@ -155,8 +160,59 @@ const ok = (cond, msg) => { console.log((cond ? 'ok   ' : 'FAIL ') + msg); if (!
   const kinds = await p.evaluate(() => document.querySelector('.play [data-act=playdo]').dataset.k);
   ok(['task', 'habit', 'goal'].includes(kinds), 'Play serves tasks, habits and goals (now: ' + kinds + ')');
 
+  // ── Phase 3: projects ────────────────────────────────────────────
+  await p.click('.tabs [data-v=more]'); await p.click('.menu [data-v=projects]'); await p.waitForTimeout(150);
+  ok((await p.$$('.pcard')).length === 4, 'Projects lists 3 active + 1 parked');
+  await p.screenshot({ path: shots + '/phone-projects.png', fullPage: true });
+  await p.click('.pcard:has-text("Inky")'); await p.waitForTimeout(150);
+  ok(await p.isVisible('text=Done when…') && await p.isVisible('text=Where I left off'), 'a project page shows Done when and Where I left off');
+  ok(await p.isVisible('details[data-panel=checklist]') && await p.isVisible('details[data-panel=links]'), 'its panels follow its kind');
+  ok(await p.isVisible('.row:has-text("Fix the Generate Plan spinner")'), 'its tasks are listed on it');
+  await p.fill('details[data-panel=checklist] input', 'Write the release notes'); await p.press('details[data-panel=checklist] input', 'Enter'); await p.waitForTimeout(150);
+  ok(await p.isVisible('details[data-panel=checklist] >> text=Write the release notes'), 'adding a checklist item works');
+  await p.click('[data-act=projnextdone]'); await p.waitForTimeout(150);
+  await p.fill('#pnext', 'Ship the timeout fix'); await p.press('#pnext', 'Enter'); await p.waitForTimeout(150);
+  ok(await p.isVisible('.nextcard >> text=Ship the timeout fix'), 'finishing the next step sets a new one');
+  ok(await p.isVisible('details[data-panel=log] >> text=Done: Fix the Generate Plan spinner'), 'the finished step is logged on the project');
+  await p.click('[data-act=projstart]'); await p.waitForTimeout(150);
+  ok(await p.isVisible('text=On your task list for Today'), 'Start puts the next step on today');
+  await p.screenshot({ path: shots + '/phone-project.png', fullPage: true });
+  await p.click('.back'); await p.click('.pcard:has-text("Apartment")'); await p.waitForTimeout(150);
+  await p.fill('details[data-panel=budget] input[name=t]', 'Paint'); await p.fill('details[data-panel=budget] input[name=amt]', '$36.50');
+  await p.press('details[data-panel=budget] input[name=amt]', 'Enter'); await p.waitForTimeout(150);
+  ok((await p.textContent('details[data-panel=budget] .kvrow')).includes('Total $285.5'), 'budget totals add up (' + (await p.textContent('details[data-panel=budget] .kvrow')) + ')');
+  await p.click('.back'); await p.click('[data-act=newproject]'); await p.waitForTimeout(100);
+  await p.fill('#npt', 'The Capri'); await p.click('label.chip:has-text("Build")'); await p.click('#sheet button[type=submit]'); await p.waitForTimeout(150);
+  ok(await p.isVisible('details[data-panel=budget]') && await p.isVisible('details[data-panel=links]'), 'a new Build project gets build panels');
+  await p.click('.back'); await p.waitForTimeout(100);
+
+  // ── Phase 3: journal ─────────────────────────────────────────────
+  await p.click('.tabs [data-v=more]'); await p.click('.menu [data-v=journal]'); await p.waitForTimeout(150);
+  ok((await p.getAttribute('#jtext', 'placeholder')).startsWith('Today you:'), 'the journal prompt is built from today\'s log');
+  await p.click('[data-act=mood][data-m=good]'); await p.fill('#jtext', 'Shipped the timeout fix.'); await p.waitForTimeout(500);
+  ok((await p.$$('.list .row')).length === 3, 'earlier entries are listed');
+  await p.screenshot({ path: shots + '/phone-journal.png', fullPage: true });
+
+  // ── Phase 3: calendar ────────────────────────────────────────────
+  await p.click('.tabs [data-v=more]'); await p.click('.menu [data-v=calendar]'); await p.waitForTimeout(150);
+  ok(await p.isVisible('.cal .day.today'), 'the month grid marks today');
+  const tomorrowBtn = await p.$('.cal .day.today + .day');
+  if (tomorrowBtn) { await tomorrowBtn.click(); await p.waitForTimeout(100); }
+  await p.fill('#caladd', 'Pick up the uniform'); await p.press('#caladd', 'Enter'); await p.waitForTimeout(150);
+  ok(await p.isVisible('.card .row:has-text("Pick up the uniform")'), 'adding a task on a chosen day works');
+  await p.click('[data-act=calmode][data-v=week]'); await p.waitForTimeout(150);
+  ok(await p.isVisible('.blk:has-text("Pick up the uniform")'), 'the week view shows it as a block');
+  await p.screenshot({ path: shots + '/phone-week.png', fullPage: true });
+
+  // ── Phase 3: notes ───────────────────────────────────────────────
+  await p.click('.tabs [data-v=more]'); await p.click('.menu [data-v=notes]'); await p.waitForTimeout(150);
+  await p.fill('#nq', 'onboarding'); await p.waitForTimeout(100);
+  ok((await p.$$('#notelist .row')).length === 1, 'note search filters as you type');
+  await p.fill('#nq', ''); await p.click('[data-act=notef][data-f=idea]'); await p.waitForTimeout(100);
+  ok((await p.$$('#notelist .row')).length >= 1, 'the Ideas filter shows sorted ideas');
+
   // Every screen: no sideways scrolling
-  const views = ['today', 'tasks', 'more', 'areas', 'inbox', 'notes', 'settings', 'money', 'habits', 'goals'];
+  const views = ['today', 'tasks', 'more', 'areas', 'inbox', 'notes', 'settings', 'money', 'habits', 'goals', 'projects', 'journal', 'calendar'];
   let wide = [];
   for (const v of views) {
     await p.evaluate((v) => { document.querySelector('[data-act=tab][data-v="' + v + '"]') ? document.querySelector('[data-act=tab][data-v="' + v + '"]').click() : null; }, v);

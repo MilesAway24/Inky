@@ -41,8 +41,8 @@ function seedData() {
   var now = new Date(); now.setHours(7, 15, 0, 0);
   [['Morning brief opened, priorities set', null, 0], ['Leg day logged', 'gym', 145], ['3 slipped tasks moved to real dates', 'hcpd', 230]]
     .forEach(function (l) { if (now.getTime() + l[2] * 6e4 < Date.now()) Store.put('log', { example: true, at: now.getTime() + l[2] * 6e4, day: t, text: l[0], area: l[1] }, true); });
-  seedPhase2();
-  Store.put('meta', { id: 'setup', seeded: Date.now(), examples: true, v: 2 });
+  seedPhase2(); seedPhase3();
+  Store.put('meta', { id: 'setup', seeded: Date.now(), examples: true, v: 3 });
 }
 
 /* Habits and goals: added in phase 2, so they're also offered to people
@@ -68,14 +68,56 @@ function seedPhase2() {
     });
 }
 function upgradeSeed() {
-  var m = Store.get('meta', 'setup');
-  if (!m || (m.v || 1) >= 2) return;
-  if (m.examples && !Store.all('habits').length && !Store.all('goals').length) seedPhase2();
-  Store.patch('meta', 'setup', { v: 2 });
+  var m = Store.get('meta', 'setup'), v = m ? (m.v || 1) : 3;
+  if (!m || v >= 3) return;
+  if (m.examples && v < 2 && !Store.all('habits').length && !Store.all('goals').length) seedPhase2();
+  if (m.examples && !Store.all('projects').length && !Store.all('journal').length) seedPhase3();
+  Store.patch('meta', 'setup', { v: 3 });
+}
+
+/* Projects (from the Sep 18 build's model, about Miles's own work) and a
+   few journal days. Added in phase 3. */
+function seedPhase3() {
+  var t = today(), now = Date.now();
+  var P = [
+    { id: 'pinky', ic: '🐙', t: 'Inky', kind: 'software', area: 'inky', done: 'Done when five beta testers use it every week.',
+      next: 'Fix the Generate Plan spinner', left: 'Spinner hangs when the AI call times out. Reproduced it with the network throttled.',
+      panels: ['checklist', 'log', 'links', 'docs'],
+      data: { checklist: [{ t: 'M0: AI fix', done: false }, { t: 'New home screen', done: false }, { t: 'Invite five testers', done: false }],
+        log: [{ t: 'Reproduced the spinner hang', at: now - 2 * 864e5 }], links: [{ t: 'Repo', url: 'https://github.com/MilesAway24/Inky' }] } },
+    { id: 'phcpd', ic: '🚔', t: 'HCPD application', kind: 'admin', area: 'hcpd', done: 'Done when I have an offer letter.',
+      next: 'Finish the PAT prep block', left: '',
+      panels: ['checklist', 'people', 'docs', 'log'],
+      data: { checklist: [{ t: 'Application submitted', done: true }, { t: 'PAT', done: false }, { t: 'Background packet', done: false }, { t: 'Oral board', done: false }],
+        people: [{ n: 'Recruiter', role: 'Add their name and number' }] } },
+    { id: 'pacad', ic: '🏃', t: 'Academy fitness prep', kind: 'fitness', area: 'gym', done: 'Done when I pass every PAT event twice in practice.',
+      next: 'Timed 1.5 mile run on Saturday', left: 'Push-ups at 28. Sit-ups fine.',
+      panels: ['checklist', 'log'],
+      data: { checklist: [{ t: '1.5 mile under the standard', done: false }, { t: 'Push-ups to standard', done: false }, { t: 'Sit-ups to standard', done: true }],
+        log: [{ t: 'Push-ups: 28 in a minute', at: now - 864e5 }] } },
+    { id: 'pkit', ic: '🏠', t: 'Apartment setup', kind: 'reno', area: null, status: 'parked', done: 'Done when the desk and shelves are up.',
+      next: 'Measure the wall by the window', left: 'Waiting on the shelf brackets.',
+      panels: ['budget', 'checklist'],
+      data: { budget: [{ t: 'Desk', amt: 140, paid: true }, { t: 'Shelves', amt: 85, paid: false }, { t: 'Brackets', amt: 24, paid: false }],
+        checklist: [{ t: 'Desk', done: true }, { t: 'Shelves', done: false }] } }
+  ];
+  P.forEach(function (p, i) {
+    Store.put('projects', Object.assign({ example: true, status: 'active', touched: addDays(t, -i), touchedAt: now - i * 864e5 }, p), true);
+  });
+  // Link existing example tasks to their projects.
+  Store.all('tasks').forEach(function (x) {
+    if (!x.example || x.project) return;
+    var pid = x.area === 'inky' ? 'pinky' : x.area === 'hcpd' ? 'phcpd' : null;
+    if (pid) Store.patch('tasks', x.id, { project: pid });
+  });
+  [[-1, 'good', 'Good day. Three gym sessions this week already. The spinner bug finally makes sense.'],
+   [-2, 'low', 'Did almost nothing. Opened the HCPD portal and closed it. That still counts as opening it.'],
+   [-3, 'ok', 'Long shift. Meal prep would have helped.']]
+    .forEach(function (j) { var d = addDays(t, j[0]); Store.put('journal', { example: true, id: 'j' + d, day: d, mood: j[1], text: j[2] }, true); });
 }
 
 function clearExamples() {
-  ['tasks', 'inbox', 'notes', 'log', 'habits', 'goals'].forEach(function (c) {
+  ['tasks', 'inbox', 'notes', 'log', 'habits', 'goals', 'projects', 'journal'].forEach(function (c) {
     Store.all(c).forEach(function (o) { if (o.example) Store.del(c, o.id); });
   });
   var m = Store.get('meta', 'setup'); if (m) Store.patch('meta', 'setup', { examples: false });

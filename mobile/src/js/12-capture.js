@@ -111,11 +111,11 @@ ACTS.file = function (d) {
 function applySuggestion(it, s) {
   var title = (s.title || it.text || 'Untitled').slice(0, 140);
   if (s.type === 'task') {
-    var t = Store.put('tasks', { t: title, ic: s.icon || '', area: s.area || null, due: s.due || null, done: false, note: s.title && s.title !== it.text ? it.text : '',
+    var t = Store.put('tasks', { t: title, ic: s.icon || '', area: s.area || null, project: s.project || null, due: s.due || null, done: false, note: s.title && s.title !== it.text ? it.text : '',
       steps: s.firstStep ? [{ t: s.firstStep, done: false }] : [], photo: it.photo || null }, true);
     logEvent('Sorted into a task: ' + t.t, t.area);
   } else if (s.type === 'note' || s.type === 'idea') {
-    Store.put('notes', { title: title.slice(0, 80), body: it.text, area: s.area || null, kind: s.type, photo: it.photo || null }, true);
+    Store.put('notes', { title: title.slice(0, 80), body: it.text, area: s.area || null, project: s.project || null, kind: s.type, photo: it.photo || null }, true);
     logEvent('Sorted into ' + (s.type === 'idea' ? 'an idea' : 'a note'), s.area);
   }
   Store.del('inbox', it.id);
@@ -126,17 +126,19 @@ ACTS.sortai = function () {
   var t = today(), d = new Date();
   aiJson('You sort quick captures for a personal organizer. Today is ' + DOWL[d.getDay()] + ' ' + t + '.\n'
     + 'Life areas (id: name): ' + areasSorted().map(function (a) { return a.id + ': ' + a.name; }).join('; ') + '.\n'
+    + 'Active projects (id: name): ' + (projectsAll('active').map(function (p) { return p.id + ': ' + p.t; }).join('; ') || 'none') + '.\n'
     + 'For each item decide:\n- type: "task" (something to do), "note" (information to keep), "idea" (a thought to develop later) or "drop" (empty or meaningless)\n'
     + '- title: a short, clear version in the person\'s own voice, under 70 characters\n- area: one area id from the list, or null\n'
+    + '- project: one project id from the list if it clearly belongs to that project, else null\n'
     + '- due: YYYY-MM-DD only if the text names or clearly implies a day, else null\n- firstStep: for tasks, one concrete step under 5 minutes, else null\n- icon: one emoji\n'
     + 'Items: ' + JSON.stringify(items.map(function (i) { return { id: i.id, text: i.text || '(photo with no text)' }; })) + '\n'
-    + 'Reply with JSON only: {"items":[{"id":"…","type":"task","title":"…","area":null,"due":null,"firstStep":null,"icon":"📝"}]}')
+    + 'Reply with JSON only: {"items":[{"id":"…","type":"task","title":"…","area":null,"project":null,"due":null,"firstStep":null,"icon":"📝"}]}')
     .then(function (r) {
       var ids = {}; items.forEach(function (i) { ids[i.id] = 1; });
-      var areaIds = {}; areasSorted().forEach(function (a) { areaIds[a.id] = 1; });
+      var areaIds = {}; areasSorted().forEach(function (a) { areaIds[a.id] = 1; }); var projIds = {}; projectsAll('active').forEach(function (p) { projIds[p.id] = p; });
       var out = (r && r.items || []).filter(function (s) { return s && ids[s.id]; }).map(function (s) {
         return { id: s.id, type: ['task', 'note', 'idea', 'drop'].indexOf(s.type) > -1 ? s.type : 'task',
-          title: String(s.title || '').slice(0, 140), area: areaIds[s.area] ? s.area : null,
+          title: String(s.title || '').slice(0, 140), project: projIds[s.project] ? s.project : null, area: areaIds[s.area] ? s.area : (projIds[s.project] ? projIds[s.project].area || null : null),
           due: /^\d{4}-\d\d-\d\d$/.test(s.due || '') ? s.due : null, firstStep: s.firstStep ? String(s.firstStep).slice(0, 120) : null,
           icon: typeof s.icon === 'string' ? s.icon.slice(0, 4) : '' };
       });
@@ -155,6 +157,7 @@ function sortView(items) {
         + '<div class="t">' + esc(s.icon ? s.icon + ' ' : '') + esc(s.title || it.text) + '</div>'
         + '<div class="meta"><span class="pill">' + { task: 'Task', note: 'Note', idea: 'Idea', drop: 'Delete' }[s.type] + '</span>'
         + (s.area ? '<span class="pill">' + areaDot(s.area) + '&nbsp;' + esc(areaName(s.area)) + '</span>' : '')
+        + (s.project && Store.get('projects', s.project) ? '<span class="pill">' + esc(Store.get('projects', s.project).t) + '</span>' : '')
         + (s.due ? '<span class="pill">' + esc(shortDate(s.due)) + '</span>' : '') + '</div>'
         + (s.firstStep ? '<div class="first">First step: ' + esc(s.firstStep) + '</div>' : '')
         + '<div class="chips"><button class="chip on" data-act="sortaccept" data-id="' + s.id + '">Accept</button>'

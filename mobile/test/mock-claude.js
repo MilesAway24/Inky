@@ -5,7 +5,7 @@
   var KEY = '__mockdb';
   var docs = JSON.parse(sessionStorage.getItem(KEY) || '{}');
   var listeners = [];
-  var save = function () { sessionStorage.setItem(KEY, JSON.stringify(docs)); };
+  var save = function () { try { sessionStorage.setItem(KEY, JSON.stringify(docs)); } catch (e) { console.error('mock db save failed: ' + e.message); } };
   function snap(col) {
     var prefix = col + '/', out = [];
     Object.keys(docs).forEach(function (p) {

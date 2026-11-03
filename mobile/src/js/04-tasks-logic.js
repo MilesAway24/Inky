@@ -62,6 +62,11 @@ function completeTask(id, on) {
   // A goal's next action, done from the task list, moves the goal on.
   var g = val && t.goal ? Store.get('goals', t.goal) : null;
   if (g && g.taskId === id) Store.patch('goals', g.id, { lastNext: g.next, next: '', taskId: null, touched: today() });
+  var pr = val && t.project ? Store.get('projects', t.project) : null;
+  if (pr && pr.nextTask === id) {
+    var data = Object.assign({}, pr.data || {}); data.log = (data.log || []).concat([{ t: 'Done: ' + pr.next, at: Date.now() }]);
+    Store.patch('projects', pr.id, { lastNext: pr.next, next: '', nextTask: null, data: data, touched: today(), touchedAt: Date.now() });
+  }
   return val;
 }
 function moveTask(id, dest) {

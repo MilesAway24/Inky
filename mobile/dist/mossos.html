@@ -354,6 +354,57 @@ textarea.input{resize:vertical;min-height:110px}
 .nextcard .t{font-size:19px;font-weight:500;line-height:1.3;letter-spacing:-.01em}
 .donegrp summary{cursor:pointer;color:var(--muted);font-size:14px;padding:6px 0;list-style:none}
 .donegrp summary::-webkit-details-marker{display:none}
+
+/* ── projects ───────────────────────────────────────────────────────── */
+.pcard{display:grid;gap:10px;padding:16px;border-radius:16px;background:var(--surface);border:1px solid var(--line);box-shadow:inset 0 3px 0 var(--c);text-align:left;width:100%;min-width:0}
+.panel{border:1px solid var(--line);border-radius:16px;background:var(--surface);overflow:hidden}
+.panel summary{display:flex;align-items:center;gap:10px;min-height:52px;padding:0 16px;cursor:pointer;font-weight:500;list-style:none}
+.panel summary::-webkit-details-marker{display:none}
+.panel summary .meta{margin-left:auto;font-size:13px;color:var(--faint);font-weight:400;font-variant-numeric:tabular-nums}
+.panel .pbody{padding:0 16px 14px;display:grid;gap:10px;border-top:1px solid var(--line)}
+.amt{font-variant-numeric:tabular-nums;white-space:nowrap}
+.kvrow{display:flex;justify-content:space-between;gap:10px;font-size:14px;color:var(--muted)}
+.kvrow b{font-weight:500;color:var(--ink)}
+.av{width:36px;height:36px;border-radius:50%;background:var(--sunk);display:grid;place-items:center;font-weight:500;flex:none}
+.addstep input[inputmode]{flex:0 0 110px}
+
+/* ── notes, journal ────────────────────────────────────────────────── */
+.search .input{min-height:44px}
+.moodweek{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.moodweek span{display:grid;justify-items:center;gap:2px;padding:8px 0;border-radius:12px;background:var(--surface)}
+.moodweek span.now{box-shadow:inset 0 0 0 1.5px var(--ink)}
+.moodweek b{font-size:20px;font-weight:400;line-height:1.2;color:var(--faint)}
+.moodweek em{font-style:normal;font-size:11px;color:var(--faint)}
+.jd{width:76px;flex:none;font-size:13px}
+.jd b{font-weight:500}
+.jt{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;font-size:15px}
+
+/* ── calendar ───────────────────────────────────────────────────────── */
+.calhead{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.calhead b{font-weight:500;font-size:17px}
+.cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;text-align:center}
+.cal .wdh{font-size:11.5px;color:var(--faint);padding:4px 0}
+.day{position:relative;min-height:58px;display:grid;justify-items:center;align-content:start;gap:4px;padding-top:6px;border-radius:12px;min-width:0}
+.day .n{width:30px;height:30px;line-height:30px;border-radius:9px;font-variant-numeric:tabular-nums;font-size:15px}
+.day.today .n{color:var(--accent);font-weight:600}
+.day.sel .n{background:var(--ink);color:var(--bg)}
+.day .dots{display:flex;gap:3px;height:6px}
+.day .dots i{width:6px;height:6px;border-radius:50%;display:block}
+.day .mood{position:absolute;right:2px;top:2px;font-size:10px}
+.arealegend{display:flex;flex-wrap:wrap;gap:6px 12px;font-size:12px;color:var(--faint)}
+.arealegend span{display:inline-flex;align-items:center;gap:5px}
+.arealegend i{width:8px;height:8px;border-radius:50%}
+.wk{display:grid;gap:6px}
+.wkday{display:grid;grid-template-columns:52px 1fr;gap:4px 10px;align-items:start;padding:10px;border-radius:14px;background:var(--surface);border:1px solid var(--line)}
+.wkday.today{border-color:var(--accent)}
+.wkday.sel{box-shadow:inset 0 0 0 1.5px var(--ink)}
+.wkh{display:grid;justify-items:start;text-align:left}
+.wkh b{font-size:13px;font-weight:500}
+.wkh span{font-size:22px;font-weight:300;line-height:1.1;font-variant-numeric:tabular-nums}
+.blocks{display:flex;flex-wrap:wrap;gap:6px;min-width:0}
+.blk{font-size:13px;font-weight:500;padding:6px 9px;border-radius:9px;background:var(--c);color:#111;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left}
+.blk.done{opacity:.45;text-decoration:line-through}
+.wkday .hab{grid-column:2}
 </style>
 
 <div class="app" id="app">
@@ -400,6 +451,7 @@ function shortDate(s) {
   if (n > 1 && n < 7) return DOW[d.getDay()];
   return DOW[d.getDay()] + ' ' + d.getDate() + ' ' + MON[d.getMonth()];
 }
+function absDate(s) { var d = parseYmd(s); return d.getDate() + ' ' + MON[d.getMonth()]; }
 function clock(ts) {
   var d = new Date(ts);
   return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
@@ -441,7 +493,7 @@ function icon(name, cls) {
    That subtree is the viewer's own, so the same person on iPhone and iPad
    sees one set of data. Without db (signed out, or a plain browser) the
    app keeps working from the device cache. */
-var COLS = ['areas', 'tasks', 'inbox', 'notes', 'log', 'meta', 'habits', 'goals'];
+var COLS = ['areas', 'tasks', 'inbox', 'notes', 'log', 'meta', 'habits', 'goals', 'projects', 'journal'];
 var CACHE_KEY = 'mossos.mobile.v1';
 
 var Store = (function () {
@@ -611,8 +663,8 @@ function seedData() {
   var now = new Date(); now.setHours(7, 15, 0, 0);
   [['Morning brief opened, priorities set', null, 0], ['Leg day logged', 'gym', 145], ['3 slipped tasks moved to real dates', 'hcpd', 230]]
     .forEach(function (l) { if (now.getTime() + l[2] * 6e4 < Date.now()) Store.put('log', { example: true, at: now.getTime() + l[2] * 6e4, day: t, text: l[0], area: l[1] }, true); });
-  seedPhase2();
-  Store.put('meta', { id: 'setup', seeded: Date.now(), examples: true, v: 2 });
+  seedPhase2(); seedPhase3();
+  Store.put('meta', { id: 'setup', seeded: Date.now(), examples: true, v: 3 });
 }
 
 /* Habits and goals: added in phase 2, so they're also offered to people
@@ -638,14 +690,56 @@ function seedPhase2() {
     });
 }
 function upgradeSeed() {
-  var m = Store.get('meta', 'setup');
-  if (!m || (m.v || 1) >= 2) return;
-  if (m.examples && !Store.all('habits').length && !Store.all('goals').length) seedPhase2();
-  Store.patch('meta', 'setup', { v: 2 });
+  var m = Store.get('meta', 'setup'), v = m ? (m.v || 1) : 3;
+  if (!m || v >= 3) return;
+  if (m.examples && v < 2 && !Store.all('habits').length && !Store.all('goals').length) seedPhase2();
+  if (m.examples && !Store.all('projects').length && !Store.all('journal').length) seedPhase3();
+  Store.patch('meta', 'setup', { v: 3 });
+}
+
+/* Projects (from the Sep 18 build's model, about Miles's own work) and a
+   few journal days. Added in phase 3. */
+function seedPhase3() {
+  var t = today(), now = Date.now();
+  var P = [
+    { id: 'pinky', ic: '🐙', t: 'Inky', kind: 'software', area: 'inky', done: 'Done when five beta testers use it every week.',
+      next: 'Fix the Generate Plan spinner', left: 'Spinner hangs when the AI call times out. Reproduced it with the network throttled.',
+      panels: ['checklist', 'log', 'links', 'docs'],
+      data: { checklist: [{ t: 'M0: AI fix', done: false }, { t: 'New home screen', done: false }, { t: 'Invite five testers', done: false }],
+        log: [{ t: 'Reproduced the spinner hang', at: now - 2 * 864e5 }], links: [{ t: 'Repo', url: 'https://github.com/MilesAway24/Inky' }] } },
+    { id: 'phcpd', ic: '🚔', t: 'HCPD application', kind: 'admin', area: 'hcpd', done: 'Done when I have an offer letter.',
+      next: 'Finish the PAT prep block', left: '',
+      panels: ['checklist', 'people', 'docs', 'log'],
+      data: { checklist: [{ t: 'Application submitted', done: true }, { t: 'PAT', done: false }, { t: 'Background packet', done: false }, { t: 'Oral board', done: false }],
+        people: [{ n: 'Recruiter', role: 'Add their name and number' }] } },
+    { id: 'pacad', ic: '🏃', t: 'Academy fitness prep', kind: 'fitness', area: 'gym', done: 'Done when I pass every PAT event twice in practice.',
+      next: 'Timed 1.5 mile run on Saturday', left: 'Push-ups at 28. Sit-ups fine.',
+      panels: ['checklist', 'log'],
+      data: { checklist: [{ t: '1.5 mile under the standard', done: false }, { t: 'Push-ups to standard', done: false }, { t: 'Sit-ups to standard', done: true }],
+        log: [{ t: 'Push-ups: 28 in a minute', at: now - 864e5 }] } },
+    { id: 'pkit', ic: '🏠', t: 'Apartment setup', kind: 'reno', area: null, status: 'parked', done: 'Done when the desk and shelves are up.',
+      next: 'Measure the wall by the window', left: 'Waiting on the shelf brackets.',
+      panels: ['budget', 'checklist'],
+      data: { budget: [{ t: 'Desk', amt: 140, paid: true }, { t: 'Shelves', amt: 85, paid: false }, { t: 'Brackets', amt: 24, paid: false }],
+        checklist: [{ t: 'Desk', done: true }, { t: 'Shelves', done: false }] } }
+  ];
+  P.forEach(function (p, i) {
+    Store.put('projects', Object.assign({ example: true, status: 'active', touched: addDays(t, -i), touchedAt: now - i * 864e5 }, p), true);
+  });
+  // Link existing example tasks to their projects.
+  Store.all('tasks').forEach(function (x) {
+    if (!x.example || x.project) return;
+    var pid = x.area === 'inky' ? 'pinky' : x.area === 'hcpd' ? 'phcpd' : null;
+    if (pid) Store.patch('tasks', x.id, { project: pid });
+  });
+  [[-1, 'good', 'Good day. Three gym sessions this week already. The spinner bug finally makes sense.'],
+   [-2, 'low', 'Did almost nothing. Opened the HCPD portal and closed it. That still counts as opening it.'],
+   [-3, 'ok', 'Long shift. Meal prep would have helped.']]
+    .forEach(function (j) { var d = addDays(t, j[0]); Store.put('journal', { example: true, id: 'j' + d, day: d, mood: j[1], text: j[2] }, true); });
 }
 
 function clearExamples() {
-  ['tasks', 'inbox', 'notes', 'log', 'habits', 'goals'].forEach(function (c) {
+  ['tasks', 'inbox', 'notes', 'log', 'habits', 'goals', 'projects', 'journal'].forEach(function (c) {
     Store.all(c).forEach(function (o) { if (o.example) Store.del(c, o.id); });
   });
   var m = Store.get('meta', 'setup'); if (m) Store.patch('meta', 'setup', { examples: false });
@@ -717,6 +811,11 @@ function completeTask(id, on) {
   // A goal's next action, done from the task list, moves the goal on.
   var g = val && t.goal ? Store.get('goals', t.goal) : null;
   if (g && g.taskId === id) Store.patch('goals', g.id, { lastNext: g.next, next: '', taskId: null, touched: today() });
+  var pr = val && t.project ? Store.get('projects', t.project) : null;
+  if (pr && pr.nextTask === id) {
+    var data = Object.assign({}, pr.data || {}); data.log = (data.log || []).concat([{ t: 'Done: ' + pr.next, at: Date.now() }]);
+    Store.patch('projects', pr.id, { lastNext: pr.next, next: '', nextTask: null, data: data, touched: today(), touchedAt: Date.now() });
+  }
   return val;
 }
 function moveTask(id, dest) {
@@ -776,9 +875,10 @@ var SIDE_MORE = [['areas', 'Life areas', 'areas'], ['inbox', 'Inbox', 'inbox'], 
   ['notes', 'Notes', 'notes'], ['journal', 'Journal', 'journal'], ['projects', 'Projects', 'projects'],
   ['calendar', 'Calendar', 'calendar'], ['settings', 'Settings', 'settings']];
 
-function go(tab) { nav.tab = tab; nav.stack = []; render(true); }
-function push(view, arg) { nav.stack.push({ view: view, arg: arg }); render(true); }
-function pop() { nav.stack.pop(); render(true); }
+function leaving() { if (current().view === 'project' && typeof maybeAskLeftOff === 'function') setTimeout(maybeAskLeftOff, 0); }
+function go(tab) { leaving(); nav.tab = tab; nav.stack = []; render(true); }
+function push(view, arg) { if (view !== 'task' && view !== 'note') leaving(); nav.stack.push({ view: view, arg: arg }); render(true); }
+function pop() { leaving(); nav.stack.pop(); render(true); }
 function current() { return nav.stack.length ? nav.stack[nav.stack.length - 1] : { view: nav.tab, arg: null }; }
 
 function syncBadge() {
@@ -1133,6 +1233,9 @@ VIEWS.task = function (id) {
     + '<div class="prop"><span class="k">Area</span><span class="v">' + areasSorted().map(function (a) {
       return '<button class="chip' + (t.area === a.id ? ' on' : '') + '" data-act="taskarea" data-id="' + t.id + '" data-a="' + a.id + '"><i style="background:' + esc(a.color) + '"></i>' + esc(a.short) + '</button>';
     }).join('') + '</span></div>'
+    + (projectsAll('active').length || t.project ? '<div class="prop"><span class="k">Project</span><span class="v">' + projectsAll('active').concat(t.project && Store.get('projects', t.project) && Store.get('projects', t.project).status !== 'active' ? [Store.get('projects', t.project)] : []).map(function (p) {
+      return '<button class="chip' + (t.project === p.id ? ' on' : '') + '" data-act="taskproj" data-id="' + t.id + '" data-p="' + p.id + '">' + esc(p.ic || '📁') + ' ' + esc(p.t) + '</button>';
+    }).join('') + '</span></div>' : '')
     + '<div class="prop"><span class="k">Time</span><span class="v"><label class="sr" for="test">Time estimate</label><input id="test" class="input" style="max-width:160px;min-height:40px" data-field="est" value="' + esc(t.est || '') + '" placeholder="e.g. 20 min"></span></div>'
     + '<div class="prop"><span class="k">Icon</span><span class="v"><label class="sr" for="tic">Icon</label><input id="tic" class="input" style="max-width:80px;min-height:40px;text-align:center" data-field="ic" value="' + esc(t.ic || '') + '" maxlength="4"></span></div>'
     + '</div></section>';
@@ -1166,6 +1269,7 @@ ACTS.step = function (d) {
 ACTS.delstep = function (d) { var t = Store.get('tasks', d.id), s = (t.steps || []).slice(); s.splice(+d.i, 1); Store.patch('tasks', d.id, { steps: s }); };
 ACTS.when = function (d) { moveTask(d.id, d.to); toast('Moved to ' + { today: 'today', tomorrow: 'tomorrow', nextweek: 'next week', whenever: 'Whenever', drifted: 'Drifted' }[d.to]); };
 ACTS.whendate = function (d, el) { if (el.value) { moveTask(d.id, el.value); toast('Moved to ' + shortDate(el.value)); } };
+ACTS.taskproj = function (d) { var t = Store.get('tasks', d.id), p = Store.get('projects', d.p); Store.patch('tasks', d.id, { project: t.project === d.p ? null : d.p, area: t.area || (p && p.area) || null }); };
 ACTS.taskarea = function (d) { var t = Store.get('tasks', d.id); Store.patch('tasks', d.id, { area: t.area === d.a ? null : d.a }); };
 ACTS.taskprio = function (d) {
   if (!d.l) { Store.patch('tasks', d.id, { prio: null, prioDay: null }); return; }
@@ -1335,11 +1439,11 @@ ACTS.file = function (d) {
 function applySuggestion(it, s) {
   var title = (s.title || it.text || 'Untitled').slice(0, 140);
   if (s.type === 'task') {
-    var t = Store.put('tasks', { t: title, ic: s.icon || '', area: s.area || null, due: s.due || null, done: false, note: s.title && s.title !== it.text ? it.text : '',
+    var t = Store.put('tasks', { t: title, ic: s.icon || '', area: s.area || null, project: s.project || null, due: s.due || null, done: false, note: s.title && s.title !== it.text ? it.text : '',
       steps: s.firstStep ? [{ t: s.firstStep, done: false }] : [], photo: it.photo || null }, true);
     logEvent('Sorted into a task: ' + t.t, t.area);
   } else if (s.type === 'note' || s.type === 'idea') {
-    Store.put('notes', { title: title.slice(0, 80), body: it.text, area: s.area || null, kind: s.type, photo: it.photo || null }, true);
+    Store.put('notes', { title: title.slice(0, 80), body: it.text, area: s.area || null, project: s.project || null, kind: s.type, photo: it.photo || null }, true);
     logEvent('Sorted into ' + (s.type === 'idea' ? 'an idea' : 'a note'), s.area);
   }
   Store.del('inbox', it.id);
@@ -1350,17 +1454,19 @@ ACTS.sortai = function () {
   var t = today(), d = new Date();
   aiJson('You sort quick captures for a personal organizer. Today is ' + DOWL[d.getDay()] + ' ' + t + '.\n'
     + 'Life areas (id: name): ' + areasSorted().map(function (a) { return a.id + ': ' + a.name; }).join('; ') + '.\n'
+    + 'Active projects (id: name): ' + (projectsAll('active').map(function (p) { return p.id + ': ' + p.t; }).join('; ') || 'none') + '.\n'
     + 'For each item decide:\n- type: "task" (something to do), "note" (information to keep), "idea" (a thought to develop later) or "drop" (empty or meaningless)\n'
     + '- title: a short, clear version in the person\'s own voice, under 70 characters\n- area: one area id from the list, or null\n'
+    + '- project: one project id from the list if it clearly belongs to that project, else null\n'
     + '- due: YYYY-MM-DD only if the text names or clearly implies a day, else null\n- firstStep: for tasks, one concrete step under 5 minutes, else null\n- icon: one emoji\n'
     + 'Items: ' + JSON.stringify(items.map(function (i) { return { id: i.id, text: i.text || '(photo with no text)' }; })) + '\n'
-    + 'Reply with JSON only: {"items":[{"id":"…","type":"task","title":"…","area":null,"due":null,"firstStep":null,"icon":"📝"}]}')
+    + 'Reply with JSON only: {"items":[{"id":"…","type":"task","title":"…","area":null,"project":null,"due":null,"firstStep":null,"icon":"📝"}]}')
     .then(function (r) {
       var ids = {}; items.forEach(function (i) { ids[i.id] = 1; });
-      var areaIds = {}; areasSorted().forEach(function (a) { areaIds[a.id] = 1; });
+      var areaIds = {}; areasSorted().forEach(function (a) { areaIds[a.id] = 1; }); var projIds = {}; projectsAll('active').forEach(function (p) { projIds[p.id] = p; });
       var out = (r && r.items || []).filter(function (s) { return s && ids[s.id]; }).map(function (s) {
         return { id: s.id, type: ['task', 'note', 'idea', 'drop'].indexOf(s.type) > -1 ? s.type : 'task',
-          title: String(s.title || '').slice(0, 140), area: areaIds[s.area] ? s.area : null,
+          title: String(s.title || '').slice(0, 140), project: projIds[s.project] ? s.project : null, area: areaIds[s.area] ? s.area : (projIds[s.project] ? projIds[s.project].area || null : null),
           due: /^\d{4}-\d\d-\d\d$/.test(s.due || '') ? s.due : null, firstStep: s.firstStep ? String(s.firstStep).slice(0, 120) : null,
           icon: typeof s.icon === 'string' ? s.icon.slice(0, 4) : '' };
       });
@@ -1379,6 +1485,7 @@ function sortView(items) {
         + '<div class="t">' + esc(s.icon ? s.icon + ' ' : '') + esc(s.title || it.text) + '</div>'
         + '<div class="meta"><span class="pill">' + { task: 'Task', note: 'Note', idea: 'Idea', drop: 'Delete' }[s.type] + '</span>'
         + (s.area ? '<span class="pill">' + areaDot(s.area) + '&nbsp;' + esc(areaName(s.area)) + '</span>' : '')
+        + (s.project && Store.get('projects', s.project) ? '<span class="pill">' + esc(Store.get('projects', s.project).t) + '</span>' : '')
         + (s.due ? '<span class="pill">' + esc(shortDate(s.due)) + '</span>' : '') + '</div>'
         + (s.firstStep ? '<div class="first">First step: ' + esc(s.firstStep) + '</div>' : '')
         + '<div class="chips"><button class="chip on" data-act="sortaccept" data-id="' + s.id + '">Accept</button>'
@@ -1437,17 +1544,49 @@ VIEWS.area.after = function (id) {
 };
 ACTS.areastate = function (d) { Store.patch('areas', d.id, { state: d.s }); logEvent(areaName(d.id) + ' is ' + d.s.toLowerCase(), d.id); };
 
-/* ═══ NOTES (basic; the full editor arrives in Phase 3) ══════════════ */
+/* ═══ NOTES ═══════════════════════════════════════════════════════════
+   Plain text (it's what dictation and the iOS keyboard handle best), with
+   search, a filter by kind or area, pins, and links to a project. */
+var noteQ = '', noteF = 'all';
 TITLES.notes = 'Notes';
 VIEWS.notes = function () {
-  var ns = Store.all('notes').sort(function (a, b) { return b.updated - a.updated; });
-  return '<button class="btn soft block" data-act="newnote">' + icon('plus', 'sm') + 'New note</button>'
-    + (ns.length ? '<div class="list">' + ns.map(function (n) {
-      return '<button class="row" data-act="open" data-v="note" data-id="' + n.id + '"><span class="grow"><div class="t">' + esc(n.title || 'Untitled') + '</div>'
-        + '<div class="s">' + (n.area ? areaDot(n.area) + esc(areaName(n.area)) + ' · ' : '') + (n.kind === 'idea' ? 'Idea · ' : '') + esc(timeAgo(n.updated)) + ' ' + exPill(n) + '</div></span>'
-        + icon('chev', 'sm chev') + '</button>';
-    }).join('') + '</div>' : '<div class="empty">No notes yet. Capture one, or sort your inbox.</div>');
+  var q = noteQ.trim().toLowerCase();
+  var ns = Store.all('notes').filter(function (n) {
+    if (noteF === 'idea' && n.kind !== 'idea') return false;
+    if (noteF === 'note' && n.kind === 'idea') return false;
+    if (noteF.indexOf('a:') === 0 && n.area !== noteF.slice(2)) return false;
+    return !q || ((n.title || '') + ' ' + (n.body || '')).toLowerCase().indexOf(q) > -1;
+  }).sort(function (a, b) { return (!!b.pinned - !!a.pinned) || b.updated - a.updated; });
+  var all = Store.all('notes');
+  var f = [['all', 'All · ' + all.length], ['note', 'Notes'], ['idea', 'Ideas · ' + all.filter(function (n) { return n.kind === 'idea'; }).length]];
+  return '<div class="search"><label class="sr" for="nq">Search notes</label><input id="nq" class="input" type="search" placeholder="Search notes" value="' + esc(noteQ) + '" autocomplete="off"></div>'
+    + '<div class="scrollx" role="group" aria-label="Filter">' + f.map(function (x) {
+      return '<button class="chip' + (noteF === x[0] ? ' on' : '') + '" data-act="notef" data-f="' + x[0] + '">' + x[1] + '</button>';
+    }).join('') + areasSorted().map(function (a) {
+      return '<button class="chip' + (noteF === 'a:' + a.id ? ' on' : '') + '" data-act="notef" data-f="a:' + a.id + '"><i style="background:' + esc(a.color) + '"></i>' + esc(a.short) + '</button>';
+    }).join('') + '</div>'
+    + '<button class="btn soft block" data-act="newnote">' + icon('plus', 'sm') + 'New note</button>'
+    + '<div id="notelist">' + noteList(ns, q) + '</div>';
 };
+function noteList(ns, q) {
+  if (!ns.length) return '<div class="empty">' + (q ? 'No notes match "' + esc(q) + '".' : 'No notes here yet. Capture one, or sort your inbox.') + '</div>';
+  return '<div class="list">' + ns.map(function (n) {
+    var pr = n.project ? Store.get('projects', n.project) : null;
+    var snip = (n.body || '').replace(/\s+/g, ' ').slice(0, 90);
+    return '<button class="row" data-act="open" data-v="note" data-id="' + n.id + '"><span class="grow"><div class="t">' + (n.pinned ? '📌 ' : '') + esc(n.title || 'Untitled') + '</div>'
+      + (snip && snip !== n.title ? '<div class="s" style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(snip) + '</div>' : '')
+      + '<div class="s">' + (n.area ? areaDot(n.area) + esc(areaName(n.area)) + ' · ' : '') + (pr ? esc(pr.t) + ' · ' : '') + (n.kind === 'idea' ? 'Idea · ' : '') + esc(timeAgo(n.updated)) + ' ' + exPill(n) + '</div></span>'
+      + icon('chev', 'sm chev') + '</button>';
+  }).join('') + '</div>';
+}
+VIEWS.notes.after = function () {
+  var q = $('#nq'); if (!q) return;
+  q.addEventListener('input', function () {
+    noteQ = q.value; var html = VIEWS.notes(); var tmp = document.createElement('div'); tmp.innerHTML = html;
+    $('#notelist').innerHTML = $('#notelist', tmp).innerHTML;
+  });
+};
+ACTS.notef = function (d) { noteF = d.f; render(); };
 TITLES.note = 'Note';
 VIEWS.note = function (id) {
   var n = Store.get('notes', id); if (!n) return '<div class="empty">This note was deleted.</div>';
@@ -1457,6 +1596,11 @@ VIEWS.note = function (id) {
     + '<div class="scrollx" role="group" aria-label="Area">' + areasSorted().map(function (a) {
       return '<button class="chip' + (n.area === a.id ? ' on' : '') + '" data-act="notearea" data-id="' + id + '" data-a="' + a.id + '"><i style="background:' + esc(a.color) + '"></i>' + esc(a.short) + '</button>';
     }).join('') + '</div>'
+    + (projectsAll('active').length ? '<div class="scrollx" role="group" aria-label="Project">' + projectsAll('active').map(function (p) {
+      return '<button class="chip' + (n.project === p.id ? ' on' : '') + '" data-act="noteproj" data-id="' + id + '" data-p="' + p.id + '">' + esc(p.ic || '📁') + ' ' + esc(p.t) + '</button>';
+    }).join('') + '</div>' : '')
+    + '<div class="btnrow"><button class="btn soft" data-act="notepin" data-id="' + id + '">' + (n.pinned ? 'Unpin' : 'Pin to top') + '</button>'
+    + '<button class="btn soft" data-act="notekind" data-id="' + id + '">' + (n.kind === 'idea' ? 'Make it a note' : 'Mark as idea') + '</button></div>'
     + '<div class="btnrow"><button class="btn soft" data-act="notetotask" data-id="' + id + '">Make it a task</button>'
     + '<button class="btn ghost" style="color:var(--bad)" data-act="delnote" data-id="' + id + '">Delete</button></div>';
 };
@@ -1466,20 +1610,20 @@ VIEWS.note.after = function (id) {
   });
 };
 ACTS.newnote = function () { var n = Store.put('notes', { title: '', body: '' }); push('note', n.id); setTimeout(function () { var e = $('#ntitle'); if (e) e.focus(); }, 50); };
+ACTS.noteproj = function (d) { var n = Store.get('notes', d.id); Store.patch('notes', d.id, { project: n.project === d.p ? null : d.p }); };
+ACTS.notepin = function (d) { var n = Store.get('notes', d.id); Store.patch('notes', d.id, { pinned: !n.pinned }); };
+ACTS.notekind = function (d) { var n = Store.get('notes', d.id); Store.patch('notes', d.id, { kind: n.kind === 'idea' ? 'note' : 'idea' }); };
 ACTS.notearea = function (d) { var n = Store.get('notes', d.id); Store.patch('notes', d.id, { area: n.area === d.a ? null : d.a }); };
 ACTS.delnote = function (d) { var n = Store.get('notes', d.id); Store.del('notes', d.id); pop(); toast('Note deleted', function () { Store.put('notes', n); }); };
 ACTS.notetotask = function (d) {
   var n = Store.get('notes', d.id);
-  var t = Store.put('tasks', { t: n.title || 'From a note', note: n.body || '', area: n.area || null, due: today(), done: false, steps: [] });
+  var t = Store.put('tasks', { t: n.title || 'From a note', note: n.body || '', area: n.area || null, project: n.project || null, due: today(), done: false, steps: [] });
   logEvent('Turned a note into a task: ' + t.t, t.area); push('task', t.id);
 };
 
 /* ═══ MORE ═══════════════════════════════════════════════════════════ */
 TITLES.more = 'More';
-var SOON = {
-  journal: 'Journal arrives with Notes and Projects: mood plus an entry, prompted from today\'s log.',
-  projects: 'Projects arrive with the Phase 3 update: Done when, Next, Where I left off, and panels.',
-  calendar: 'Calendar arrives with the Phase 3 update: a month grid and a week view coloured by area.' };
+var SOON = {};
 VIEWS.more = function () {
   var inboxN = Store.all('inbox').length;
   return '<div class="menu">' + SIDE_MORE.map(function (m) {
@@ -1492,9 +1636,6 @@ VIEWS.soon = function () {
   var c = current();
   return '<div class="empty">' + esc(SOON[c.view] || 'Coming soon.') + '</div>';
 };
-['journal', 'projects', 'calendar'].forEach(function (k) {
-  TITLES[k] = k.charAt(0).toUpperCase() + k.slice(1); VIEWS[k] = VIEWS.soon;
-});
 
 TITLES.money = 'Money';
 VIEWS.money = function () {
@@ -1851,6 +1992,396 @@ ACTS.goalpick = function (d) { touchGoal(d.id, { next: d.t }); closeSheet(); toa
 ACTS.newgoal = function () {
   var g = Store.put('goals', { n: 'New goal', ic: '🎯', why: '', steps: [], next: '', area: null, status: 'live', touched: today() });
   push('goal', g.id); setTimeout(function () { var e = $('#gn'); if (e) { e.focus(); e.select(); } }, 50);
+};
+
+/* ── 16-projects.js ── */
+/* ═══ PROJECTS ══════════════════════════════════════════════════════
+   From the Sep 18 build: each project says when it's done, holds exactly
+   one next step and a "where I left off" note, and carries panels chosen
+   by its kind. Panel data lives on the project document. */
+var KINDS = {
+  software: ['Software', ['checklist', 'log', 'links', 'docs']],
+  build: ['Build', ['checklist', 'budget', 'log', 'links']],
+  fitness: ['Fitness', ['checklist', 'log']],
+  learning: ['Learning', ['checklist', 'links', 'docs']],
+  admin: ['Admin', ['checklist', 'people', 'docs', 'log']],
+  reno: ['Home', ['budget', 'people', 'checklist']],
+  other: ['Other', ['checklist', 'log']]
+};
+var PANELS = {
+  checklist: ['Checklist', '☑︎'], log: ['Log', '🗒'], links: ['Links', '🔗'], docs: ['Notes', '📝'],
+  people: ['People', '👥'], budget: ['Budget', '💵']
+};
+function projectsAll(status) {
+  return Store.all('projects').filter(function (p) { return !status || (p.status || 'active') === status; })
+    .sort(function (a, b) { return (b.touchedAt || b.updated || 0) - (a.touchedAt || a.updated || 0); });
+}
+function projTasks(id) { return Store.all('tasks').filter(function (t) { return t.project === id; }); }
+function touchProject(id, f) { f = f || {}; f.touched = today(); f.touchedAt = Date.now(); return Store.patch('projects', id, f); }
+function pd(p, k, dflt) { return (p.data && p.data[k]) || dflt; }
+function setPd(id, k, v) { var p = Store.get('projects', id), data = Object.assign({}, p.data || {}); data[k] = v; touchProject(id, { data: data }); }
+function money(n) { return '$' + (Math.round((+n || 0) * 100) / 100).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 }); }
+
+TITLES.projects = 'Projects';
+VIEWS.projects = function () {
+  var act = projectsAll('active'), park = projectsAll('parked'), done = projectsAll('done');
+  var card = function (p) {
+    var open = projTasks(p.id).filter(function (t) { return !t.done; }).length;
+    return '<button class="pcard" style="--c:' + esc(areaColor(p.area)) + '" data-act="open" data-v="project" data-id="' + p.id + '">'
+      + '<div class="gh"><span class="gic">' + esc(p.ic || '📁') + '</span><span class="grow"><b>' + esc(p.t) + '</b>'
+      + '<span class="s">' + (p.area ? areaDot(p.area) + esc(areaName(p.area)) + ' · ' : '') + esc((KINDS[p.kind] || KINDS.other)[0]) + ' · touched ' + esc(p.touched ? shortDate(p.touched).toLowerCase() : 'never') + ' ' + exPill(p) + '</span></span></div>'
+      + '<div class="gnext"><span>Next</span>' + esc(p.next || 'No next step yet') + '</div>'
+      + (open ? '<div class="small faint">' + open + ' open task' + (open === 1 ? '' : 's') + '</div>' : '') + '</button>';
+  };
+  var h = '';
+  h += act.length ? '<section><div class="sechead"><h2>Active</h2><span class="meta">' + act.length + '</span></div><div class="goals">' + act.map(card).join('') + '</div></section>'
+    : '<div class="empty">No active projects. A project here is anything with a finish line: a car, an application, a beta.</div>';
+  if (park.length) h += '<section><div class="sechead"><h2>Parked</h2><span class="meta">' + park.length + '</span></div><div class="goals">' + park.map(card).join('') + '</div></section>';
+  h += '<button class="btn soft block" data-act="newproject">' + icon('plus', 'sm') + 'New project</button>';
+  if (done.length) h += '<details class="card"><summary class="muted" style="cursor:pointer">Finished · ' + done.length + '</summary><div class="list" style="margin-top:8px">'
+    + done.map(function (p) { return '<button class="row" data-act="open" data-v="project" data-id="' + p.id + '"><span class="ic">' + esc(p.ic || '📁') + '</span><span class="grow t">' + esc(p.t) + '</span></button>'; }).join('') + '</div></details>';
+  return h;
+};
+
+TITLES.project = function (id) { var p = Store.get('projects', id); return p ? p.t : 'Project'; };
+var projOpen = {}; // panels the viewer expanded, per project
+VIEWS.project = function (id) {
+  var p = Store.get('projects', id); if (!p) return '<div class="empty">This project was deleted.</div>';
+  var tasks = projTasks(id), open = tasks.filter(function (t) { return !t.done; });
+  var nextTask = p.nextTask ? Store.get('tasks', p.nextTask) : null;
+  var h = '<div class="dhead"><div class="ic">' + esc(p.ic || '📁') + '</div><div style="flex:1;min-width:0;display:grid;gap:6px">'
+    + '<label class="sr" for="pt">Project name</label><input id="pt" class="input" style="font-size:19px;font-weight:500" data-pfield="t" value="' + esc(p.t) + '">'
+    + '<div class="btnrow">' + exPill(p) + '<span class="pill">' + esc((KINDS[p.kind] || KINDS.other)[0]) + '</span>' + (p.status === 'parked' ? '<span class="pill">Parked</span>' : p.status === 'done' ? '<span class="pill">Finished</span>' : '') + '</div></div></div>';
+  h += '<div class="field"><label for="pdone">Done when…</label><textarea id="pdone" class="input" style="min-height:60px" rows="2" data-pfield="done" placeholder="Done when it passes inspection and starts first time.">' + esc(p.done || '') + '</textarea></div>';
+  h += '<div class="nextcard"><span class="lbl">Next</span><div class="t">' + esc(p.next || 'Nothing set') + '</div>'
+    + (nextTask && !nextTask.done ? '<p class="note small">On your task list for ' + esc(nextTask.due ? shortDate(nextTask.due) : 'whenever') + '.</p>' : '')
+    + '<div class="btnrow">' + (p.next ? '<button class="btn accent" data-act="projstart" data-id="' + id + '">' + (nextTask && !nextTask.done ? 'Start' : 'Start, put it on today') + '</button>'
+      + '<button class="btn soft" data-act="projnextdone" data-id="' + id + '">Done, what\'s next?</button>'
+      : '<button class="btn accent" data-act="projnextdone" data-id="' + id + '">Set the next step</button>') + '</div></div>';
+  h += '<div class="field"><label for="pleft">Where I left off</label><textarea id="pleft" class="input" style="min-height:80px" data-pfield="left" placeholder="So future you can pick it straight back up.">' + esc(p.left || '') + '</textarea></div>';
+
+  h += '<section><div class="sechead"><h2>Tasks</h2><span class="meta">' + open.length + ' open</span></div>'
+    + (tasks.length ? '<div class="list">' + tasks.sort(function (a, b) { return (a.done - b.done) || (a.due || '9').localeCompare(b.due || '9'); }).slice(0, 20).map(taskRow).join('') + '</div>' : '')
+    + '<form class="addstep" data-form="projtask" data-id="' + id + '"><label class="sr" for="ptask">New task</label><input id="ptask" class="input" placeholder="Add a task to this project" autocomplete="off"><button class="btn soft" type="submit">Add</button></form></section>';
+
+  (p.panels || []).forEach(function (k) {
+    var def = PANELS[k]; if (!def) return;
+    var isOpen = projOpen[id + k] !== false;
+    h += '<details class="panel"' + (isOpen ? ' open' : '') + ' data-panel="' + k + '"><summary><span>' + def[1] + '</span>' + def[0] + '<span class="meta">' + panelMeta(p, k) + '</span></summary><div class="pbody">' + panelBody(p, k) + '</div></details>';
+  });
+  h += '<details class="card"><summary class="muted" style="cursor:pointer">Panels, area and status</summary><div style="display:grid;gap:14px;margin-top:12px">'
+    + '<div class="field"><span class="lbl">Panels</span><div class="chips">' + Object.keys(PANELS).map(function (k) {
+      var on = (p.panels || []).indexOf(k) > -1;
+      return '<button class="chip' + (on ? ' on' : '') + '" data-act="projpanel" data-id="' + id + '" data-k="' + k + '" aria-pressed="' + on + '">' + PANELS[k][0] + '</button>';
+    }).join('') + '</div></div>'
+    + '<div class="field"><span class="lbl">Area</span><div class="scrollx">' + areasSorted().map(function (a) {
+      return '<button class="chip' + (p.area === a.id ? ' on' : '') + '" data-act="projarea" data-id="' + id + '" data-a="' + a.id + '"><i style="background:' + esc(a.color) + '"></i>' + esc(a.short) + '</button>';
+    }).join('') + '</div></div>'
+    + '<div class="field"><span class="lbl">Kind</span><div class="chips">' + Object.keys(KINDS).map(function (k) {
+      return '<button class="chip' + (p.kind === k ? ' on' : '') + '" data-act="projkind" data-id="' + id + '" data-k="' + k + '">' + KINDS[k][0] + '</button>';
+    }).join('') + '</div></div>'
+    + '<div class="field" style="max-width:90px"><label for="pic">Icon</label><input id="pic" class="input" style="text-align:center" maxlength="4" data-pfield="ic" value="' + esc(p.ic || '') + '"></div>'
+    + '<div class="btnrow">' + ['active', 'parked', 'done'].filter(function (s) { return (p.status || 'active') !== s; }).map(function (s) {
+      return '<button class="btn soft" data-act="projstatus" data-id="' + id + '" data-s="' + s + '">' + { active: 'Make active', parked: 'Park it', done: 'Mark finished' }[s] + '</button>';
+    }).join('') + '<button class="btn ghost" style="color:var(--bad)" data-act="delproject" data-id="' + id + '">Delete</button></div>'
+    + '</div></details>';
+  return h;
+};
+VIEWS.project.after = function (id) {
+  $$('[data-pfield]').forEach(function (el) {
+    el.addEventListener('input', function () { var f = {}; f[el.dataset.pfield] = el.value; touchProject(id, f); });
+  });
+  $$('details[data-panel]').forEach(function (el) {
+    el.addEventListener('toggle', function () { projOpen[id + el.dataset.panel] = el.open; });
+  });
+  if (!projVisit || projVisit.id !== id) projVisit = { id: id, at: Date.now(), left: (Store.get('projects', id) || {}).left || '' };
+};
+
+/* ── panels ─────────────────────────────────────────────────────────── */
+function panelMeta(p, k) {
+  if (k === 'checklist') { var c = pd(p, 'checklist', []); return c.filter(function (x) { return x.done; }).length + '/' + c.length; }
+  if (k === 'budget') { var b = pd(p, 'budget', []); return money(b.reduce(function (s, x) { return s + (+x.amt || 0); }, 0)); }
+  if (k === 'docs') return Store.all('notes').filter(function (n) { return n.project === p.id; }).length || '';
+  var a = pd(p, k, []); return a.length || '';
+}
+function panelBody(p, k) {
+  var id = p.id, items = pd(p, k, []);
+  var addForm = function (ph, fields) {
+    return '<form class="addstep" data-form="paneladd" data-id="' + id + '" data-k="' + k + '">' + fields.map(function (f, i) {
+      return '<label class="sr" for="pa' + k + i + '">' + esc(f[1]) + '</label><input id="pa' + k + i + '" class="input" name="' + f[0] + '" placeholder="' + esc(f[1]) + '" autocomplete="off"'
+        + (f[2] ? ' inputmode="' + f[2] + '" style="max-width:110px"' : '') + '>';
+    }).join('') + '<button class="btn soft" type="submit">Add</button></form>';
+  };
+  var del = function (i) { return '<button class="iconbtn" data-act="paneldel" data-id="' + id + '" data-k="' + k + '" data-i="' + i + '" aria-label="Remove">' + icon('x', 'sm') + '</button>'; };
+  if (k === 'checklist') return '<div class="list">' + items.map(function (x, i) {
+    return '<div class="row' + (x.done ? ' done' : '') + '"><button class="ck' + (x.done ? ' on' : '') + '" data-act="panelcheck" data-id="' + id + '" data-i="' + i + '" aria-label="Toggle"><span></span></button><span class="grow t">' + esc(x.t) + '</span>' + del(i) + '</div>';
+  }).join('') + '</div>' + addForm('', [['t', 'Add an item']]);
+  if (k === 'log') return addForm('', [['t', 'What happened?']]) + '<div class="log" style="margin-top:8px">' + items.slice().reverse().map(function (x) {
+    return '<div class="logrow"><time>' + esc(shortDate(ymd(new Date(x.at)))) + '</time><span style="flex:1">' + esc(x.t) + '</span></div>';
+  }).join('') + '</div>';
+  if (k === 'links') return '<div class="list">' + items.map(function (x, i) {
+    var safe = /^https?:\/\//i.test(x.url) ? x.url : 'https://' + x.url;
+    return '<div class="row"><span class="grow"><a class="t" href="' + esc(safe) + '" target="_blank" rel="noopener" style="color:var(--accent)">' + esc(x.t || x.url) + '</a><div class="s">' + esc(x.url) + '</div></span>' + del(i) + '</div>';
+  }).join('') + '</div>' + addForm('', [['t', 'Name'], ['url', 'https://…', 'url']]);
+  if (k === 'people') return '<div class="list">' + items.map(function (x, i) {
+    return '<div class="row"><span class="av" aria-hidden="true">' + esc((x.n || '?').charAt(0).toUpperCase()) + '</span><span class="grow"><div class="t">' + esc(x.n) + '</div><div class="s">' + esc(x.role || '') + '</div></span>' + del(i) + '</div>';
+  }).join('') + '</div>' + addForm('', [['n', 'Name'], ['role', 'Role or note']]);
+  if (k === 'budget') {
+    var total = items.reduce(function (s, x) { return s + (+x.amt || 0); }, 0), paid = items.filter(function (x) { return x.paid; }).reduce(function (s, x) { return s + (+x.amt || 0); }, 0);
+    return '<div class="list">' + items.map(function (x, i) {
+      return '<div class="row' + (x.paid ? ' done' : '') + '"><button class="ck' + (x.paid ? ' on' : '') + '" data-act="panelcheck" data-id="' + id + '" data-k="budget" data-i="' + i + '" aria-label="Paid"><span></span></button>'
+        + '<span class="grow t">' + esc(x.t) + '</span><span class="amt">' + money(x.amt) + '</span>' + del(i) + '</div>';
+    }).join('') + '</div><div class="kvrow"><span>Paid ' + money(paid) + '</span><b>Total ' + money(total) + '</b></div>' + addForm('', [['t', 'Item'], ['amt', 'Amount', 'decimal']]);
+  }
+  if (k === 'docs') {
+    var ns = Store.all('notes').filter(function (n) { return n.project === id; });
+    return '<div class="list">' + ns.map(function (n) {
+      return '<button class="row" data-act="open" data-v="note" data-id="' + n.id + '"><span class="grow"><div class="t">' + esc(n.title || 'Untitled') + '</div><div class="s">' + esc(timeAgo(n.updated)) + '</div></span>' + icon('chev', 'sm chev') + '</button>';
+    }).join('') + '</div><button class="btn soft block" data-act="projnote" data-id="' + id + '">' + icon('plus', 'sm') + 'New note in this project</button>';
+  }
+  return '';
+}
+ACTS.form_paneladd = function (d, f) {
+  var vals = {}; $$('input', f).forEach(function (i) { vals[i.name] = i.value.trim(); });
+  var main = vals.t || vals.n || vals.url; if (!main) return;
+  var p = Store.get('projects', d.id), items = pd(p, d.k, []).slice();
+  if (d.k === 'log') items.push({ t: vals.t, at: Date.now() });
+  else if (d.k === 'links') items.push({ t: vals.t, url: vals.url || vals.t });
+  else if (d.k === 'people') items.push({ n: vals.n, role: vals.role });
+  else if (d.k === 'budget') items.push({ t: vals.t, amt: parseFloat(String(vals.amt).replace(/[^0-9.\-]/g, '')) || 0, paid: false });
+  else items.push({ t: vals.t, done: false });
+  setPd(d.id, d.k, items); render(false, true);
+  var first = $('form[data-k="' + d.k + '"] input'); if (first) first.focus();
+};
+ACTS.panelcheck = function (d) {
+  var k = d.k || 'checklist', p = Store.get('projects', d.id), items = pd(p, k, []).slice(), x = Object.assign({}, items[+d.i]);
+  if (k === 'budget') x.paid = !x.paid; else x.done = !x.done;
+  items[+d.i] = x; setPd(d.id, k, items);
+};
+ACTS.paneldel = function (d) { var p = Store.get('projects', d.id), items = pd(p, d.k, []).slice(); items.splice(+d.i, 1); setPd(d.id, d.k, items); };
+ACTS.projnote = function (d) {
+  var p = Store.get('projects', d.id);
+  var n = Store.put('notes', { title: '', body: '', area: p.area || null, project: d.id }); push('note', n.id);
+  setTimeout(function () { var e = $('#ntitle'); if (e) e.focus(); }, 50);
+};
+
+/* ── next step, tasks, settings ────────────────────────────────────── */
+ACTS.form_projtask = function (d, f) {
+  var inp = $('input', f), v = inp.value.trim(); if (!v) return;
+  var p = Store.get('projects', d.id); inp.value = '';
+  Store.put('tasks', { t: v, area: p.area || null, project: d.id, due: null, done: false, steps: [], note: '' });
+  touchProject(d.id); render(false, true); var n = $('#ptask'); if (n) n.focus();
+};
+ACTS.projstart = function (d) {
+  var p = Store.get('projects', d.id), t = p.nextTask ? Store.get('tasks', p.nextTask) : null;
+  if (!t || t.done) {
+    t = Store.put('tasks', { t: p.next, ic: p.ic || '', area: p.area || null, project: d.id, due: today(), done: false, steps: [], note: p.left ? 'Where I left off: ' + p.left : '' });
+    touchProject(d.id, { nextTask: t.id });
+  } else if (t.due !== today()) moveTask(t.id, 'today');
+  logEvent('Started on ' + p.t + ': ' + p.next, p.area);
+  toast('On today. ' + (p.left ? 'You left off: ' + esc(p.left.slice(0, 60)) : 'Ten minutes counts.'));
+};
+ACTS.projnextdone = function (d) {
+  var p = Store.get('projects', d.id), had = !!p.next;
+  if (had) {
+    var t = p.nextTask ? Store.get('tasks', p.nextTask) : null;
+    // Also tick off an open task on this project with the same name.
+    if (!t) t = projTasks(d.id).filter(function (x) { return !x.done && x.t.trim().toLowerCase() === p.next.trim().toLowerCase(); })[0] || null;
+    if (t && !t.done) completeTask(t.id, true);
+    p = Store.get('projects', d.id);
+    var log = pd(p, 'log', []).concat([{ t: 'Done: ' + p.next, at: Date.now() }]);
+    var data = Object.assign({}, p.data || {}, { log: log });
+    touchProject(d.id, { lastNext: p.next, next: '', nextTask: null, data: data });
+    logEvent(p.t + ': ' + p.next, p.area);
+  }
+  openSheet('<div class="shead"><h2>' + (had ? 'Nice. What\'s next?' : 'Next step') + '</h2><button class="iconbtn" data-act="close" aria-label="Close">' + icon('x') + '</button></div>'
+    + '<p class="note">' + esc(p.t) + '. One thing you could start next time you sit down with it.</p>'
+    + '<form class="addstep" data-form="projnext" data-id="' + d.id + '"><label class="sr" for="pnext">Next step</label><input id="pnext" class="input" autocomplete="off"><button class="btn accent" type="submit">Set</button></form>',
+    function (s) { $('#pnext', s).focus(); });
+};
+ACTS.form_projnext = function (d, f) { var v = $('input', f).value.trim(); if (!v) return; touchProject(d.id, { next: v }); closeSheet(); toast('Next step set'); };
+ACTS.projpanel = function (d) {
+  var p = Store.get('projects', d.id), ps = (p.panels || []).slice(), i = ps.indexOf(d.k);
+  if (i > -1) ps.splice(i, 1); else ps.push(d.k);
+  Store.patch('projects', d.id, { panels: ps });
+};
+ACTS.projarea = function (d) { var p = Store.get('projects', d.id); Store.patch('projects', d.id, { area: p.area === d.a ? null : d.a }); };
+ACTS.projkind = function (d) { Store.patch('projects', d.id, { kind: d.k }); };
+ACTS.projstatus = function (d) {
+  var p = Store.get('projects', d.id); touchProject(d.id, { status: d.s });
+  logEvent(p.t + (d.s === 'done' ? ' finished' : d.s === 'parked' ? ' parked' : ' back on'), p.area);
+  if (d.s === 'done') toast('Finished. That counts.');
+};
+ACTS.delproject = function (d) {
+  var p = Store.get('projects', d.id); Store.del('projects', d.id); projVisit = null; pop();
+  toast('Project deleted', function () { Store.put('projects', p); });
+};
+ACTS.newproject = function () {
+  openSheet('<div class="shead"><h2>New project</h2><button class="iconbtn" data-act="close" aria-label="Close">' + icon('x') + '</button></div>'
+    + '<form data-form="newproject" style="display:grid;gap:14px"><div class="field"><label for="npt">Name</label><input id="npt" class="input" name="t" autocomplete="off" placeholder="e.g. The Capri"></div>'
+    + '<div class="field"><span class="lbl">Kind (sets the starting panels)</span><div class="chips">' + Object.keys(KINDS).map(function (k, i) {
+      return '<label class="chip"><input type="radio" name="kind" value="' + k + '"' + (i === 0 ? ' checked' : '') + ' class="sr">' + KINDS[k][0] + '</label>';
+    }).join('') + '</div></div><button class="btn accent" type="submit">Create</button></form>',
+    function (s) {
+      $('#npt', s).focus();
+      $$('input[name=kind]', s).forEach(function (r) { r.addEventListener('change', function () { $$('label.chip', s).forEach(function (l) { l.classList.toggle('on', $('input', l).checked); }); }); });
+      $$('label.chip', s)[0].classList.add('on');
+    });
+};
+ACTS.form_newproject = function (d, f) {
+  var t = $('#npt', f).value.trim(); if (!t) { $('#npt', f).focus(); return; }
+  var kind = ($('input[name=kind]:checked', f) || {}).value || 'other';
+  var p = Store.put('projects', { t: t, ic: '📁', kind: kind, status: 'active', area: null, done: '', next: '', left: '', panels: KINDS[kind][1].slice(), data: {}, touched: today(), touchedAt: Date.now() });
+  logEvent('New project: ' + t); closeSheet(); push('project', p.id);
+};
+
+/* Leaving a project you spent time in asks where you left off. */
+var projVisit = null;
+function maybeAskLeftOff() {
+  var v = projVisit; projVisit = null;
+  if (!v || Date.now() - v.at < 45000) return;
+  var p = Store.get('projects', v.id); if (!p || p.left !== v.left) return; // they already wrote it
+  openSheet('<div class="shead"><h2>Where did you leave off?</h2><button class="iconbtn" data-act="close" aria-label="Skip">' + icon('x') + '</button></div>'
+    + '<p class="note">' + esc(p.t) + '. One line, so next time starts fast.</p>'
+    + '<form class="addstep" data-form="leftoff" data-id="' + p.id + '"><label class="sr" for="lo">Where you left off</label><input id="lo" class="input" autocomplete="off" value="' + esc(p.left || '') + '"><button class="btn accent" type="submit">Save</button></form>',
+    function (s) { var i = $('#lo', s); i.focus(); i.select(); });
+}
+ACTS.form_leftoff = function (d, f) { var v = $('input', f).value.trim(); touchProject(d.id, { left: v }); closeSheet(); toast('Saved for next time'); };
+
+/* ── 17-journal.js ── */
+/* ═══ JOURNAL ═══════════════════════════════════════════════════════
+   One entry per day (id j<date>): a mood and some words. Recorded, not
+   scored. The prompt is built from today's log, so there's always a
+   place to start. */
+var MOODS = { good: ['🙂', 'Good'], ok: ['😐', 'Okay'], low: ['🌧', 'Low'] };
+function entryFor(day) { return Store.get('journal', 'j' + day); }
+TITLES.journal = 'Journal';
+VIEWS.journal = function () {
+  var t = today(), e = entryFor(t) || {};
+  var log = Store.all('log').filter(function (l) { return l.day === t; }).sort(function (a, b) { return a.at - b.at; });
+  var prompt = log.length ? 'Today you: ' + log.slice(-3).map(function (l) { return l.text.replace(/^Done: /, ''); }).join('; ') + '. How did it feel?'
+    : 'What took up most of today?';
+  var past = Store.all('journal').filter(function (j) { return j.day !== t; }).sort(function (a, b) { return b.day.localeCompare(a.day); });
+  var wk = range(7).map(function (i) { return addDays(t, i - 6); });
+  var h = '<div class="moodweek">' + wk.map(function (d) {
+    var j = entryFor(d);
+    return '<span class="' + (d === t ? 'now' : '') + '"><b>' + (j && j.mood ? MOODS[j.mood][0] : '·') + '</b><em>' + DOW[parseYmd(d).getDay()].charAt(0) + '</em></span>';
+  }).join('') + '</div>';
+  h += '<section class="card" style="display:grid;gap:12px"><div class="sechead" style="margin:0"><h2>' + esc(DOWL[new Date().getDay()]) + '</h2><span class="meta">' + esc(shortDate(t)) + '</span></div>'
+    + '<div class="chips" role="group" aria-label="Mood">' + Object.keys(MOODS).map(function (k) {
+      return '<button class="chip' + (e.mood === k ? ' on' : '') + '" data-act="mood" data-m="' + k + '" aria-pressed="' + (e.mood === k) + '">' + MOODS[k][0] + ' ' + MOODS[k][1] + '</button>';
+    }).join('') + '</div>'
+    + '<label class="sr" for="jtext">Entry</label><textarea id="jtext" class="input" style="min-height:160px;font-size:16.5px;line-height:1.55" placeholder="' + esc(prompt) + '">' + esc(e.text || '') + '</textarea>'
+    + '<p class="note small">Recorded, not scored. Saved as you type.</p></section>';
+  h += past.length ? '<section><div class="sechead"><h2>Earlier</h2><span class="meta">' + past.length + '</span></div><div class="list">' + past.slice(0, 60).map(function (j) {
+    return '<button class="row" data-act="open" data-v="entry" data-id="' + j.id + '" style="align-items:flex-start"><span class="jd"><b>' + esc(shortDate(j.day)) + '</b></span>'
+      + '<span class="grow"><div class="t jt">' + esc(j.text || '(no words)') + '</div><div class="s">' + (j.mood ? MOODS[j.mood][0] + ' ' + MOODS[j.mood][1] : '') + ' ' + exPill(j) + '</div></span></button>';
+  }).join('') + '</div></section>' : '';
+  return h;
+};
+VIEWS.journal.after = function () {
+  var ta = $('#jtext'); if (!ta) return;
+  ta.addEventListener('input', function () { saveEntry(today(), { text: ta.value }); });
+};
+function saveEntry(day, f) {
+  var id = 'j' + day, e = Store.get('journal', id);
+  if (e) Store.patch('journal', id, f);
+  else Store.put('journal', Object.assign({ id: id, day: day, text: '', mood: null }, f));
+}
+ACTS.mood = function (d) {
+  var e = entryFor(today()) || {};
+  saveEntry(today(), { mood: e.mood === d.m ? null : d.m });
+  if (e.mood !== d.m) logEvent('Journal: feeling ' + MOODS[d.m][1].toLowerCase());
+};
+TITLES.entry = function (id) { var j = Store.get('journal', id); return j ? shortDate(j.day) : 'Entry'; };
+VIEWS.entry = function (id) {
+  var j = Store.get('journal', id); if (!j) return '<div class="empty">This entry was deleted.</div>';
+  return '<div class="chips">' + Object.keys(MOODS).map(function (k) {
+    return '<button class="chip' + (j.mood === k ? ' on' : '') + '" data-act="entrymood" data-id="' + id + '" data-m="' + k + '">' + MOODS[k][0] + ' ' + MOODS[k][1] + '</button>';
+  }).join('') + '</div>'
+    + '<label class="sr" for="etext">Entry</label><textarea id="etext" class="input" style="min-height:50vh;font-size:16.5px;line-height:1.55">' + esc(j.text || '') + '</textarea>'
+    + '<button class="btn ghost" style="color:var(--bad);justify-self:start" data-act="delentry" data-id="' + id + '">Delete entry</button>';
+};
+VIEWS.entry.after = function (id) { var ta = $('#etext'); if (ta) ta.addEventListener('input', function () { Store.patch('journal', id, { text: ta.value }); }); };
+ACTS.entrymood = function (d) { var j = Store.get('journal', d.id); Store.patch('journal', d.id, { mood: j.mood === d.m ? null : d.m }); };
+ACTS.delentry = function (d) { var j = Store.get('journal', d.id); Store.del('journal', d.id); pop(); toast('Entry deleted', function () { Store.put('journal', j); }); };
+
+/* ── 18-calendar.js ── */
+/* ═══ CALENDAR ══════════════════════════════════════════════════════
+   Month: a grid with a dot per task (in its area's colour) and a mark
+   for journal days. Week: the Status design's view, each day a column of
+   blocks coloured by area. Tap a day to see and add to it. Money
+   (paydays, bills) joins in the Finance update. */
+var cal = { mode: 'month', sel: null, month: null };
+function monthStart(s) { return s.slice(0, 8) + '01'; }
+function tasksOn(d) {
+  return Store.all('tasks').filter(function (t) { return t.due === d || (t.done && t.doneAt && ymd(new Date(t.doneAt)) === d && t.due !== d); });
+}
+TITLES.calendar = 'Calendar';
+VIEWS.calendar = function () {
+  var t = today(); cal.sel = cal.sel || t; cal.month = cal.month || monthStart(t);
+  var h = '<div class="seg" role="tablist">' + [['month', 'Month'], ['week', 'Week']].map(function (v) {
+    return '<button role="tab" aria-selected="' + (cal.mode === v[0]) + '" class="' + (cal.mode === v[0] ? 'on' : '') + '" data-act="calmode" data-v="' + v[0] + '">' + v[1] + '</button>';
+  }).join('') + '</div>';
+  h += cal.mode === 'month' ? monthView() : weekView();
+  h += dayDetail(cal.sel);
+  return h;
+};
+function monthView() {
+  var t = today(), m = cal.month, first = parseYmd(m), lead = (first.getDay() + 6) % 7;
+  var days = new Date(first.getFullYear(), first.getMonth() + 1, 0).getDate();
+  var h = '<div class="calhead"><button class="iconbtn" data-act="calnav" data-n="-1" aria-label="Previous month">' + icon('back') + '</button>'
+    + '<b>' + ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'][first.getMonth()] + ' ' + first.getFullYear() + '</b>'
+    + '<button class="iconbtn" data-act="calnav" data-n="1" aria-label="Next month">' + icon('chev') + '</button></div>'
+    + '<div class="cal">' + ['M', 'T', 'W', 'T', 'F', 'S', 'S'].map(function (x) { return '<span class="wdh">' + x + '</span>'; }).join('');
+  for (var i = 0; i < lead; i++) h += '<span></span>';
+  for (var dnum = 1; dnum <= days; dnum++) {
+    var d = m.slice(0, 8) + String(dnum).padStart(2, '0'), ts = tasksOn(d), j = entryFor(d);
+    h += '<button class="day' + (d === t ? ' today' : '') + (d === cal.sel ? ' sel' : '') + '" data-act="calday" data-d="' + d + '" aria-label="' + esc(shortDate(d)) + ', ' + ts.length + ' tasks">'
+      + '<span class="n">' + dnum + '</span><span class="dots">' + ts.slice(0, 4).map(function (x) {
+        return '<i style="background:' + areaColor(x.area) + (x.done ? ';opacity:.4' : '') + '"></i>';
+      }).join('') + '</span>' + (j && j.mood ? '<span class="mood">' + MOODS[j.mood][0] + '</span>' : '') + '</button>';
+  }
+  return h + '</div>';
+}
+function weekView() {
+  var t = today(), sel = cal.sel, mon = addDays(sel, -wd(sel));
+  var h = '<div class="calhead"><button class="iconbtn" data-act="calweek" data-n="-7" aria-label="Previous week">' + icon('back') + '</button>'
+    + '<b>' + esc(absDate(mon)) + ' – ' + esc(absDate(addDays(mon, 6))) + '</b>'
+    + '<button class="iconbtn" data-act="calweek" data-n="7" aria-label="Next week">' + icon('chev') + '</button></div>';
+  h += '<div class="arealegend">' + areasSorted().map(function (a) { return '<span><i style="background:' + esc(a.color) + '"></i>' + esc(a.short) + '</span>'; }).join('') + '</div>';
+  h += '<div class="wk">' + range(7).map(function (i) {
+    var d = addDays(mon, i), ts = tasksOn(d), hd = habitsSorted().filter(function (x) { return dueOn(x, d); }), hit = hd.filter(function (x) { return mark(x, d) === 1; }).length;
+    return '<div class="wkday' + (d === t ? ' today' : '') + (d === sel ? ' sel' : '') + '"><button class="wkh" data-act="calday" data-d="' + d + '"><b>' + DOW[parseYmd(d).getDay()] + '</b><span>' + parseYmd(d).getDate() + '</span></button>'
+      + '<div class="blocks">' + (ts.length ? ts.map(function (x) {
+        return '<button class="blk' + (x.done ? ' done' : '') + '" style="--c:' + areaColor(x.area) + '" data-act="open" data-v="task" data-id="' + x.id + '">' + esc(x.t) + '</button>';
+      }).join('') : '<span class="faint small">Nothing planned</span>') + '</div>'
+      + (hd.length && d <= t ? '<span class="hab small faint">' + hit + '/' + hd.length + ' habits</span>' : '') + '</div>';
+  }).join('') + '</div>';
+  return h;
+}
+function dayDetail(d) {
+  var ts = tasksOn(d), j = entryFor(d), t = today();
+  var hs = habitsSorted().filter(function (x) { return dueOn(x, d); });
+  var h = '<section class="card" style="display:grid;gap:10px"><div class="sechead" style="margin:0"><h2>' + esc(shortDate(d)) + '</h2>'
+    + '<span class="meta">' + ts.filter(function (x) { return !x.done; }).length + ' open</span></div>';
+  h += ts.length ? '<div class="list">' + ts.map(taskRow).join('') + '</div>' : '<p class="note">Nothing due.</p>';
+  h += '<form class="addstep" data-form="caladd" data-d="' + d + '"><label class="sr" for="caladd">Add a task on this day</label><input id="caladd" class="input" placeholder="Add a task on ' + esc(shortDate(d)) + '" autocomplete="off"><button class="btn soft" type="submit">Add</button></form>';
+  if (hs.length && d <= t) h += '<div class="small muted">Habits: ' + hs.map(function (x) { var m = mark(x, d); return esc(x.ic) + (m === 1 ? '✓' : m === 2 ? '–' : '·'); }).join('  ') + '</div>';
+  if (j && (j.mood || j.text)) h += '<button class="row" data-act="open" data-v="entry" data-id="' + j.id + '"><span class="grow"><div class="s">Journal' + (j.mood ? ' · ' + MOODS[j.mood][0] + ' ' + MOODS[j.mood][1] : '') + '</div><div class="t jt">' + esc(j.text || '') + '</div></span></button>';
+  return h + '</section>';
+}
+ACTS.calmode = function (d) { cal.mode = d.v; render(); };
+ACTS.calday = function (d) { cal.sel = d.d; render(); };
+ACTS.calnav = function (d) {
+  var f = parseYmd(cal.month); f.setMonth(f.getMonth() + (+d.n)); cal.month = ymd(f);
+  cal.sel = cal.month.slice(0, 7) === today().slice(0, 7) ? today() : cal.month; render();
+};
+ACTS.calweek = function (d) { cal.sel = addDays(cal.sel, +d.n); cal.month = monthStart(cal.sel); render(); };
+ACTS.form_caladd = function (d, f) {
+  var inp = $('input', f), v = inp.value.trim(); if (!v) return; inp.value = '';
+  Store.put('tasks', { t: v, area: null, due: d.d, done: false, steps: [], note: '' });
+  render(false, true); toast('Added to ' + shortDate(d.d));
 };
 
 /* ── 99-boot.js ── */
