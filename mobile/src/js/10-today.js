@@ -1,27 +1,45 @@
 /* ═══ TODAY ═════════════════════════════════════════════════════════
-   Money, then the Play card (one thing at a time), habits, life areas,
-   and the day's log. */
+   An overview first (from Miles's recording): the count, a Heads up card
+   for what needs you, bills, the inbox, then the Play card, today's
+   tasks, anything overdue, habits, life areas, the log, and what's done. */
 TITLES.today = 'Today';
+function partOfDay(h) { return h < 12 ? 'morning' : h < 17 ? 'afternoon' : 'evening'; }
+function headsUpDismissed() { try { return localStorage.getItem('mossos.headsup') === today(); } catch (e) { return false; } }
+function habitRemindersNow() {
+  var n = new Date(), now = n.getHours() * 60 + n.getMinutes(), t = today();
+  return habitsDueToday().filter(function (h) { return h.remindAt && mins(h.remindAt) <= now && !habitDone(h, t); });
+}
 VIEWS.today = function () {
   var d = new Date(), t = today();
-  var inboxN = Store.all('inbox').length, slipN = slipped().length;
-  var h = '<div class="dateline">' + DOWL[d.getDay()] + ' · ' + d.getDate() + ' ' + MON[d.getMonth()] + '</div>';
+  var inbox = Store.all('inbox').sort(function (a, b) { return a.created - b.created; }), sl = slipped();
+  var todays = tasksIn('today'), open = todays.filter(function (x) { return !x.done; }), done = todays.filter(function (x) { return x.done; });
+  var h = '<div class="overview"><div class="dateline">' + DOW[d.getDay()] + ', ' + MON[d.getMonth()] + ' ' + d.getDate() + ' · ' + partOfDay(d.getHours()) + '</div>'
+    + '<div class="ovcount">' + open.length + ' task' + (open.length === 1 ? '' : 's') + ' today' + (sl.length ? ' · <span class="bad">' + sl.length + ' overdue</span>' : '') + '</div></div>';
   h += jumpTiles(['habits', 'goals', 'notes', 'projects', 'tools', 'calendar']);
 
   if (hasExamples()) h += '<div class="card flat"><p class="note">You\'re looking at example data so you can see how MossOS works. '
     + 'Items marked <span class="pill ex">example</span> go when you clear them.</p>'
     + '<div class="btnrow" style="margin-top:12px"><button class="btn sm soft" data-act="clearex">Clear examples</button></div></div>';
 
-  if (inboxN || slipN) {
-    h += '<div style="display:grid;gap:8px">';
-    if (inboxN) h += '<button class="inboxbar" data-act="tab" data-v="inbox">' + icon('inbox') + '<span class="grow"><b>' + inboxN + ' captured</b>'
-      + '<span class="muted small"> · waiting to be sorted</span></span>' + icon('chev', 'sm chev') + '</button>';
-    if (slipN) h += '<button class="sweepbar" data-act="reschedule">' + icon('broom') + '<span class="grow"><b style="font-weight:500">'
-      + slipN + ' slipped</b><span class="muted small"> · give each a new day</span></span>' + icon('chev', 'sm chev') + '</button>';
-    h += '</div>';
+  // Heads up
+  var rem = remindersNow(), hrem = habitRemindersNow();
+  if ((sl.length || rem.length || hrem.length || inbox.length) && !headsUpDismissed()) {
+    h += '<section class="headsup"><div class="sechead" style="margin:0"><h2>Heads up</h2><button class="iconbtn" data-act="hudismiss" aria-label="Hide for today">' + icon('x', 'sm') + '</button></div>';
+    if (sl.length) h += '<div class="hurow"><span>🔥</span><span class="grow"><b>' + sl.length + ' task' + (sl.length === 1 ? '' : 's') + ' overdue</b></span><button class="btn sm soft" data-act="reschedule">Sweep</button></div>';
+    rem.forEach(function (x) { h += '<div class="hurow"><span>🔔</span><button class="grow" style="text-align:left" data-act="open" data-v="task" data-id="' + x.id + '"><b>' + esc(x.t) + '</b> <span class="muted">' + esc(untilText(x)) + '</span></button></div>'; });
+    hrem.forEach(function (x) { h += '<div class="hurow"><span>' + esc(x.ic) + '</span><span class="grow"><b>' + esc(x.n) + '</b> <span class="muted">reminder · ' + esc(fmtTime(x.remindAt)) + '</span></span><button class="btn sm soft" data-act="habtoggle" data-id="' + x.id + '">' + (x.target ? 'Log' : 'Done') + '</button></div>'; });
+    if (inbox.length) h += '<div class="hurow"><span>📥</span><span class="grow"><b>' + inbox.length + ' to sort</b></span><button class="btn sm soft" data-act="tab" data-v="inbox">Sort</button></div>';
+    h += '</section>';
   }
 
-  if (typeof moneyStrip === 'function') h += moneyStrip();
+  if (typeof billsSection === 'function') h += billsSection();
+
+  // Inbox, each with its own sort
+  if (inbox.length) h += '<section><div class="sechead"><h2>Inbox</h2><span class="pill accent">' + inbox.length + ' to sort</span></div><div class="list">'
+    + inbox.slice(0, 4).map(function (it) {
+      return '<div class="row"><span class="grow"><div class="t">' + esc(it.text || '(photo)') + '</div><div class="s">unsorted · ' + esc(timeAgo(it.created)) + ' ' + exPill(it) + '</div></span>'
+        + '<button class="btn sm soft" data-act="sortone" data-id="' + it.id + '">sort ›</button></div>';
+    }).join('') + (inbox.length > 4 ? '<button class="row link" data-act="tab" data-v="inbox">All ' + inbox.length + ' in the inbox ›</button>' : '') + '</div></section>';
 
   // Play
   var q = playQueue();
@@ -40,16 +58,20 @@ VIEWS.today = function () {
   }
   h += '</section>';
 
+  // Today's tasks
+  h += '<section><div class="sechead"><h2>Today</h2><button class="link" data-act="tab" data-v="tasks">All tasks</button></div>'
+    + (open.length ? '<div class="tlist">' + open.map(taskRow).join('') + '</div>' : '<p class="note">Nothing else due today.</p>') + '</section>';
+
+  // Overdue
+  if (sl.length) h += '<section><div class="sechead"><h2 class="bad">Overdue</h2><button class="link" data-act="reschedule">Sweep →</button></div>'
+    + '<div class="tlist">' + sl.slice(0, 5).map(taskRow).join('') + '</div></section>';
+
   // Habits due today
   var hd = habitsDueToday();
   if (hd.length) {
-    var hdone = hd.filter(function (x) { return mark(x, t) === 1; }).length;
+    var hdone = hd.filter(function (x) { return habitDone(x, t); }).length;
     h += '<section><div class="sechead"><h2>Habits today</h2><span class="meta">' + hdone + '/' + hd.length + '</span></div><div class="hchips">'
-      + hd.map(function (x) {
-        var m = mark(x, t);
-        return '<button class="hchip' + (m === 1 ? ' on' : '') + (m === 2 ? ' skip' : '') + '" style="--c:' + esc(x.color) + '" data-act="habtoggle" data-id="' + x.id + '" aria-pressed="' + (m === 1) + '">'
-          + '<span>' + esc(x.ic) + '</span>' + esc(x.n) + (m === 1 ? ' ✓' : '') + '</button>';
-      }).join('') + '</div></section>';
+      + hd.map(habitChip).join('') + '</div></section>';
   }
 
   // Areas
@@ -62,9 +84,9 @@ VIEWS.today = function () {
     }).join('') + '</div></section>';
 
   // Rescheduled
-  var rs = rescheduled().slice(0, 4);
-  if (rs.length) h += '<section><div class="sechead"><h2>Slipped, rescheduled</h2><span class="meta">nothing overdue</span></div><div style="display:grid;gap:6px">'
-    + rs.map(slipRow).join('') + '</div></section>';
+  var rs2 = rescheduled().slice(0, 4);
+  if (rs2.length) h += '<section><div class="sechead"><h2>Slipped, rescheduled</h2></div><div style="display:grid;gap:6px">'
+    + rs2.map(slipRow).join('') + '</div></section>';
 
   // Log
   var log = Store.all('log').filter(function (l) { return l.day === t; }).sort(function (a, b) { return b.at - a.at; });
@@ -73,7 +95,19 @@ VIEWS.today = function () {
       return '<div class="logrow"><time>' + clock(l.at) + '</time>' + areaDot(l.area) + '<span>' + esc(l.text) + '</span></div>';
     }).join('') + '</div>' : '<div class="empty">Nothing yet. Finishing a task, marking a habit or capturing something adds a line here.</div>')
     + '</section>';
+
+  // Completed
+  if (done.length) h += '<details class="donegrp"><summary>✓ Completed · ' + done.length + '</summary><div class="tlist">' + done.map(taskRow).join('') + '</div></details>';
   return h;
+};
+VIEWS.today.after = function () { wireSwipes(); };
+ACTS.hudismiss = function () { try { localStorage.setItem('mossos.headsup', today()); } catch (e) {} render(); };
+/* "sort ›" on one inbox item: smart-sort just that one, in the capture sheet. */
+ACTS.sortone = function (d) {
+  var it = Store.get('inbox', d.id); if (!it) return;
+  capState = { kind: 'smart', area: null, photo: null, sugg: null };
+  openSheet('<div class="shead"><h2>Sorting…</h2></div>');
+  smartSort([it]).then(function (sugg) { capState.sugg = sugg; capReview(); });
 };
 
 function slipRow(tk) {

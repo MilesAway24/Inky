@@ -59,14 +59,79 @@ function setMark(id, s, v) {
   Store.patch('habits', id, { marks: marks });
   if (v === 1 && s === today()) logEvent(h.n + ' ✓', h.area);
 }
+/* ── amounts ─────────────────────────────────────────────────────────
+   A habit with a target ("3 L", "10 pages") keeps amounts per day; it
+   counts as done (mark 1) once the day's amount reaches the target. */
+function habitDone(h, d) { return mark(h, d) === 1; }
+function amountOn(h, d) { return +((h.amounts || {})[d] || 0); }
+function fmtAmt(n) { return String(Math.round(n * 100) / 100); }
+function logAmount(id, d, add) {
+  var h = Store.get('habits', id); if (!h || !h.target) return;
+  var amounts = Object.assign({}, h.amounts || {}), marks = Object.assign({}, h.marks || {});
+  var v = Math.max(0, Math.round((amountOn(h, d) + add) * 100) / 100), was = marks[d] === 1;
+  if (v) amounts[d] = v; else delete amounts[d];
+  if (v >= h.target) marks[d] = 1; else if (marks[d] === 1) delete marks[d];
+  Store.patch('habits', id, { amounts: amounts, marks: marks });
+  if (!was && v >= h.target && d === today()) logEvent(h.n + ' ✓ ' + fmtAmt(v) + ' ' + (h.unit || ''), h.area);
+}
+function amountUndo(id) { var h = Store.get('habits', id), a = JSON.stringify(h.amounts || {}), m = JSON.stringify(h.marks || {}); return function () { Store.patch('habits', id, { amounts: JSON.parse(a), marks: JSON.parse(m) }); }; }
 function toggleToday(id) {
-  var h = Store.get('habits', id), was = mark(h, today());
-  setMark(id, today(), was === 1 ? 0 : 1);
+  var h = Store.get('habits', id), t = today(), was = mark(h, t);
+  if (h.target) {
+    var undo = amountUndo(id);
+    if (was === 1) { logAmount(id, t, -amountOn(h, t)); toast(esc(h.n) + ' cleared for today', undo); return; }
+    logAmount(id, t, h.target - amountOn(h, t));
+    var s1 = streak(Store.get('habits', id));
+    toast(esc(h.n) + ' · ' + fmtAmt(h.target) + ' ' + esc(h.unit || '') + (s1 > 1 ? ' · ' + s1 + ' in a row' : ''), undo);
+    return;
+  }
+  setMark(id, t, was === 1 ? 0 : 1);
   if (was !== 1) {
     var s = streak(Store.get('habits', id));
-    toast(esc(h.n) + ' done' + (s > 1 ? ' · ' + s + ' in a row' : ''), function () { setMark(id, today(), was); });
+    toast(esc(h.n) + ' done' + (s > 1 ? ' · ' + s + ' in a row' : ''), function () { setMark(id, t, was); });
   }
 }
+/* A ring that fills towards the day's target. */
+function ring(h, d, size) {
+  var p = h.target ? Math.min(1, amountOn(h, d) / h.target) : (habitDone(h, d) ? 1 : 0), r = size / 2 - 3, c = 2 * Math.PI * r;
+  return '<svg class="ring" width="' + size + '" height="' + size + '" viewBox="0 0 ' + size + ' ' + size + '" aria-hidden="true"><circle cx="' + size / 2 + '" cy="' + size / 2 + '" r="' + r + '" fill="none" stroke="var(--line2)" stroke-width="3"/>'
+    + '<circle cx="' + size / 2 + '" cy="' + size / 2 + '" r="' + r + '" fill="none" stroke="var(--c)" stroke-width="3" stroke-linecap="round" stroke-dasharray="' + (c * p).toFixed(1) + ' ' + c.toFixed(1) + '" transform="rotate(-90 ' + size / 2 + ' ' + size / 2 + ')"/></svg>';
+}
+function amtText(h, d) { return fmtAmt(amountOn(h, d)) + ' / ' + fmtAmt(h.target) + ' ' + (h.unit || ''); }
+function habitChip(x) {
+  var t = today(), m = mark(x, t), part = x.target && !m && amountOn(x, t) > 0;
+  return '<button class="hchip' + (m === 1 ? ' on' : '') + (m === 2 ? ' skip' : '') + (part ? ' part' : '') + '" style="--c:' + esc(x.color) + '" data-act="habtoggle" data-hold="' + x.id + '" data-id="' + x.id + '" aria-pressed="' + (m === 1) + '">'
+    + (x.target ? ring(x, t, 22) : '<span>' + esc(x.ic) + '</span>') + esc(x.n) + (x.target ? ' <span class="amt2">' + esc(amtText(x, t)) + '</span>' : '') + (m === 1 ? ' ✓' : '') + '</button>';
+}
+/* Log part of a target: press and hold a habit, or tap "Log some". */
+ACTS.habsome = function (d) {
+  var h = Store.get('habits', d.id); if (!h || !h.target) return;
+  var t = today(), q = [0.25, 0.5].map(function (f) { return Math.round(h.target * f * 100) / 100; });
+  openSheet('<div class="shead"><h2>' + esc(h.ic) + ' ' + esc(h.n) + '</h2><button class="iconbtn" data-act="close" aria-label="Close">' + icon('x') + '</button></div>'
+    + '<div class="amtnow" style="--c:' + esc(h.color) + '">' + ring(h, t, 64) + '<div><b>' + esc(amtText(h, t)) + '</b><div class="small muted">today</div></div></div>'
+    + '<div class="sweep3">' + q.map(function (v) { return '<button class="btn soft" data-act="habadd" data-id="' + h.id + '" data-v="' + v + '">+' + fmtAmt(v) + ' ' + esc(h.unit || '') + '</button>'; }).join('')
+    + '<button class="btn accent" data-act="habadd" data-id="' + h.id + '" data-v="' + Math.max(0, h.target - amountOn(h, t)) + '">Fill it</button></div>'
+    + '<form class="addstep" data-form="habamt" data-id="' + h.id + '"><label class="sr" for="hamt">Amount</label><input id="hamt" class="input" inputmode="decimal" placeholder="Amount in ' + esc(h.unit || 'units') + '"><button class="btn soft" type="submit">Log</button></form>'
+    + (amountOn(h, t) ? '<button class="link" data-act="habadd" data-id="' + h.id + '" data-v="' + (-amountOn(h, t)) + '">Clear today</button>' : ''));
+};
+ACTS.habadd = function (d) { var undo = amountUndo(d.id); logAmount(d.id, today(), +d.v); closeSheet(); var h = Store.get('habits', d.id); toast(esc(h.n) + ' · ' + esc(amtText(h, today())), undo); };
+ACTS.form_habamt = function (d, f) { var v = parseFloat($('input', f).value); if (!v) return; ACTS.habadd({ id: d.id, v: v }); };
+/* Press and hold any [data-hold] habit button to log part of it. */
+(function () {
+  var timer = null, held = null;
+  document.addEventListener('pointerdown', function (e) {
+    var b = e.target.closest('[data-hold]'); if (!b) return;
+    var h = Store.get('habits', b.dataset.hold); if (!h || !h.target) return;
+    timer = setTimeout(function () { held = b; ACTS.habsome({ id: b.dataset.hold }); }, 480);
+  }, true);
+  ['pointerup', 'pointercancel', 'pointermove'].forEach(function (ev) {
+    document.addEventListener(ev, function (e) { if (ev === 'pointermove' && Math.abs(e.movementX) + Math.abs(e.movementY) < 4) return; clearTimeout(timer); }, true);
+  });
+  document.addEventListener('click', function (e) {
+    if (held && e.target.closest('[data-hold]') === held) { e.stopImmediatePropagation(); e.preventDefault(); held = null; }
+  }, true);
+  document.addEventListener('contextmenu', function (e) { if (e.target.closest('[data-hold]')) e.preventDefault(); });
+})();
 function habitsDueToday() { var t = today(); return habitsSorted().filter(function (h) { return dueOn(h, t); }); }
 
 /* ── list ───────────────────────────────────────────────────────────── */
@@ -90,8 +155,10 @@ VIEWS.habits = function () {
 };
 function markBtn(h) {
   var t = today(), m = mark(h, t), due = dueOn(h, t);
-  return '<button class="hmark' + (m === 1 ? ' on' : '') + '" style="--c:' + esc(h.color) + '" data-act="habtoggle" data-id="' + h.id + '" aria-pressed="' + (m === 1) + '">'
-    + (m === 1 ? 'Done' : m === 2 ? 'Skipped' : due ? 'Mark done' : 'Not today') + '</button>';
+  var main = '<button class="hmark' + (m === 1 ? ' on' : '') + '" style="--c:' + esc(h.color) + '" data-act="habtoggle" data-hold="' + h.id + '" data-id="' + h.id + '" aria-pressed="' + (m === 1) + '">'
+    + (h.target ? (m === 1 ? 'Done · ' + esc(amtText(h, t)) : amountOn(h, t) ? esc(amtText(h, t)) + ' · fill it' : 'Log ' + fmtAmt(h.target) + ' ' + esc(h.unit || ''))
+      : (m === 1 ? 'Done' : m === 2 ? 'Skipped' : due ? 'Mark done' : 'Not today')) + '</button>';
+  return h.target ? '<div class="btnrow">' + main + '<button class="btn soft sm" data-act="habsome" data-id="' + h.id + '">Log some</button></div>' : main;
 }
 function habitCard(h) {
   var t = today(), body = '';
@@ -99,25 +166,25 @@ function habitCard(h) {
     var mon = addDays(t, -wd(t));
     body = '<div class="hweek">' + [0, 1, 2, 3, 4, 5, 6].map(function (i) {
       var d = addDays(mon, i), m = mark(h, d), fut = d > t, isT = d === t;
-      var cls = m === 1 ? 'hit' : m === 2 ? 'skip' : !dueOn(h, d) ? 'off' : fut ? 'fut' : isT ? 'now' : 'miss';
+      var cls = m === 1 ? 'hit' : m === 2 ? 'skip' : amountOn(h, d) > 0 ? 'part' : !dueOn(h, d) ? 'off' : fut ? 'fut' : isT ? 'now' : 'miss';
       return '<span class="' + cls + '"><i></i><em>' + 'MTWTFSS'.charAt(i) + '</em></span>';
     }).join('') + '</div>';
   } else if (habView === 'month') {
     body = '<div class="hgrid">' + range(30).map(function (i) {
       var d = addDays(t, i - 29), m = mark(h, d);
-      var cls = m === 1 ? 'hit' : m === 2 ? 'skip' : !dueOn(h, d) || d < habitStart(h) ? 'off' : d === t ? 'now' : 'miss';
+      var cls = m === 1 ? 'hit' : m === 2 ? 'skip' : amountOn(h, d) > 0 ? 'part' : !dueOn(h, d) || d < habitStart(h) ? 'off' : d === t ? 'now' : 'miss';
       return '<i class="' + cls + '" title="' + esc(shortDate(d)) + '"></i>';
     }).join('') + '</div>';
   } else {
     body = '<div class="hspark">' + range(14).map(function (i) {
       var d = addDays(t, i - 13), m = mark(h, d);
-      return '<i class="' + (m === 1 ? 'hit' : m === 2 ? 'skip' : dueOn(h, d) ? 'miss' : 'off') + '"></i>';
+      return '<i class="' + (m === 1 ? 'hit' : m === 2 ? 'skip' : amountOn(h, d) > 0 ? 'part' : dueOn(h, d) ? 'miss' : 'off') + '"></i>';
     }).join('') + '</div>';
   }
   var s = streak(h);
   return '<div class="hcard" style="--c:' + esc(h.color) + '">'
     + '<button class="hhead" data-act="open" data-v="habit" data-id="' + h.id + '"><span class="hic">' + esc(h.ic) + '</span>'
-    + '<span class="grow"><b>' + esc(h.n) + '</b><span class="s">' + (s ? s + ' in a row · ' : '') + pctOver(h, 30) + '% this month ' + exPill(h) + '</span></span></button>'
+    + '<span class="grow"><b>' + esc(h.n) + '</b><span class="s">' + (h.target ? esc(amtText(h, t)) + ' today · ' : '') + (s ? s + ' in a row · ' : '') + pctOver(h, 30) + '% this month' + (h.remindAt ? ' · 🔔 ' + esc(fmtTime(h.remindAt)) : '') + ' ' + exPill(h) + '</span></span>' + (h.target ? ring(h, t, 34) : '') + '</button>'
     + body + markBtn(h) + '</div>';
 }
 function range(n) { var a = []; for (var i = 0; i < n; i++) a.push(i); return a; }
@@ -141,6 +208,12 @@ VIEWS.habit = function (id) {
   out += '<section><div class="sechead"><h2>Edit</h2></div><div style="display:grid;gap:12px">'
     + '<div class="field"><label for="hn">Name</label><input id="hn" class="input" data-hfield="n" value="' + esc(h.n) + '"></div>'
     + '<div class="field"><label for="hcue">Cue: when and where it happens</label><input id="hcue" class="input" data-hfield="cue" value="' + esc(h.cue || '') + '"></div>'
+    + '<div class="field"><span class="lbl">Amount goal (optional): log part of it, a ring fills toward it</span><div class="btnrow">'
+    + '<label class="sr" for="htarget">Target</label><input id="htarget" class="input" inputmode="decimal" style="flex:1" placeholder="Target, e.g. 3" data-hnum="target" value="' + esc(h.target || '') + '">'
+    + '<label class="sr" for="hunit">Unit</label><input id="hunit" class="input" style="flex:1" placeholder="Unit, e.g. L, pages" data-hfield="unit" value="' + esc(h.unit || '') + '"></div></div>'
+    + '<div class="field"><span class="lbl">Daily reminder (shown in Heads up on Today)</span><div class="chips">' + ['', '07:00', '09:00', '12:00', '18:00', '21:00'].map(function (r) {
+      return '<button class="chip' + ((h.remindAt || '') === r ? ' on' : '') + '" data-act="habremind" data-id="' + id + '" data-t="' + r + '">' + (r ? esc(fmtTime(r)) : 'None') + '</button>';
+    }).join('') + '<label class="chip" style="position:relative">Other<input type="time" data-act-change="habremindt" data-id="' + id + '" style="position:absolute;inset:0;opacity:0" aria-label="Other reminder time"></label></div></div>'
     + '<div class="field"><span class="lbl">Days</span><div class="chips">' + ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(function (n, i) {
       var on = !h.days || h.days[i];
       return '<button class="chip' + (on ? ' on' : '') + '" data-act="habdays" data-id="' + id + '" data-i="' + i + '" aria-pressed="' + !!on + '">' + n + '</button>';
@@ -155,10 +228,15 @@ VIEWS.habit = function (id) {
   return out;
 };
 VIEWS.habit.after = function (id) {
+  $$('[data-hnum]').forEach(function (el) {
+    el.addEventListener('input', function () { var v = parseFloat(el.value), f = {}; f[el.dataset.hnum] = v > 0 ? v : null; Store.patch('habits', id, f); });
+  });
   $$('[data-hfield]').forEach(function (el) {
     el.addEventListener('input', function () { var f = {}; f[el.dataset.hfield] = el.value; Store.patch('habits', id, f); });
   });
 };
+ACTS.habremind = function (d) { Store.patch('habits', d.id, { remindAt: d.t || null }); };
+ACTS.habremindt = function (d, el) { if (el.value) Store.patch('habits', d.id, { remindAt: el.value }); };
 ACTS.habday = function (d) {
   var h = Store.get('habits', d.id), cur = mark(h, d.d), next = cur === 0 ? 1 : cur === 1 ? 2 : 0;
   setMark(d.id, d.d, next);

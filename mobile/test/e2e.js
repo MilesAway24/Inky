@@ -135,7 +135,7 @@ const ok = (cond, msg) => { console.log((cond ? 'ok   ' : 'FAIL ') + msg); if (!
   // ── Reschedule sheet (replaces the one-at-a-time sweep) ─────────
   await p.click('.tabs [data-v=today]'); await p.waitForTimeout(150);
   const tk2 = (title) => p.evaluate((t) => Object.values(window.__mock.docs).filter((d) => d.t === t)[0], title);
-  await p.click('.sweepbar'); await p.waitForTimeout(200);
+  await p.click('[data-act=reschedule] >> nth=0'); await p.waitForTimeout(200);
   ok(await p.isVisible('#rsbox') && (await p.$$('.odrow input:checked')).length === 2 && /2 of 2 overdue/.test(await p.textContent('#rsbox .shead')),
     'Reschedule lists every overdue task, all ticked');
   await p.uncheck('.odrow >> nth=1 >> input'); await p.waitForTimeout(150);
@@ -147,13 +147,13 @@ const ok = (cond, msg) => { console.log((cond ? 'ok   ' : 'FAIL ') + msg); if (!
   ok(!(await tk2('Order the replacement cable')) && !(await p.isVisible('#rsbox')), 'Delete removes the ticked task');
   await p.click('#toast [data-act=undo]'); await p.waitForTimeout(600);
   ok(!!(await tk2('Order the replacement cable')), 'and Undo brings it back');
-  await p.click('.sweepbar'); await p.waitForTimeout(200);
+  await p.click('[data-act=reschedule] >> nth=0'); await p.waitForTimeout(200);
   await p.click('[data-act=rsspread]'); await p.waitForTimeout(600);
   const sp = [await tk2('Order the replacement cable'), await tk2('Reply to the important emails')];
   const tday = await p.evaluate(() => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); });
   ok(sp.every((x) => x.due >= tday) && /Spread over/.test(await p.textContent('#toast')), 'Spread puts them on days this week (' + sp.map((x) => x.due).join(', ') + ')');
   await p.click('#toast [data-act=undo]'); await p.waitForTimeout(600);
-  await p.click('.sweepbar'); await p.waitForTimeout(200);
+  await p.click('[data-act=reschedule] >> nth=0'); await p.waitForTimeout(200);
   await p.click('.sweep3 [data-act=rsday] >> nth=1'); await p.waitForTimeout(100);
   await p.click('[data-act=rspreset][data-t="19:00"]'); await p.waitForTimeout(100);
   ok((await p.textContent('#rsbig')).replace(/\s/g, '') === '7PM', 'the ruler presets set 7 PM');
@@ -169,7 +169,7 @@ const ok = (cond, msg) => { console.log((cond ? 'ok   ' : 'FAIL ') + msg); if (!
   await p.fill('#captext', 'Call the HCPD office about the packet\nIdea: a shift-day meal plan');
   await p.click('[data-act=capsave]'); await p.waitForTimeout(200);
   ok(await p.isVisible('text=2 items in your inbox'), 'a two-line capture makes two inbox items');
-  await p.click('.inboxbar'); await p.waitForTimeout(150);
+  await p.click('.headsup [data-v=inbox]'); await p.waitForTimeout(150);
   await p.screenshot({ path: shots + '/phone-inbox.png', fullPage: true });
   await p.click('[data-act=sortai]'); await p.waitForTimeout(400);
   ok(await p.isVisible('text=File all'), 'Sort with Claude shows suggestions');
@@ -204,14 +204,14 @@ const ok = (cond, msg) => { console.log((cond ? 'ok   ' : 'FAIL ') + msg); if (!
 
   // ── Phase 2: habits ──────────────────────────────────────────────
   await p.click('.tabs [data-v=today]'); await p.waitForTimeout(150);
-  ok((await p.$$('.hchip')).length === 5, 'Today lists the 5 habits due today');
+  ok((await p.$$('.hchip')).length === 6, 'Today lists the 6 habits due today');
   await p.click('.hchip >> nth=0'); await p.waitForTimeout(150);
   ok(await p.isVisible('.hchip.on'), 'tapping a habit on Today marks it done');
   ok(/in a row/.test(await p.textContent('#toast')), 'marking shows the streak');
   await p.click('.tabs [data-v=more]'); await p.click('#view [data-act=tab][data-v=habits]'); await p.waitForTimeout(150);
-  ok((await p.$$('.hcard')).length === 5, 'Habits lists 5 habit cards');
+  ok((await p.$$('.hcard')).length === 6, 'Habits lists 6 habit cards');
   const stat = await p.textContent('.stats4 > div:first-child b');
-  ok(/^1\/5/.test(stat.replace(/\s/g, '')), 'Done today reads 1/5 (' + stat + ')');
+  ok(/^1\/6/.test(stat.replace(/\s/g, '')), 'Done today reads 1/6 (' + stat + ')');
   for (const v of ['month', 'daily', 'week']) { await p.click('[data-act=habview][data-v=' + v + ']'); await p.waitForTimeout(80); }
   ok(await p.isVisible('.hweek'), 'Week / 30 days / Daily views switch');
   await p.screenshot({ path: shots + '/phone-habits.png', fullPage: true });
@@ -382,6 +382,45 @@ const ok = (cond, msg) => { console.log((cond ? 'ok   ' : 'FAIL ') + msg); if (!
   ok(await p.isVisible('.tabs [data-v=notes]') && !(await p.isVisible('.tabs [data-v=tasks]')), 'Settings can put Notes in the bottom bar');
   await p.selectOption('#tab1', 'tasks'); await p.waitForTimeout(150);
 
+  // ── Today overview ──────────────────────────────────────────────
+  await p.click('.tabs [data-v=today]'); await p.waitForTimeout(200);
+  const openN = await p.$$eval('#view section:has(h2:text-is("Today")) .trow', (x) => x.length);
+  ok(new RegExp('^' + openN + ' tasks? today').test(await p.textContent('.ovcount')), 'the overview count matches today\'s open tasks (' + (await p.textContent('.ovcount')) + ')');
+  ok(await p.isVisible('details.donegrp >> text=Completed'), 'a collapsed Completed list holds what\'s done today');
+  await p.click('.tabs .cap'); await p.click('[data-act=capkind][data-k=inbox]'); await p.fill('#captext', 'watched Arrival again 10/10'); await p.click('[data-act=capsave]'); await p.waitForTimeout(300);
+  await p.click('#view [data-act=sortone] >> nth=0'); await p.waitForTimeout(400);
+  ok(/Movie/.test(await p.textContent('#sheet')), 'inbox "sort ›" sorts that one item on the spot');
+  await p.click('#sheet [data-act=close]'); await p.waitForTimeout(150);
+  // an in-app reminder: due in ~90 minutes, remind 2 hours before
+  const target = await p.evaluate(() => { const n = new Date(); return Math.ceil((n.getHours() * 60 + n.getMinutes() + 90) / 5) * 5; });
+  if (target < 1435) {
+    await p.click('.tabs [data-v=tasks]'); await p.fill('#qadd', 'Reminder probe'); await p.press('#qadd', 'Enter'); await p.waitForTimeout(300);
+    await p.click('[data-act=open][aria-label="Open Reminder probe"]'); await p.click('[data-act=taskwhen]'); await p.waitForTimeout(150);
+    await p.click('[data-act=wday] >> nth=0'); await p.waitForTimeout(100);
+    await p.focus('#ruler'); const steps = Math.round((target - 540) / 5);
+    for (let i = 0; i < Math.abs(steps); i++) await p.keyboard.press(steps > 0 ? 'ArrowRight' : 'ArrowLeft');
+    await p.click('[data-act=wremind][data-m="120"]'); await p.click('[data-act=wdone]'); await p.waitForTimeout(400);
+    await p.click('.back'); await p.click('.tabs [data-v=today]'); await p.waitForTimeout(200);
+    ok(/Reminder probe/.test(await p.textContent('.headsup')), 'a reminder shows in Heads up once its window opens');
+  } else ok(true, 'reminder check skipped this late in the day');
+
+  // ── Habit amounts ──────────────────────────────────────────────
+  const water = () => p.evaluate(() => Object.values(window.__mock.docs).filter((d) => d.n === 'Drink water')[0]);
+  ok(/0 \/ 3 L/.test(await p.textContent('.hchip:has-text("Drink water")')), 'an amount habit shows 0 / 3 L');
+  await p.click('.hchip:has-text("Drink water")'); await p.waitForTimeout(500);
+  ok(/3 \/ 3 L/.test(await p.textContent('.hchip:has-text("Drink water")')) && (await p.$('.hchip.on:has-text("Drink water")')), 'a tap logs the full target and marks it done');
+  await p.click('#toast [data-act=undo]'); await p.waitForTimeout(500);
+  const chip = await p.$('.hchip:has-text("Drink water")'); const cb = await chip.boundingBox();
+  await p.mouse.move(cb.x + 20, cb.y + cb.height / 2); await p.mouse.down(); await p.waitForTimeout(650); await p.mouse.up(); await p.waitForTimeout(200);
+  ok(await p.isVisible('#sheet >> text=Fill it'), 'press and hold opens Log some');
+  await p.fill('#hamt', '1.5'); await p.press('#hamt', 'Enter'); await p.waitForTimeout(500);
+  let w = await water(), td = await p.evaluate(() => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); });
+  ok(w.amounts[td] === 1.5 && w.marks[td] !== 1 && await p.isVisible('.hchip.part:has-text("Drink water")'), 'logging 1.5 of 3 L is partial, not done');
+  await p.click('.tabs [data-v=habits]'); await p.waitForTimeout(150);
+  await p.click('.hcard:has-text("Drink water") [data-act=habsome]'); await p.click('#sheet [data-act=habadd] >> nth=1'); await p.waitForTimeout(500);
+  w = await water();
+  ok(w.amounts[td] === 3 && w.marks[td] === 1, 'logging another 1.5 reaches the target and marks it done (' + w.amounts[td] + ')');
+
   // Every screen: no sideways scrolling
   const views = ['tools', 'ranks', 'decks', 'bored', 'gym', 'timer','today', 'tasks', 'more', 'areas', 'inbox', 'notes', 'settings', 'money', 'habits', 'goals', 'projects', 'journal', 'calendar'];
   let wide = [];
@@ -421,7 +460,7 @@ const ok = (cond, msg) => { console.log((cond ? 'ok   ' : 'FAIL ') + msg); if (!
   await ctx.addInitScript(mock); // after the planted data, so the fake db loads it
   p = await ctx.newPage(); watch(p, 'upgrade');
   await p.goto(URL); await p.waitForTimeout(700);
-  ok((await p.$$('.hchip')).length === 5, 'a phase-1 user with examples gets example habits');
+  ok((await p.$$('.hchip')).length === 6, 'a phase-1 user with examples gets example habits');
   const kept = await p.evaluate(() => Object.values(window.__mock.docs).some((d) => d.t === 'My real task'));
   ok(kept, 'and their own data is untouched');
   await p.screenshot({ path: shots + '/phone-today-dark.png', fullPage: true });

@@ -60,6 +60,9 @@ function seedPhase2() {
     .forEach(function (x, i) {
       Store.put('habits', { example: true, ic: x[0], n: x[1], color: x[2], area: x[3], cue: x[4], days: [1, 1, 1, 1, 1, 1, 1], marks: hist(x[5]), since: addDays(t, -30), order: i + 1 }, true);
     });
+  var wm = {}, wa = {}; [3, 2.5, 1.5, 3, 3.2, 2, 3].forEach(function (v, i) { var d = addDays(t, i - 7); wa[d] = v; if (v >= 3) wm[d] = 1; });
+  Store.put('habits', { example: true, ic: '💧', n: 'Drink water', color: '#8FD3C7', area: 'gym', cue: 'A glass when you sit down.', target: 3, unit: 'L', remindAt: '12:00',
+    days: [1, 1, 1, 1, 1, 1, 1], marks: wm, amounts: wa, since: addDays(t, -14), order: 6 }, true);
   [['🚔', 'Get through the HCPD hiring process', 'hcpd', 'The job I actually want.', 'Finish the PAT prep block', '', [['Application submitted', 1], ['Pass the PAT', 0], ['Background check', 0], ['Oral board', 0]]],
    ['🏋️', 'Three gym sessions a week', 'gym', 'It is the thing that makes the other things possible.', 'Move the gym bag to the door', 'ongoing', [['Push day', 1], ['Pull day', 1], ['Legs', 0]]],
    ['💵', 'One month of runway saved', 'money', 'So a bad month is a bad month, not a crisis.', 'Move the standing order to the 2nd', 'Dec', [['Set the amount', 1], ['Automate it', 0], ['Leave it alone', 0]]],

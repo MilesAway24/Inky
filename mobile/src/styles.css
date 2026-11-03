@@ -527,3 +527,24 @@ select.input.sel{min-height:40px;padding:6px 10px;font-size:15px;width:auto;max-
 .wk1 b{position:absolute;top:0;font-size:11px;font-weight:500;color:var(--muted)}
 .swatch{width:32px;height:32px;border-radius:50%;border:2px solid transparent}
 .swatch.on{border-color:var(--ink);box-shadow:inset 0 0 0 2px var(--bg)}
+
+/* ── today overview, heads up, habit amounts ─────────────────────── */
+.overview{display:grid;gap:2px}
+.ovcount{font-size:20px;font-weight:500;letter-spacing:-.015em}
+.bad{color:var(--bad)}
+h2.bad{color:var(--bad)}
+.headsup{display:grid;gap:8px;padding:14px 16px;border-radius:16px;background:var(--surface);border:1px solid var(--line);box-shadow:inset 3px 0 0 var(--warn)}
+.hurow{display:flex;align-items:center;gap:10px;min-height:40px}
+.hurow .grow{flex:1;min-width:0}
+.hurow b{font-weight:500}
+.pill.accent{background:var(--accent);color:var(--accent-ink);font-weight:600}
+.ring{flex:none}
+.hchip .amt2{font-size:12.5px;color:var(--muted)}
+.hchip.on .amt2{color:#111}
+.hchip.part{border-color:color-mix(in srgb,var(--c) 60%,transparent)}
+.hweek .part i{background:color-mix(in srgb,var(--c) 40%,var(--sunk))}
+.hgrid .part,.hspark .part{background:color-mix(in srgb,var(--c) 40%,var(--sunk))}
+.hspark .part{height:55%}
+.hcard .btnrow .hmark{flex:1}
+.amtnow{display:flex;align-items:center;gap:14px}
+.amtnow b{font-size:22px;font-weight:400}

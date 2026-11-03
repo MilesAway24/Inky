@@ -530,6 +530,27 @@ select.input.sel{min-height:40px;padding:6px 10px;font-size:15px;width:auto;max-
 .wk1 b{position:absolute;top:0;font-size:11px;font-weight:500;color:var(--muted)}
 .swatch{width:32px;height:32px;border-radius:50%;border:2px solid transparent}
 .swatch.on{border-color:var(--ink);box-shadow:inset 0 0 0 2px var(--bg)}
+
+/* ── today overview, heads up, habit amounts ─────────────────────── */
+.overview{display:grid;gap:2px}
+.ovcount{font-size:20px;font-weight:500;letter-spacing:-.015em}
+.bad{color:var(--bad)}
+h2.bad{color:var(--bad)}
+.headsup{display:grid;gap:8px;padding:14px 16px;border-radius:16px;background:var(--surface);border:1px solid var(--line);box-shadow:inset 3px 0 0 var(--warn)}
+.hurow{display:flex;align-items:center;gap:10px;min-height:40px}
+.hurow .grow{flex:1;min-width:0}
+.hurow b{font-weight:500}
+.pill.accent{background:var(--accent);color:var(--accent-ink);font-weight:600}
+.ring{flex:none}
+.hchip .amt2{font-size:12.5px;color:var(--muted)}
+.hchip.on .amt2{color:#111}
+.hchip.part{border-color:color-mix(in srgb,var(--c) 60%,transparent)}
+.hweek .part i{background:color-mix(in srgb,var(--c) 40%,var(--sunk))}
+.hgrid .part,.hspark .part{background:color-mix(in srgb,var(--c) 40%,var(--sunk))}
+.hspark .part{height:55%}
+.hcard .btnrow .hmark{flex:1}
+.amtnow{display:flex;align-items:center;gap:14px}
+.amtnow b{font-size:22px;font-weight:400}
 </style>
 
 <div class="app" id="app">
@@ -808,6 +829,9 @@ function seedPhase2() {
     .forEach(function (x, i) {
       Store.put('habits', { example: true, ic: x[0], n: x[1], color: x[2], area: x[3], cue: x[4], days: [1, 1, 1, 1, 1, 1, 1], marks: hist(x[5]), since: addDays(t, -30), order: i + 1 }, true);
     });
+  var wm = {}, wa = {}; [3, 2.5, 1.5, 3, 3.2, 2, 3].forEach(function (v, i) { var d = addDays(t, i - 7); wa[d] = v; if (v >= 3) wm[d] = 1; });
+  Store.put('habits', { example: true, ic: '💧', n: 'Drink water', color: '#8FD3C7', area: 'gym', cue: 'A glass when you sit down.', target: 3, unit: 'L', remindAt: '12:00',
+    days: [1, 1, 1, 1, 1, 1, 1], marks: wm, amounts: wa, since: addDays(t, -14), order: 6 }, true);
   [['🚔', 'Get through the HCPD hiring process', 'hcpd', 'The job I actually want.', 'Finish the PAT prep block', '', [['Application submitted', 1], ['Pass the PAT', 0], ['Background check', 0], ['Oral board', 0]]],
    ['🏋️', 'Three gym sessions a week', 'gym', 'It is the thing that makes the other things possible.', 'Move the gym bag to the door', 'ongoing', [['Push day', 1], ['Pull day', 1], ['Legs', 0]]],
    ['💵', 'One month of runway saved', 'money', 'So a bad month is a bad month, not a crisis.', 'Move the standing order to the 2nd', 'Dec', [['Set the amount', 1], ['Automate it', 0], ['Leave it alone', 0]]],
@@ -1264,29 +1288,47 @@ function exPill(o) { return o && o.example ? '<span class="pill ex">example</spa
 
 /* ── 10-today.js ── */
 /* ═══ TODAY ═════════════════════════════════════════════════════════
-   Money, then the Play card (one thing at a time), habits, life areas,
-   and the day's log. */
+   An overview first (from Miles's recording): the count, a Heads up card
+   for what needs you, bills, the inbox, then the Play card, today's
+   tasks, anything overdue, habits, life areas, the log, and what's done. */
 TITLES.today = 'Today';
+function partOfDay(h) { return h < 12 ? 'morning' : h < 17 ? 'afternoon' : 'evening'; }
+function headsUpDismissed() { try { return localStorage.getItem('mossos.headsup') === today(); } catch (e) { return false; } }
+function habitRemindersNow() {
+  var n = new Date(), now = n.getHours() * 60 + n.getMinutes(), t = today();
+  return habitsDueToday().filter(function (h) { return h.remindAt && mins(h.remindAt) <= now && !habitDone(h, t); });
+}
 VIEWS.today = function () {
   var d = new Date(), t = today();
-  var inboxN = Store.all('inbox').length, slipN = slipped().length;
-  var h = '<div class="dateline">' + DOWL[d.getDay()] + ' · ' + d.getDate() + ' ' + MON[d.getMonth()] + '</div>';
+  var inbox = Store.all('inbox').sort(function (a, b) { return a.created - b.created; }), sl = slipped();
+  var todays = tasksIn('today'), open = todays.filter(function (x) { return !x.done; }), done = todays.filter(function (x) { return x.done; });
+  var h = '<div class="overview"><div class="dateline">' + DOW[d.getDay()] + ', ' + MON[d.getMonth()] + ' ' + d.getDate() + ' · ' + partOfDay(d.getHours()) + '</div>'
+    + '<div class="ovcount">' + open.length + ' task' + (open.length === 1 ? '' : 's') + ' today' + (sl.length ? ' · <span class="bad">' + sl.length + ' overdue</span>' : '') + '</div></div>';
   h += jumpTiles(['habits', 'goals', 'notes', 'projects', 'tools', 'calendar']);
 
   if (hasExamples()) h += '<div class="card flat"><p class="note">You\'re looking at example data so you can see how MossOS works. '
     + 'Items marked <span class="pill ex">example</span> go when you clear them.</p>'
     + '<div class="btnrow" style="margin-top:12px"><button class="btn sm soft" data-act="clearex">Clear examples</button></div></div>';
 
-  if (inboxN || slipN) {
-    h += '<div style="display:grid;gap:8px">';
-    if (inboxN) h += '<button class="inboxbar" data-act="tab" data-v="inbox">' + icon('inbox') + '<span class="grow"><b>' + inboxN + ' captured</b>'
-      + '<span class="muted small"> · waiting to be sorted</span></span>' + icon('chev', 'sm chev') + '</button>';
-    if (slipN) h += '<button class="sweepbar" data-act="reschedule">' + icon('broom') + '<span class="grow"><b style="font-weight:500">'
-      + slipN + ' slipped</b><span class="muted small"> · give each a new day</span></span>' + icon('chev', 'sm chev') + '</button>';
-    h += '</div>';
+  // Heads up
+  var rem = remindersNow(), hrem = habitRemindersNow();
+  if ((sl.length || rem.length || hrem.length || inbox.length) && !headsUpDismissed()) {
+    h += '<section class="headsup"><div class="sechead" style="margin:0"><h2>Heads up</h2><button class="iconbtn" data-act="hudismiss" aria-label="Hide for today">' + icon('x', 'sm') + '</button></div>';
+    if (sl.length) h += '<div class="hurow"><span>🔥</span><span class="grow"><b>' + sl.length + ' task' + (sl.length === 1 ? '' : 's') + ' overdue</b></span><button class="btn sm soft" data-act="reschedule">Sweep</button></div>';
+    rem.forEach(function (x) { h += '<div class="hurow"><span>🔔</span><button class="grow" style="text-align:left" data-act="open" data-v="task" data-id="' + x.id + '"><b>' + esc(x.t) + '</b> <span class="muted">' + esc(untilText(x)) + '</span></button></div>'; });
+    hrem.forEach(function (x) { h += '<div class="hurow"><span>' + esc(x.ic) + '</span><span class="grow"><b>' + esc(x.n) + '</b> <span class="muted">reminder · ' + esc(fmtTime(x.remindAt)) + '</span></span><button class="btn sm soft" data-act="habtoggle" data-id="' + x.id + '">' + (x.target ? 'Log' : 'Done') + '</button></div>'; });
+    if (inbox.length) h += '<div class="hurow"><span>📥</span><span class="grow"><b>' + inbox.length + ' to sort</b></span><button class="btn sm soft" data-act="tab" data-v="inbox">Sort</button></div>';
+    h += '</section>';
   }
 
-  if (typeof moneyStrip === 'function') h += moneyStrip();
+  if (typeof billsSection === 'function') h += billsSection();
+
+  // Inbox, each with its own sort
+  if (inbox.length) h += '<section><div class="sechead"><h2>Inbox</h2><span class="pill accent">' + inbox.length + ' to sort</span></div><div class="list">'
+    + inbox.slice(0, 4).map(function (it) {
+      return '<div class="row"><span class="grow"><div class="t">' + esc(it.text || '(photo)') + '</div><div class="s">unsorted · ' + esc(timeAgo(it.created)) + ' ' + exPill(it) + '</div></span>'
+        + '<button class="btn sm soft" data-act="sortone" data-id="' + it.id + '">sort ›</button></div>';
+    }).join('') + (inbox.length > 4 ? '<button class="row link" data-act="tab" data-v="inbox">All ' + inbox.length + ' in the inbox ›</button>' : '') + '</div></section>';
 
   // Play
   var q = playQueue();
@@ -1305,16 +1347,20 @@ VIEWS.today = function () {
   }
   h += '</section>';
 
+  // Today's tasks
+  h += '<section><div class="sechead"><h2>Today</h2><button class="link" data-act="tab" data-v="tasks">All tasks</button></div>'
+    + (open.length ? '<div class="tlist">' + open.map(taskRow).join('') + '</div>' : '<p class="note">Nothing else due today.</p>') + '</section>';
+
+  // Overdue
+  if (sl.length) h += '<section><div class="sechead"><h2 class="bad">Overdue</h2><button class="link" data-act="reschedule">Sweep →</button></div>'
+    + '<div class="tlist">' + sl.slice(0, 5).map(taskRow).join('') + '</div></section>';
+
   // Habits due today
   var hd = habitsDueToday();
   if (hd.length) {
-    var hdone = hd.filter(function (x) { return mark(x, t) === 1; }).length;
+    var hdone = hd.filter(function (x) { return habitDone(x, t); }).length;
     h += '<section><div class="sechead"><h2>Habits today</h2><span class="meta">' + hdone + '/' + hd.length + '</span></div><div class="hchips">'
-      + hd.map(function (x) {
-        var m = mark(x, t);
-        return '<button class="hchip' + (m === 1 ? ' on' : '') + (m === 2 ? ' skip' : '') + '" style="--c:' + esc(x.color) + '" data-act="habtoggle" data-id="' + x.id + '" aria-pressed="' + (m === 1) + '">'
-          + '<span>' + esc(x.ic) + '</span>' + esc(x.n) + (m === 1 ? ' ✓' : '') + '</button>';
-      }).join('') + '</div></section>';
+      + hd.map(habitChip).join('') + '</div></section>';
   }
 
   // Areas
@@ -1327,9 +1373,9 @@ VIEWS.today = function () {
     }).join('') + '</div></section>';
 
   // Rescheduled
-  var rs = rescheduled().slice(0, 4);
-  if (rs.length) h += '<section><div class="sechead"><h2>Slipped, rescheduled</h2><span class="meta">nothing overdue</span></div><div style="display:grid;gap:6px">'
-    + rs.map(slipRow).join('') + '</div></section>';
+  var rs2 = rescheduled().slice(0, 4);
+  if (rs2.length) h += '<section><div class="sechead"><h2>Slipped, rescheduled</h2></div><div style="display:grid;gap:6px">'
+    + rs2.map(slipRow).join('') + '</div></section>';
 
   // Log
   var log = Store.all('log').filter(function (l) { return l.day === t; }).sort(function (a, b) { return b.at - a.at; });
@@ -1338,7 +1384,19 @@ VIEWS.today = function () {
       return '<div class="logrow"><time>' + clock(l.at) + '</time>' + areaDot(l.area) + '<span>' + esc(l.text) + '</span></div>';
     }).join('') + '</div>' : '<div class="empty">Nothing yet. Finishing a task, marking a habit or capturing something adds a line here.</div>')
     + '</section>';
+
+  // Completed
+  if (done.length) h += '<details class="donegrp"><summary>✓ Completed · ' + done.length + '</summary><div class="tlist">' + done.map(taskRow).join('') + '</div></details>';
   return h;
+};
+VIEWS.today.after = function () { wireSwipes(); };
+ACTS.hudismiss = function () { try { localStorage.setItem('mossos.headsup', today()); } catch (e) {} render(); };
+/* "sort ›" on one inbox item: smart-sort just that one, in the capture sheet. */
+ACTS.sortone = function (d) {
+  var it = Store.get('inbox', d.id); if (!it) return;
+  capState = { kind: 'smart', area: null, photo: null, sugg: null };
+  openSheet('<div class="shead"><h2>Sorting…</h2></div>');
+  smartSort([it]).then(function (sugg) { capState.sugg = sugg; capReview(); });
 };
 
 function slipRow(tk) {
@@ -2205,14 +2263,79 @@ function setMark(id, s, v) {
   Store.patch('habits', id, { marks: marks });
   if (v === 1 && s === today()) logEvent(h.n + ' ✓', h.area);
 }
+/* ── amounts ─────────────────────────────────────────────────────────
+   A habit with a target ("3 L", "10 pages") keeps amounts per day; it
+   counts as done (mark 1) once the day's amount reaches the target. */
+function habitDone(h, d) { return mark(h, d) === 1; }
+function amountOn(h, d) { return +((h.amounts || {})[d] || 0); }
+function fmtAmt(n) { return String(Math.round(n * 100) / 100); }
+function logAmount(id, d, add) {
+  var h = Store.get('habits', id); if (!h || !h.target) return;
+  var amounts = Object.assign({}, h.amounts || {}), marks = Object.assign({}, h.marks || {});
+  var v = Math.max(0, Math.round((amountOn(h, d) + add) * 100) / 100), was = marks[d] === 1;
+  if (v) amounts[d] = v; else delete amounts[d];
+  if (v >= h.target) marks[d] = 1; else if (marks[d] === 1) delete marks[d];
+  Store.patch('habits', id, { amounts: amounts, marks: marks });
+  if (!was && v >= h.target && d === today()) logEvent(h.n + ' ✓ ' + fmtAmt(v) + ' ' + (h.unit || ''), h.area);
+}
+function amountUndo(id) { var h = Store.get('habits', id), a = JSON.stringify(h.amounts || {}), m = JSON.stringify(h.marks || {}); return function () { Store.patch('habits', id, { amounts: JSON.parse(a), marks: JSON.parse(m) }); }; }
 function toggleToday(id) {
-  var h = Store.get('habits', id), was = mark(h, today());
-  setMark(id, today(), was === 1 ? 0 : 1);
+  var h = Store.get('habits', id), t = today(), was = mark(h, t);
+  if (h.target) {
+    var undo = amountUndo(id);
+    if (was === 1) { logAmount(id, t, -amountOn(h, t)); toast(esc(h.n) + ' cleared for today', undo); return; }
+    logAmount(id, t, h.target - amountOn(h, t));
+    var s1 = streak(Store.get('habits', id));
+    toast(esc(h.n) + ' · ' + fmtAmt(h.target) + ' ' + esc(h.unit || '') + (s1 > 1 ? ' · ' + s1 + ' in a row' : ''), undo);
+    return;
+  }
+  setMark(id, t, was === 1 ? 0 : 1);
   if (was !== 1) {
     var s = streak(Store.get('habits', id));
-    toast(esc(h.n) + ' done' + (s > 1 ? ' · ' + s + ' in a row' : ''), function () { setMark(id, today(), was); });
+    toast(esc(h.n) + ' done' + (s > 1 ? ' · ' + s + ' in a row' : ''), function () { setMark(id, t, was); });
   }
 }
+/* A ring that fills towards the day's target. */
+function ring(h, d, size) {
+  var p = h.target ? Math.min(1, amountOn(h, d) / h.target) : (habitDone(h, d) ? 1 : 0), r = size / 2 - 3, c = 2 * Math.PI * r;
+  return '<svg class="ring" width="' + size + '" height="' + size + '" viewBox="0 0 ' + size + ' ' + size + '" aria-hidden="true"><circle cx="' + size / 2 + '" cy="' + size / 2 + '" r="' + r + '" fill="none" stroke="var(--line2)" stroke-width="3"/>'
+    + '<circle cx="' + size / 2 + '" cy="' + size / 2 + '" r="' + r + '" fill="none" stroke="var(--c)" stroke-width="3" stroke-linecap="round" stroke-dasharray="' + (c * p).toFixed(1) + ' ' + c.toFixed(1) + '" transform="rotate(-90 ' + size / 2 + ' ' + size / 2 + ')"/></svg>';
+}
+function amtText(h, d) { return fmtAmt(amountOn(h, d)) + ' / ' + fmtAmt(h.target) + ' ' + (h.unit || ''); }
+function habitChip(x) {
+  var t = today(), m = mark(x, t), part = x.target && !m && amountOn(x, t) > 0;
+  return '<button class="hchip' + (m === 1 ? ' on' : '') + (m === 2 ? ' skip' : '') + (part ? ' part' : '') + '" style="--c:' + esc(x.color) + '" data-act="habtoggle" data-hold="' + x.id + '" data-id="' + x.id + '" aria-pressed="' + (m === 1) + '">'
+    + (x.target ? ring(x, t, 22) : '<span>' + esc(x.ic) + '</span>') + esc(x.n) + (x.target ? ' <span class="amt2">' + esc(amtText(x, t)) + '</span>' : '') + (m === 1 ? ' ✓' : '') + '</button>';
+}
+/* Log part of a target: press and hold a habit, or tap "Log some". */
+ACTS.habsome = function (d) {
+  var h = Store.get('habits', d.id); if (!h || !h.target) return;
+  var t = today(), q = [0.25, 0.5].map(function (f) { return Math.round(h.target * f * 100) / 100; });
+  openSheet('<div class="shead"><h2>' + esc(h.ic) + ' ' + esc(h.n) + '</h2><button class="iconbtn" data-act="close" aria-label="Close">' + icon('x') + '</button></div>'
+    + '<div class="amtnow" style="--c:' + esc(h.color) + '">' + ring(h, t, 64) + '<div><b>' + esc(amtText(h, t)) + '</b><div class="small muted">today</div></div></div>'
+    + '<div class="sweep3">' + q.map(function (v) { return '<button class="btn soft" data-act="habadd" data-id="' + h.id + '" data-v="' + v + '">+' + fmtAmt(v) + ' ' + esc(h.unit || '') + '</button>'; }).join('')
+    + '<button class="btn accent" data-act="habadd" data-id="' + h.id + '" data-v="' + Math.max(0, h.target - amountOn(h, t)) + '">Fill it</button></div>'
+    + '<form class="addstep" data-form="habamt" data-id="' + h.id + '"><label class="sr" for="hamt">Amount</label><input id="hamt" class="input" inputmode="decimal" placeholder="Amount in ' + esc(h.unit || 'units') + '"><button class="btn soft" type="submit">Log</button></form>'
+    + (amountOn(h, t) ? '<button class="link" data-act="habadd" data-id="' + h.id + '" data-v="' + (-amountOn(h, t)) + '">Clear today</button>' : ''));
+};
+ACTS.habadd = function (d) { var undo = amountUndo(d.id); logAmount(d.id, today(), +d.v); closeSheet(); var h = Store.get('habits', d.id); toast(esc(h.n) + ' · ' + esc(amtText(h, today())), undo); };
+ACTS.form_habamt = function (d, f) { var v = parseFloat($('input', f).value); if (!v) return; ACTS.habadd({ id: d.id, v: v }); };
+/* Press and hold any [data-hold] habit button to log part of it. */
+(function () {
+  var timer = null, held = null;
+  document.addEventListener('pointerdown', function (e) {
+    var b = e.target.closest('[data-hold]'); if (!b) return;
+    var h = Store.get('habits', b.dataset.hold); if (!h || !h.target) return;
+    timer = setTimeout(function () { held = b; ACTS.habsome({ id: b.dataset.hold }); }, 480);
+  }, true);
+  ['pointerup', 'pointercancel', 'pointermove'].forEach(function (ev) {
+    document.addEventListener(ev, function (e) { if (ev === 'pointermove' && Math.abs(e.movementX) + Math.abs(e.movementY) < 4) return; clearTimeout(timer); }, true);
+  });
+  document.addEventListener('click', function (e) {
+    if (held && e.target.closest('[data-hold]') === held) { e.stopImmediatePropagation(); e.preventDefault(); held = null; }
+  }, true);
+  document.addEventListener('contextmenu', function (e) { if (e.target.closest('[data-hold]')) e.preventDefault(); });
+})();
 function habitsDueToday() { var t = today(); return habitsSorted().filter(function (h) { return dueOn(h, t); }); }
 
 /* ── list ───────────────────────────────────────────────────────────── */
@@ -2236,8 +2359,10 @@ VIEWS.habits = function () {
 };
 function markBtn(h) {
   var t = today(), m = mark(h, t), due = dueOn(h, t);
-  return '<button class="hmark' + (m === 1 ? ' on' : '') + '" style="--c:' + esc(h.color) + '" data-act="habtoggle" data-id="' + h.id + '" aria-pressed="' + (m === 1) + '">'
-    + (m === 1 ? 'Done' : m === 2 ? 'Skipped' : due ? 'Mark done' : 'Not today') + '</button>';
+  var main = '<button class="hmark' + (m === 1 ? ' on' : '') + '" style="--c:' + esc(h.color) + '" data-act="habtoggle" data-hold="' + h.id + '" data-id="' + h.id + '" aria-pressed="' + (m === 1) + '">'
+    + (h.target ? (m === 1 ? 'Done · ' + esc(amtText(h, t)) : amountOn(h, t) ? esc(amtText(h, t)) + ' · fill it' : 'Log ' + fmtAmt(h.target) + ' ' + esc(h.unit || ''))
+      : (m === 1 ? 'Done' : m === 2 ? 'Skipped' : due ? 'Mark done' : 'Not today')) + '</button>';
+  return h.target ? '<div class="btnrow">' + main + '<button class="btn soft sm" data-act="habsome" data-id="' + h.id + '">Log some</button></div>' : main;
 }
 function habitCard(h) {
   var t = today(), body = '';
@@ -2245,25 +2370,25 @@ function habitCard(h) {
     var mon = addDays(t, -wd(t));
     body = '<div class="hweek">' + [0, 1, 2, 3, 4, 5, 6].map(function (i) {
       var d = addDays(mon, i), m = mark(h, d), fut = d > t, isT = d === t;
-      var cls = m === 1 ? 'hit' : m === 2 ? 'skip' : !dueOn(h, d) ? 'off' : fut ? 'fut' : isT ? 'now' : 'miss';
+      var cls = m === 1 ? 'hit' : m === 2 ? 'skip' : amountOn(h, d) > 0 ? 'part' : !dueOn(h, d) ? 'off' : fut ? 'fut' : isT ? 'now' : 'miss';
       return '<span class="' + cls + '"><i></i><em>' + 'MTWTFSS'.charAt(i) + '</em></span>';
     }).join('') + '</div>';
   } else if (habView === 'month') {
     body = '<div class="hgrid">' + range(30).map(function (i) {
       var d = addDays(t, i - 29), m = mark(h, d);
-      var cls = m === 1 ? 'hit' : m === 2 ? 'skip' : !dueOn(h, d) || d < habitStart(h) ? 'off' : d === t ? 'now' : 'miss';
+      var cls = m === 1 ? 'hit' : m === 2 ? 'skip' : amountOn(h, d) > 0 ? 'part' : !dueOn(h, d) || d < habitStart(h) ? 'off' : d === t ? 'now' : 'miss';
       return '<i class="' + cls + '" title="' + esc(shortDate(d)) + '"></i>';
     }).join('') + '</div>';
   } else {
     body = '<div class="hspark">' + range(14).map(function (i) {
       var d = addDays(t, i - 13), m = mark(h, d);
-      return '<i class="' + (m === 1 ? 'hit' : m === 2 ? 'skip' : dueOn(h, d) ? 'miss' : 'off') + '"></i>';
+      return '<i class="' + (m === 1 ? 'hit' : m === 2 ? 'skip' : amountOn(h, d) > 0 ? 'part' : dueOn(h, d) ? 'miss' : 'off') + '"></i>';
     }).join('') + '</div>';
   }
   var s = streak(h);
   return '<div class="hcard" style="--c:' + esc(h.color) + '">'
     + '<button class="hhead" data-act="open" data-v="habit" data-id="' + h.id + '"><span class="hic">' + esc(h.ic) + '</span>'
-    + '<span class="grow"><b>' + esc(h.n) + '</b><span class="s">' + (s ? s + ' in a row · ' : '') + pctOver(h, 30) + '% this month ' + exPill(h) + '</span></span></button>'
+    + '<span class="grow"><b>' + esc(h.n) + '</b><span class="s">' + (h.target ? esc(amtText(h, t)) + ' today · ' : '') + (s ? s + ' in a row · ' : '') + pctOver(h, 30) + '% this month' + (h.remindAt ? ' · 🔔 ' + esc(fmtTime(h.remindAt)) : '') + ' ' + exPill(h) + '</span></span>' + (h.target ? ring(h, t, 34) : '') + '</button>'
     + body + markBtn(h) + '</div>';
 }
 function range(n) { var a = []; for (var i = 0; i < n; i++) a.push(i); return a; }
@@ -2287,6 +2412,12 @@ VIEWS.habit = function (id) {
   out += '<section><div class="sechead"><h2>Edit</h2></div><div style="display:grid;gap:12px">'
     + '<div class="field"><label for="hn">Name</label><input id="hn" class="input" data-hfield="n" value="' + esc(h.n) + '"></div>'
     + '<div class="field"><label for="hcue">Cue: when and where it happens</label><input id="hcue" class="input" data-hfield="cue" value="' + esc(h.cue || '') + '"></div>'
+    + '<div class="field"><span class="lbl">Amount goal (optional): log part of it, a ring fills toward it</span><div class="btnrow">'
+    + '<label class="sr" for="htarget">Target</label><input id="htarget" class="input" inputmode="decimal" style="flex:1" placeholder="Target, e.g. 3" data-hnum="target" value="' + esc(h.target || '') + '">'
+    + '<label class="sr" for="hunit">Unit</label><input id="hunit" class="input" style="flex:1" placeholder="Unit, e.g. L, pages" data-hfield="unit" value="' + esc(h.unit || '') + '"></div></div>'
+    + '<div class="field"><span class="lbl">Daily reminder (shown in Heads up on Today)</span><div class="chips">' + ['', '07:00', '09:00', '12:00', '18:00', '21:00'].map(function (r) {
+      return '<button class="chip' + ((h.remindAt || '') === r ? ' on' : '') + '" data-act="habremind" data-id="' + id + '" data-t="' + r + '">' + (r ? esc(fmtTime(r)) : 'None') + '</button>';
+    }).join('') + '<label class="chip" style="position:relative">Other<input type="time" data-act-change="habremindt" data-id="' + id + '" style="position:absolute;inset:0;opacity:0" aria-label="Other reminder time"></label></div></div>'
     + '<div class="field"><span class="lbl">Days</span><div class="chips">' + ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(function (n, i) {
       var on = !h.days || h.days[i];
       return '<button class="chip' + (on ? ' on' : '') + '" data-act="habdays" data-id="' + id + '" data-i="' + i + '" aria-pressed="' + !!on + '">' + n + '</button>';
@@ -2301,10 +2432,15 @@ VIEWS.habit = function (id) {
   return out;
 };
 VIEWS.habit.after = function (id) {
+  $$('[data-hnum]').forEach(function (el) {
+    el.addEventListener('input', function () { var v = parseFloat(el.value), f = {}; f[el.dataset.hnum] = v > 0 ? v : null; Store.patch('habits', id, f); });
+  });
   $$('[data-hfield]').forEach(function (el) {
     el.addEventListener('input', function () { var f = {}; f[el.dataset.hfield] = el.value; Store.patch('habits', id, f); });
   });
 };
+ACTS.habremind = function (d) { Store.patch('habits', d.id, { remindAt: d.t || null }); };
+ACTS.habremindt = function (d, el) { if (el.value) Store.patch('habits', d.id, { remindAt: el.value }); };
 ACTS.habday = function (d) {
   var h = Store.get('habits', d.id), cur = mark(h, d.d), next = cur === 0 ? 1 : cur === 1 ? 2 : 0;
   setMark(d.id, d.d, next);
