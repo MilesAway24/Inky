@@ -89,10 +89,40 @@ const ok = (cond, msg) => { console.log((cond ? 'ok   ' : 'FAIL ') + msg); if (!
   ok(!trash1.done && trash1.due > trash0.due && (trash1.doneDates || []).length === 1 && /every Thu/.test(await p.textContent('.trow:has-text("Take out the trash")')),
     'finishing a weekly task rolls it to next week and records the day (' + trash0.due + ' → ' + trash1.due + ')');
   await p.click('[data-act=open][aria-label="Open Send Sam the revised invoice"]'); await p.waitForTimeout(150);
-  ok(!(await p.$('[data-act=taskprio]')) && await p.isVisible('#ttime') && await p.isVisible('[data-act=taskrep][data-r=week]'), 'task detail has Time and Repeat, and no P1/P2');
+  ok(!(await p.$('[data-act=taskprio]')) && await p.isVisible('[data-act=taskwhen]') && await p.isVisible('[data-act=taskrep][data-r=week]'), 'task detail has When and Repeat, and no P1/P2');
   await p.click('[data-act=taskrep][data-r=week]'); await p.waitForTimeout(150);
   ok(await p.isVisible('[data-act=taskrepday]'), 'Weekly shows day chips');
   await p.click('[data-act=taskrep][data-r=""]'); await p.waitForTimeout(100);
+  // ── When picker with the time ruler ─────────────────────────────
+  ok(!(await p.isVisible('#ttime')), 'the old time field is gone from task detail');
+  await p.click('[data-act=taskwhen]'); await p.waitForTimeout(200);
+  ok(await p.isVisible('#ruler') && /All day|AM|PM/.test(await p.textContent('#wbig')), 'When opens with a big readout and the ruler');
+  await p.click('[data-act=wpreset][data-t="09:00"]'); await p.waitForTimeout(100);
+  ok((await p.textContent('#wbig')).replace(/\s/g, '') === '9AM', 'a preset sets 9 AM (' + (await p.textContent('#wbig')) + ')');
+  const rb = await (await p.$('#ruler')).boundingBox();
+  await p.mouse.move(rb.x + rb.width / 2, rb.y + 20); await p.mouse.down();
+  for (let i = 1; i <= 10; i++) await p.mouse.move(rb.x + rb.width / 2 - 6 * i, rb.y + 20);
+  await p.waitForTimeout(200); await p.mouse.up(); await p.waitForTimeout(400);
+  const after = (await p.textContent('#wbig')).replace(/\s/g, '');
+  ok(/^9:(25|30|35|40)AM$/.test(after), 'dragging the ruler 60px left moves the time ~30 min later, in 5-minute steps (' + after + ')');
+  await p.focus('#ruler'); await p.keyboard.press('ArrowRight'); await p.keyboard.press('ArrowRight'); await p.waitForTimeout(100);
+  const k = (await p.textContent('#wbig')).replace(/\s/g, '');
+  ok(/^9:\d5AM$|^9:\d0AM$/.test(k) && k !== after, 'arrow keys move it by 5 minutes (' + after + ' → ' + k + ')');
+  await p.click('[data-act=wfull]'); await p.waitForTimeout(100);
+  ok(await p.isVisible('.wmonth .cal'), 'Full month opens a month grid');
+  const pick = await p.evaluate(() => { const d = new Date(); d.setDate(d.getDate() + 3); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); });
+  await p.click('[data-act=wday][data-d="' + pick + '"] >> nth=0'); await p.waitForTimeout(100);
+  await p.click('[data-act=wremind][data-m="120"]'); await p.waitForTimeout(100);
+  ok(/1 set/.test(await p.textContent('#whenbox')), 'a reminder can be set');
+  const shown = (await p.textContent('#wbig')).replace(/\s/g, '');
+  await p.click('[data-act=wdone]'); await p.waitForTimeout(600);
+  const sam = await p.evaluate(() => Object.values(window.__mock.docs).filter((d) => d.t === 'Send Sam the revised invoice')[0]);
+  const want = (() => { const m = shown.match(/^(\d+)(?::(\d\d))?(AM|PM)$/); let h = +m[1] % 12 + (m[3] === 'PM' ? 12 : 0); return String(h).padStart(2, '0') + ':' + (m[2] || '00'); })();
+  ok(sam.due === pick && sam.time === want && (sam.remind || []).indexOf(120) > -1, 'Done saves the day, time and reminder (' + sam.due + ' ' + sam.time + ' vs ' + pick + ' ' + want + ')');
+  await p.click('[data-act=taskwhen]'); await p.waitForTimeout(150);
+  await p.click('[data-act=wpreset][data-t=""]'); await p.click('[data-act=wdone]'); await p.waitForTimeout(500);
+  ok(!(await p.evaluate(() => Object.values(window.__mock.docs).filter((d) => d.t === 'Send Sam the revised invoice')[0].time)), 'All day clears the time');
+  await p.click('[data-act=taskwhen]'); await p.waitForTimeout(150); await p.click('[data-act=wday] >> nth=0'); await p.click('[data-act=wdone]'); await p.waitForTimeout(300);
 
   // Steps + Break it down
   await p.fill('#newstep', 'Attach the PDF'); await p.press('#newstep', 'Enter'); await p.waitForTimeout(150);

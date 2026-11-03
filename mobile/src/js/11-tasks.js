@@ -129,8 +129,6 @@ VIEWS.task = function (id) {
   var t = Store.get('tasks', id);
   if (!t) return '<div class="empty">This task was deleted.</div>';
   var d = today(), steps = t.steps || [], rep = t.repeat || null;
-  var whenChips = [['today', 'Today', t.due === d], ['tomorrow', 'Tomorrow', t.due === addDays(d, 1)], ['nextweek', 'Next week', t.due === addDays(d, 7)],
-    ['whenever', 'Whenever', !t.due && !t.drifted], ['drifted', 'Drifted', !!t.drifted]];
   var h = '<div class="dhead"><div class="ic">' + esc(t.ic || '•') + '</div><div style="flex:1;min-width:0;display:grid;gap:6px">'
     + '<label class="sr" for="ttitle">Task name</label><input id="ttitle" class="input" style="font-size:19px;font-weight:500" value="' + esc(t.t) + '" data-field="t">'
     + '<div class="btnrow">' + exPill(t) + (t.done ? '<span class="pill">Done ' + esc(t.doneAt ? shortDate(ymd(new Date(t.doneAt))) : '') + '</span>' : '') + '</div></div></div>';
@@ -155,12 +153,9 @@ VIEWS.task = function (id) {
     + icon('sparkle', 'sm') + 'Break it down with Claude</button></section>';
 
   h += '<section><div class="sechead"><h2>Details</h2></div><div class="props">'
-    + '<div class="prop"><span class="k">When</span><span class="v">' + whenChips.map(function (c) {
-      return '<button class="chip' + (c[2] ? ' on' : '') + '" data-act="when" data-id="' + t.id + '" data-to="' + c[0] + '">' + c[1] + '</button>';
-    }).join('') + '<label class="chip" style="position:relative">Pick a day<input type="date" data-act-change="whendate" data-id="' + t.id + '" style="position:absolute;inset:0;opacity:0" aria-label="Pick a day"></label>'
-    + (t.due && whenChips.every(function (c) { return !c[2]; }) ? '<span class="pill">' + esc(shortDate(t.due)) + '</span>' : '') + '</span></div>'
-    + '<div class="prop"><span class="k">Time</span><span class="v"><label class="sr" for="ttime">Time</label><input id="ttime" type="time" class="input" style="max-width:150px;min-height:40px" value="' + esc(t.time || '') + '" data-act-change="tasktime" data-id="' + t.id + '">'
-    + (t.time ? '<button class="chip" data-act="tasktimeclear" data-id="' + t.id + '">No time</button>' : '') + '</span></div>'
+    + '<div class="prop"><span class="k">When</span><span class="v"><button class="whenbtn" data-act="taskwhen" data-id="' + t.id + '">'
+      + '<b>' + esc(t.due ? shortDate(t.due) : t.drifted ? 'Drifted' : 'Someday') + (t.time ? ' · ' + esc(fmtTime(t.time)) : '') + '</b>'
+      + ((t.remind || []).length ? '<span class="faint small">🔔 ' + t.remind.map(remindLabel).join(', ') + ' before</span>' : '') + '<span class="link">Change</span></button></span></div>'
     + '<div class="prop"><span class="k">Repeat</span><span class="v">' + [['', 'None'], ['day', 'Daily'], ['weekday', 'Weekdays'], ['week', 'Weekly'], ['month', 'Monthly']].map(function (r) {
       var on = (rep ? rep.every : '') === r[0];
       return '<button class="chip' + (on ? ' on' : '') + '" data-act="taskrep" data-id="' + t.id + '" data-r="' + r[0] + '" aria-pressed="' + on + '">' + r[1] + '</button>';
@@ -209,6 +204,15 @@ ACTS.taskproj = function (d) { var t = Store.get('tasks', d.id), p = Store.get('
 ACTS.taskarea = function (d) { var t = Store.get('tasks', d.id); Store.patch('tasks', d.id, { area: t.area === d.a ? null : d.a }); };
 ACTS.tasktime = function (d, el) { Store.patch('tasks', d.id, { time: el.value || null }); };
 ACTS.tasktimeclear = function (d) { Store.patch('tasks', d.id, { time: null }); };
+ACTS.taskwhen = function (d) {
+  var t = Store.get('tasks', d.id);
+  pickWhen({ due: t.due, time: t.time, remind: t.remind, id: t.id, title: 'When' }, function (r) {
+    var undo = snapshot(d.id);
+    if (r.due !== t.due) moveTask(d.id, r.due || 'whenever');
+    Store.patch('tasks', d.id, { time: r.time, remind: r.remind });
+    toast(esc([r.due ? shortDate(r.due) : 'Someday', r.time ? fmtTime(r.time) : 'all day'].join(' · ')), undo);
+  });
+};
 ACTS.taskrep = function (d) {
   var t = Store.get('tasks', d.id), r = d.r ? { every: d.r } : null, base = t.due || today();
   if (r && r.every === 'week') { r.days = [0, 0, 0, 0, 0, 0, 0]; r.days[(parseYmd(base).getDay() + 6) % 7] = 1; }
