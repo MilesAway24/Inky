@@ -4,6 +4,7 @@
 // with a fake window.claude (mobile/test/mock-claude.js).
 const { chromium, devices } = require('playwright');
 const fs = require('fs');
+const NodeURL = require('url').URL;
 const path = require('path');
 
 const root = path.join(__dirname, '..');
@@ -298,6 +299,26 @@ const ok = (cond, msg) => { console.log((cond ? 'ok   ' : 'FAIL ') + msg); if (!
   await p.click('[data-act=mood][data-m=good]'); await p.fill('#jtext', 'Shipped the timeout fix.'); await p.waitForTimeout(500);
   ok((await p.$$('.list .row')).length === 3, 'earlier entries are listed');
   await p.screenshot({ path: shots + '/phone-journal.png', fullPage: true });
+
+  // ── Add to iPhone Calendar (tap-to-add .ics links) ───────────────
+  await p.click('.tabs [data-v=tasks]'); await p.waitForTimeout(150);
+  await p.fill('#qadd', 'Dentist tomorrow at 2:30pm'); await p.press('#qadd', 'Enter'); await p.waitForTimeout(600);
+  const hcpd = await p.evaluate(() => Object.values(window.__mock.docs).filter((d) => d.t === 'Dentist')[0]);
+  if (hcpd) {
+    await p.evaluate((id) => { const b = document.createElement('button'); b.dataset.act = 'open'; b.dataset.v = 'task'; b.dataset.id = id; document.getElementById('view').appendChild(b); b.click(); }, hcpd.id);
+    await p.waitForTimeout(200);
+    const href = await p.getAttribute('.callink', 'href').catch(() => null);
+    const want = await p.evaluate((t) => { const s = new Date(t.due + 'T' + t.time + ':00'); return s.toISOString().replace(/\.\d{3}Z$/, 'Z'); }, hcpd);
+    const u = href ? new NodeURL(href) : null;
+    ok(u && u.host === 'ics.agical.io' && u.searchParams.get('subject') === 'Dentist' && u.searchParams.get('dtstart') === want,
+      'a timed task has an Add to Calendar link with its title and UTC start (' + (u && u.searchParams.get('dtstart')) + ')');
+    ok(u && u.searchParams.get('dtend') === new Date(new Date(want).getTime() + 30 * 60000).toISOString().replace(/\.\d{3}Z$/, 'Z'), 'the event lasts the task\'s estimate (30 min)');
+    ok(await p.getAttribute('.callink', 'target') === '_blank', 'the link opens outside MossOS so iPhone can offer Add to Calendar');
+    await p.click('[data-act=back]'); await p.waitForTimeout(150);
+  } else ok(false, 'example timed task exists');
+  await p.click('.tabs [data-v=today]'); await p.waitForTimeout(300);
+  const billHref = await p.getAttribute('section.money .calicon >> nth=0', 'href').catch(() => null);
+  ok(billHref && new NodeURL(billHref).searchParams.get('reminder') === '1440', 'each bill on Today can go to Calendar, alerting the day before');
 
   // ── Tomorrow: one planning page ─────────────────────────────────
   await p.click('.tabs [data-v=more]'); await p.click('#view [data-act=tab][data-v=plan]'); await p.waitForTimeout(200);

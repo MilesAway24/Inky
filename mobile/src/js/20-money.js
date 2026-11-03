@@ -161,8 +161,8 @@ function billsSection() {
   var t = today();
   var rows = (s.bills || []).slice(0, 3).map(function (b) {
     var n = Math.round((parseYmd(b.date) - parseYmd(t)) / 864e5);
-    return '<button class="row" data-act="tab" data-v="money"><span class="grow"><div class="t">' + esc(b.name) + '</div><div class="s">' + esc(shortDate(b.date)) + (b.est ? ' · projected' : '') + '</div></span>'
-      + '<span class="amt">' + esc(fmtMoney(b.amt)) + '</span><span class="pill">' + (n <= 0 ? 'today' : 'in ' + n + 'd') + '</span></button>';
+    return '<div class="row billrow"><button class="grow brow" data-act="tab" data-v="money"><span class="grow"><div class="t">' + esc(b.name) + '</div><div class="s">' + esc(shortDate(b.date)) + (b.est ? ' · projected' : '') + '</div></span>'
+      + '<span class="amt">' + esc(fmtMoney(b.amt)) + '</span><span class="pill">' + (n <= 0 ? 'today' : 'in ' + n + 'd') + '</span></button>' + calIcon(billCal(b.name, b.amt, b.date, 'bill')) + '</div>';
   }).join('');
   return '<section class="money"><div class="sechead"><h2>Money</h2><button class="link" data-act="tab" data-v="money">Open</button></div>'
     + '<div class="stats3 fin3"><button data-act="tab" data-v="money"><b class="' + (s.leftToday < 0 ? 'bad' : '') + '">' + esc(fmtMoney(s.leftToday, true)) + '</b><span>left today</span></button>'
@@ -189,6 +189,10 @@ function finHeadsUp() {
   });
   if (s.isFriday && s.friday.done < s.friday.total) out.push('<div class="hurow"><span>💵</span><span class="grow"><b>Friday plan</b> <span class="muted">' + s.friday.done + ' of ' + s.friday.total + ' done</span></span><button class="btn sm soft" data-act="fingoto" data-fv="today">Open</button></div>');
   return out;
+}
+/* A bill or payday as a 9:00 calendar event that alerts the day before. */
+function billCal(name, amt, date, type) {
+  return { title: (type === 'pay' ? '💵 ' : '🧾 ') + name + ' ' + fmtMoney(amt), date: date, time: '09:00', minutes: 15, notes: type === 'pay' ? 'Payday. Run the Friday plan in MossOS → Money.' : 'Bill due. From MossOS → Money.', alarmMin: type === 'pay' ? 0 : 1440 };
 }
 function fmtMoney(n, whole) {
   n = +n || 0; var neg = n < 0; n = Math.abs(n);

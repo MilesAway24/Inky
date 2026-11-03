@@ -161,3 +161,37 @@ function untilText(t) {
   if (m < 60) return 'in ' + m + ' min'; if (m < 1440) return 'in ' + Math.round(m / 60) + ' h';
   return shortDate(t.due).toLowerCase() === 'tomorrow' ? 'tomorrow' + (t.time ? ' at ' + fmtTime(t.time) : '') : 'in ' + Math.round(m / 1440) + ' days';
 }
+
+/* ── Add to iPhone Calendar ─────────────────────────────────────────
+   Artifacts can't save .ics files, so a tap opens ics.agical.io, which
+   returns one built from the link; iPhone then offers "Add to Calendar".
+   The title and time pass through that service. Its repeat syntax isn't
+   documented, so repeating items add their next date only. */
+var CAL_ICS = 'https://ics.agical.io/';
+function utcStamp(d) { return d.toISOString().replace(/\.\d{3}Z$/, 'Z'); }
+function calLink(o) {
+  var st = new Date(o.date + 'T' + (o.time || '09:00') + ':00'), en = new Date(st.getTime() + Math.max(5, o.minutes || 30) * 60000);
+  var q = ['subject=' + encodeURIComponent(String(o.title || 'MossOS').slice(0, 120)),
+    'dtstart=' + encodeURIComponent(utcStamp(st)), 'dtend=' + encodeURIComponent(utcStamp(en))];
+  if (o.notes) q.push('description=' + encodeURIComponent(String(o.notes).replace(/&/g, 'and').replace(/\s+/g, ' ').slice(0, 200)));
+  if (o.alarmMin != null && o.alarmMin >= 0) q.push('reminder=' + Math.round(o.alarmMin));
+  return CAL_ICS + '?' + q.join('&');
+}
+function calText(o) { return o.title + ' · ' + longDate(o.date) + (o.time ? ', ' + fmtTime(o.time) : ''); }
+/* A tap-to-add link plus a Copy fallback. */
+function calBtn(o, label) {
+  return '<span class="calpair"><a class="btn sm soft callink" href="' + esc(calLink(o)) + '" target="_blank" rel="noopener">📅 ' + esc(label || 'Add to Calendar') + '</a>'
+    + '<button type="button" class="btn sm ghost" data-act="calcopy" data-text="' + esc(calText(o)) + '" aria-label="Copy the event text">Copy</button></span>';
+}
+/* Icon-only version for list rows. */
+function calIcon(o) {
+  return '<a class="calicon" href="' + esc(calLink(o)) + '" target="_blank" rel="noopener" aria-label="Add ' + esc(o.title) + ' to Calendar" title="Add to Calendar">📅</a>';
+}
+ACTS.calcopy = function (d) {
+  try { navigator.clipboard.writeText(d.text).then(function () { toast('Copied. Paste it into a new Calendar event.'); }, function () { toast('This device blocked copying.'); }); }
+  catch (e) { toast('This device blocked copying.'); }
+};
+function estMinutes(s) { var m = /(\d+)\s*(h|hr|hour)/i.exec(s || ''), n = /(\d+)\s*m/i.exec(s || ''); return (m ? +m[1] * 60 : 0) + (n ? +n[1] : 0) || 30; }
+function taskCal(t) {
+  return { title: (t.ic ? t.ic + ' ' : '') + t.t, date: t.due, time: t.time, minutes: estMinutes(t.est), notes: t.note || '', alarmMin: (t.remind || [])[0] != null ? t.remind[0] : 0 };
+}

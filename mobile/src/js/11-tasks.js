@@ -156,6 +156,8 @@ VIEWS.task = function (id) {
     + '<div class="prop"><span class="k">When</span><span class="v"><button class="whenbtn" data-act="taskwhen" data-id="' + t.id + '">'
       + '<b>' + esc(t.due ? shortDate(t.due) : t.drifted ? 'Drifted' : 'Someday') + (t.time ? ' · ' + esc(fmtTime(t.time)) : '') + '</b>'
       + ((t.remind || []).length ? '<span class="faint small">🔔 ' + t.remind.map(remindLabel).join(', ') + ' before</span>' : '') + '<span class="link">Change</span></button></span></div>'
+    + (t.due && t.time && !t.done ? '<div class="prop"><span class="k">Calendar</span><span class="v">' + calBtn(taskCal(t)) + '<span class="faint small calnote">Opens ics.agical.io, which makes the calendar file; the title and time pass through it.'
+      + (t.repeat ? ' Adds the next date only; set Repeat in Calendar.' : '') + '</span></span></div>' : '')
     + '<div class="prop"><span class="k">Repeat</span><span class="v">' + [['', 'None'], ['day', 'Daily'], ['weekday', 'Weekdays'], ['week', 'Weekly'], ['month', 'Monthly']].map(function (r) {
       var on = (rep ? rep.every : '') === r[0];
       return '<button class="chip' + (on ? ' on' : '') + '" data-act="taskrep" data-id="' + t.id + '" data-r="' + r[0] + '" aria-pressed="' + on + '">' + r[1] + '</button>';

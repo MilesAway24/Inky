@@ -584,6 +584,15 @@ p.finline .bad{color:var(--bad)}
 .planrow .s{flex-basis:100%;font-size:12.5px;color:var(--faint)}
 .planrow .chips{gap:6px}
 .planlink{justify-self:start;margin-top:6px;font-size:14px}
+/* ── add to calendar ─────────────────────────────────────────────── */
+.calpair{display:inline-flex;gap:6px;flex-wrap:wrap;align-items:center}
+.callink{text-decoration:none}
+.calnote{display:block;flex-basis:100%;margin-top:6px;line-height:1.35}
+.calrow{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.billrow{padding:0;gap:4px}
+.billrow .brow{display:flex;align-items:center;gap:10px;min-height:56px;text-align:left;color:var(--ink);min-width:0}
+.calicon{display:grid;place-items:center;width:44px;height:44px;border-radius:12px;text-decoration:none;flex:none;font-size:18px}
+.calicon:hover{background:var(--sunk)}
 </style>
 
 <div class="app" id="app">
@@ -1641,6 +1650,8 @@ VIEWS.task = function (id) {
     + '<div class="prop"><span class="k">When</span><span class="v"><button class="whenbtn" data-act="taskwhen" data-id="' + t.id + '">'
       + '<b>' + esc(t.due ? shortDate(t.due) : t.drifted ? 'Drifted' : 'Someday') + (t.time ? ' · ' + esc(fmtTime(t.time)) : '') + '</b>'
       + ((t.remind || []).length ? '<span class="faint small">🔔 ' + t.remind.map(remindLabel).join(', ') + ' before</span>' : '') + '<span class="link">Change</span></button></span></div>'
+    + (t.due && t.time && !t.done ? '<div class="prop"><span class="k">Calendar</span><span class="v">' + calBtn(taskCal(t)) + '<span class="faint small calnote">Opens ics.agical.io, which makes the calendar file; the title and time pass through it.'
+      + (t.repeat ? ' Adds the next date only; set Repeat in Calendar.' : '') + '</span></span></div>' : '')
     + '<div class="prop"><span class="k">Repeat</span><span class="v">' + [['', 'None'], ['day', 'Daily'], ['weekday', 'Weekdays'], ['week', 'Weekly'], ['month', 'Monthly']].map(function (r) {
       var on = (rep ? rep.every : '') === r[0];
       return '<button class="chip' + (on ? ' on' : '') + '" data-act="taskrep" data-id="' + t.id + '" data-r="' + r[0] + '" aria-pressed="' + on + '">' + r[1] + '</button>';
@@ -2514,7 +2525,9 @@ VIEWS.habit = function (id) {
     + '<label class="sr" for="hunit">Unit</label><input id="hunit" class="input" style="flex:1" placeholder="Unit, e.g. L, pages" data-hfield="unit" value="' + esc(h.unit || '') + '"></div></div>'
     + '<div class="field"><span class="lbl">Daily reminder (shown in Heads up on Today)</span><div class="chips">' + ['', '07:00', '09:00', '12:00', '18:00', '21:00'].map(function (r) {
       return '<button class="chip' + ((h.remindAt || '') === r ? ' on' : '') + '" data-act="habremind" data-id="' + id + '" data-t="' + r + '">' + (r ? esc(fmtTime(r)) : 'None') + '</button>';
-    }).join('') + '<label class="chip" style="position:relative">Other<input type="time" data-act-change="habremindt" data-id="' + id + '" style="position:absolute;inset:0;opacity:0" aria-label="Other reminder time"></label></div></div>'
+    }).join('') + '<label class="chip" style="position:relative">Other<input type="time" data-act-change="habremindt" data-id="' + id + '" style="position:absolute;inset:0;opacity:0" aria-label="Other reminder time"></label></div>'
+      + (h.remindAt ? '<div class="calrow">' + calBtn({ title: (h.ic ? h.ic + ' ' : '') + h.n, date: habitNextDay(h), time: h.remindAt, minutes: 15, notes: h.cue || '', alarmMin: 0 }, 'Add reminder to Calendar')
+        + '<span class="faint small calnote">Adds the next one. In Calendar, set Repeat to Every Day.</span></div>' : '') + '</div>'
     + '<div class="field"><span class="lbl">Days</span><div class="chips">' + ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(function (n, i) {
       var on = !h.days || h.days[i];
       return '<button class="chip' + (on ? ' on' : '') + '" data-act="habdays" data-id="' + id + '" data-i="' + i + '" aria-pressed="' + !!on + '">' + n + '</button>';
@@ -2536,6 +2549,12 @@ VIEWS.habit.after = function (id) {
     el.addEventListener('input', function () { var f = {}; f[el.dataset.hfield] = el.value; Store.patch('habits', id, f); });
   });
 };
+function habitNextDay(h) {
+  var n = new Date(), now = n.getHours() * 60 + n.getMinutes(), d = today();
+  if (h.remindAt && mins(h.remindAt) <= now) d = addDays(d, 1);
+  for (var i = 0; i < 7 && !dueOn(h, d); i++) d = addDays(d, 1);
+  return d;
+}
 ACTS.habremind = function (d) { Store.patch('habits', d.id, { remindAt: d.t || null }); };
 ACTS.habremindt = function (d, el) { if (el.value) Store.patch('habits', d.id, { remindAt: el.value }); };
 ACTS.habday = function (d) {
@@ -3098,7 +3117,8 @@ function dayDetail(d) {
   h += ts.length ? '<div class="list">' + ts.map(taskRow).join('') + '</div>' : '<p class="note">Nothing due.</p>';
   var fe = typeof finEventsFor === 'function' ? (finEventsFor(monthStart(d))[parseYmd(d).getDate()] || []) : [];
   if (fe.length) h += '<div class="list">' + fe.map(function (e) {
-    return '<button class="row" data-act="tab" data-v="money"><span class="dot fin ' + e.type + '"></span><span class="grow t">' + esc(e.title) + '</span><span class="amt' + (e.type === 'pay' ? ' good' : '') + '">' + (e.type === 'pay' ? '+' : '−') + esc(fmtMoney(e.amount)) + '</span></button>';
+    return '<div class="row billrow"><button class="grow brow" data-act="tab" data-v="money"><span class="dot fin ' + e.type + '"></span><span class="grow t">' + esc(e.title) + '</span><span class="amt' + (e.type === 'pay' ? ' good' : '') + '">' + (e.type === 'pay' ? '+' : '−') + esc(fmtMoney(e.amount)) + '</span></button>'
+      + calIcon(billCal(e.title.replace(/ minimum$/, ''), e.amount, d, e.type)) + '</div>';
   }).join('') + '</div>';
   h += '<form class="addstep" data-form="caladd" data-d="' + d + '"><label class="sr" for="caladd">Add a task on this day</label><input id="caladd" class="input" placeholder="Add a task on ' + esc(shortDate(d)) + '" autocomplete="off"><button class="btn soft" type="submit">Add</button></form>';
   if (hs.length && d <= t) h += '<div class="small muted">Habits: ' + hs.map(function (x) { var m = mark(x, d); return esc(x.ic) + (m === 1 ? '✓' : m === 2 ? '–' : '·'); }).join('  ') + '</div>';
@@ -3644,8 +3664,8 @@ function billsSection() {
   var t = today();
   var rows = (s.bills || []).slice(0, 3).map(function (b) {
     var n = Math.round((parseYmd(b.date) - parseYmd(t)) / 864e5);
-    return '<button class="row" data-act="tab" data-v="money"><span class="grow"><div class="t">' + esc(b.name) + '</div><div class="s">' + esc(shortDate(b.date)) + (b.est ? ' · projected' : '') + '</div></span>'
-      + '<span class="amt">' + esc(fmtMoney(b.amt)) + '</span><span class="pill">' + (n <= 0 ? 'today' : 'in ' + n + 'd') + '</span></button>';
+    return '<div class="row billrow"><button class="grow brow" data-act="tab" data-v="money"><span class="grow"><div class="t">' + esc(b.name) + '</div><div class="s">' + esc(shortDate(b.date)) + (b.est ? ' · projected' : '') + '</div></span>'
+      + '<span class="amt">' + esc(fmtMoney(b.amt)) + '</span><span class="pill">' + (n <= 0 ? 'today' : 'in ' + n + 'd') + '</span></button>' + calIcon(billCal(b.name, b.amt, b.date, 'bill')) + '</div>';
   }).join('');
   return '<section class="money"><div class="sechead"><h2>Money</h2><button class="link" data-act="tab" data-v="money">Open</button></div>'
     + '<div class="stats3 fin3"><button data-act="tab" data-v="money"><b class="' + (s.leftToday < 0 ? 'bad' : '') + '">' + esc(fmtMoney(s.leftToday, true)) + '</b><span>left today</span></button>'
@@ -3672,6 +3692,10 @@ function finHeadsUp() {
   });
   if (s.isFriday && s.friday.done < s.friday.total) out.push('<div class="hurow"><span>💵</span><span class="grow"><b>Friday plan</b> <span class="muted">' + s.friday.done + ' of ' + s.friday.total + ' done</span></span><button class="btn sm soft" data-act="fingoto" data-fv="today">Open</button></div>');
   return out;
+}
+/* A bill or payday as a 9:00 calendar event that alerts the day before. */
+function billCal(name, amt, date, type) {
+  return { title: (type === 'pay' ? '💵 ' : '🧾 ') + name + ' ' + fmtMoney(amt), date: date, time: '09:00', minutes: 15, notes: type === 'pay' ? 'Payday. Run the Friday plan in MossOS → Money.' : 'Bill due. From MossOS → Money.', alarmMin: type === 'pay' ? 0 : 1440 };
 }
 function fmtMoney(n, whole) {
   n = +n || 0; var neg = n < 0; n = Math.abs(n);
@@ -3905,6 +3929,40 @@ function untilText(t) {
   return shortDate(t.due).toLowerCase() === 'tomorrow' ? 'tomorrow' + (t.time ? ' at ' + fmtTime(t.time) : '') : 'in ' + Math.round(m / 1440) + ' days';
 }
 
+/* ── Add to iPhone Calendar ─────────────────────────────────────────
+   Artifacts can't save .ics files, so a tap opens ics.agical.io, which
+   returns one built from the link; iPhone then offers "Add to Calendar".
+   The title and time pass through that service. Its repeat syntax isn't
+   documented, so repeating items add their next date only. */
+var CAL_ICS = 'https://ics.agical.io/';
+function utcStamp(d) { return d.toISOString().replace(/\.\d{3}Z$/, 'Z'); }
+function calLink(o) {
+  var st = new Date(o.date + 'T' + (o.time || '09:00') + ':00'), en = new Date(st.getTime() + Math.max(5, o.minutes || 30) * 60000);
+  var q = ['subject=' + encodeURIComponent(String(o.title || 'MossOS').slice(0, 120)),
+    'dtstart=' + encodeURIComponent(utcStamp(st)), 'dtend=' + encodeURIComponent(utcStamp(en))];
+  if (o.notes) q.push('description=' + encodeURIComponent(String(o.notes).replace(/&/g, 'and').replace(/\s+/g, ' ').slice(0, 200)));
+  if (o.alarmMin != null && o.alarmMin >= 0) q.push('reminder=' + Math.round(o.alarmMin));
+  return CAL_ICS + '?' + q.join('&');
+}
+function calText(o) { return o.title + ' · ' + longDate(o.date) + (o.time ? ', ' + fmtTime(o.time) : ''); }
+/* A tap-to-add link plus a Copy fallback. */
+function calBtn(o, label) {
+  return '<span class="calpair"><a class="btn sm soft callink" href="' + esc(calLink(o)) + '" target="_blank" rel="noopener">📅 ' + esc(label || 'Add to Calendar') + '</a>'
+    + '<button type="button" class="btn sm ghost" data-act="calcopy" data-text="' + esc(calText(o)) + '" aria-label="Copy the event text">Copy</button></span>';
+}
+/* Icon-only version for list rows. */
+function calIcon(o) {
+  return '<a class="calicon" href="' + esc(calLink(o)) + '" target="_blank" rel="noopener" aria-label="Add ' + esc(o.title) + ' to Calendar" title="Add to Calendar">📅</a>';
+}
+ACTS.calcopy = function (d) {
+  try { navigator.clipboard.writeText(d.text).then(function () { toast('Copied. Paste it into a new Calendar event.'); }, function () { toast('This device blocked copying.'); }); }
+  catch (e) { toast('This device blocked copying.'); }
+};
+function estMinutes(s) { var m = /(\d+)\s*(h|hr|hour)/i.exec(s || ''), n = /(\d+)\s*m/i.exec(s || ''); return (m ? +m[1] * 60 : 0) + (n ? +n[1] : 0) || 30; }
+function taskCal(t) {
+  return { title: (t.ic ? t.ic + ' ' : '') + t.t, date: t.due, time: t.time, minutes: estMinutes(t.est), notes: t.note || '', alarmMin: (t.remind || [])[0] != null ? t.remind[0] : 0 };
+}
+
 /* ── 22-reschedule.js ── */
 /* ═══ RESCHEDULE ════════════════════════════════════════════════════
    From Miles's screenshots: every overdue task in one sheet. Tick the
@@ -4053,7 +4111,8 @@ VIEWS.plan = function () {
   // 3. Money tomorrow
   var fe = typeof finEventsFor === 'function' ? (finEventsFor(monthStart(tm))[td.getDate()] || []) : [];
   if (fe.length) h += '<section><div class="sechead"><h2>Money tomorrow</h2></div><div class="list">' + fe.map(function (e) {
-    return '<button class="row" data-act="tab" data-v="money"><span class="dot fin ' + e.type + '"></span><span class="grow t">' + esc(e.title) + '</span><span class="amt' + (e.type === 'pay' ? ' good' : '') + '">' + (e.type === 'pay' ? '+' : '−') + esc(fmtMoney(e.amount)) + '</span></button>';
+    return '<div class="row billrow"><button class="grow brow" data-act="tab" data-v="money"><span class="dot fin ' + e.type + '"></span><span class="grow t">' + esc(e.title) + '</span><span class="amt' + (e.type === 'pay' ? ' good' : '') + '">' + (e.type === 'pay' ? '+' : '−') + esc(fmtMoney(e.amount)) + '</span></button>'
+      + calIcon(billCal(e.title.replace(/ minimum$/, ''), e.amount, tm, e.type)) + '</div>';
   }).join('') + '</div></section>';
 
   // 4. Habits tomorrow

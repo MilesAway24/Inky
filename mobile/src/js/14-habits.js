@@ -213,7 +213,9 @@ VIEWS.habit = function (id) {
     + '<label class="sr" for="hunit">Unit</label><input id="hunit" class="input" style="flex:1" placeholder="Unit, e.g. L, pages" data-hfield="unit" value="' + esc(h.unit || '') + '"></div></div>'
     + '<div class="field"><span class="lbl">Daily reminder (shown in Heads up on Today)</span><div class="chips">' + ['', '07:00', '09:00', '12:00', '18:00', '21:00'].map(function (r) {
       return '<button class="chip' + ((h.remindAt || '') === r ? ' on' : '') + '" data-act="habremind" data-id="' + id + '" data-t="' + r + '">' + (r ? esc(fmtTime(r)) : 'None') + '</button>';
-    }).join('') + '<label class="chip" style="position:relative">Other<input type="time" data-act-change="habremindt" data-id="' + id + '" style="position:absolute;inset:0;opacity:0" aria-label="Other reminder time"></label></div></div>'
+    }).join('') + '<label class="chip" style="position:relative">Other<input type="time" data-act-change="habremindt" data-id="' + id + '" style="position:absolute;inset:0;opacity:0" aria-label="Other reminder time"></label></div>'
+      + (h.remindAt ? '<div class="calrow">' + calBtn({ title: (h.ic ? h.ic + ' ' : '') + h.n, date: habitNextDay(h), time: h.remindAt, minutes: 15, notes: h.cue || '', alarmMin: 0 }, 'Add reminder to Calendar')
+        + '<span class="faint small calnote">Adds the next one. In Calendar, set Repeat to Every Day.</span></div>' : '') + '</div>'
     + '<div class="field"><span class="lbl">Days</span><div class="chips">' + ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(function (n, i) {
       var on = !h.days || h.days[i];
       return '<button class="chip' + (on ? ' on' : '') + '" data-act="habdays" data-id="' + id + '" data-i="' + i + '" aria-pressed="' + !!on + '">' + n + '</button>';
@@ -235,6 +237,12 @@ VIEWS.habit.after = function (id) {
     el.addEventListener('input', function () { var f = {}; f[el.dataset.hfield] = el.value; Store.patch('habits', id, f); });
   });
 };
+function habitNextDay(h) {
+  var n = new Date(), now = n.getHours() * 60 + n.getMinutes(), d = today();
+  if (h.remindAt && mins(h.remindAt) <= now) d = addDays(d, 1);
+  for (var i = 0; i < 7 && !dueOn(h, d); i++) d = addDays(d, 1);
+  return d;
+}
 ACTS.habremind = function (d) { Store.patch('habits', d.id, { remindAt: d.t || null }); };
 ACTS.habremindt = function (d, el) { if (el.value) Store.patch('habits', d.id, { remindAt: el.value }); };
 ACTS.habday = function (d) {

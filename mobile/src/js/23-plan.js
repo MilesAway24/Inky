@@ -29,7 +29,8 @@ VIEWS.plan = function () {
   // 3. Money tomorrow
   var fe = typeof finEventsFor === 'function' ? (finEventsFor(monthStart(tm))[td.getDate()] || []) : [];
   if (fe.length) h += '<section><div class="sechead"><h2>Money tomorrow</h2></div><div class="list">' + fe.map(function (e) {
-    return '<button class="row" data-act="tab" data-v="money"><span class="dot fin ' + e.type + '"></span><span class="grow t">' + esc(e.title) + '</span><span class="amt' + (e.type === 'pay' ? ' good' : '') + '">' + (e.type === 'pay' ? '+' : '−') + esc(fmtMoney(e.amount)) + '</span></button>';
+    return '<div class="row billrow"><button class="grow brow" data-act="tab" data-v="money"><span class="dot fin ' + e.type + '"></span><span class="grow t">' + esc(e.title) + '</span><span class="amt' + (e.type === 'pay' ? ' good' : '') + '">' + (e.type === 'pay' ? '+' : '−') + esc(fmtMoney(e.amount)) + '</span></button>'
+      + calIcon(billCal(e.title.replace(/ minimum$/, ''), e.amount, tm, e.type)) + '</div>';
   }).join('') + '</div></section>';
 
   // 4. Habits tomorrow

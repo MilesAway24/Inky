@@ -61,7 +61,8 @@ function dayDetail(d) {
   h += ts.length ? '<div class="list">' + ts.map(taskRow).join('') + '</div>' : '<p class="note">Nothing due.</p>';
   var fe = typeof finEventsFor === 'function' ? (finEventsFor(monthStart(d))[parseYmd(d).getDate()] || []) : [];
   if (fe.length) h += '<div class="list">' + fe.map(function (e) {
-    return '<button class="row" data-act="tab" data-v="money"><span class="dot fin ' + e.type + '"></span><span class="grow t">' + esc(e.title) + '</span><span class="amt' + (e.type === 'pay' ? ' good' : '') + '">' + (e.type === 'pay' ? '+' : '−') + esc(fmtMoney(e.amount)) + '</span></button>';
+    return '<div class="row billrow"><button class="grow brow" data-act="tab" data-v="money"><span class="dot fin ' + e.type + '"></span><span class="grow t">' + esc(e.title) + '</span><span class="amt' + (e.type === 'pay' ? ' good' : '') + '">' + (e.type === 'pay' ? '+' : '−') + esc(fmtMoney(e.amount)) + '</span></button>'
+      + calIcon(billCal(e.title.replace(/ minimum$/, ''), e.amount, d, e.type)) + '</div>';
   }).join('') + '</div>';
   h += '<form class="addstep" data-form="caladd" data-d="' + d + '"><label class="sr" for="caladd">Add a task on this day</label><input id="caladd" class="input" placeholder="Add a task on ' + esc(shortDate(d)) + '" autocomplete="off"><button class="btn soft" type="submit">Add</button></form>';
   if (hs.length && d <= t) h += '<div class="small muted">Habits: ' + hs.map(function (x) { var m = mark(x, d); return esc(x.ic) + (m === 1 ? '✓' : m === 2 ? '–' : '·'); }).join('  ') + '</div>';

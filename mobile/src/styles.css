@@ -581,3 +581,12 @@ p.finline .bad{color:var(--bad)}
 .planrow .s{flex-basis:100%;font-size:12.5px;color:var(--faint)}
 .planrow .chips{gap:6px}
 .planlink{justify-self:start;margin-top:6px;font-size:14px}
+/* ── add to calendar ─────────────────────────────────────────────── */
+.calpair{display:inline-flex;gap:6px;flex-wrap:wrap;align-items:center}
+.callink{text-decoration:none}
+.calnote{display:block;flex-basis:100%;margin-top:6px;line-height:1.35}
+.calrow{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.billrow{padding:0;gap:4px}
+.billrow .brow{display:flex;align-items:center;gap:10px;min-height:56px;text-align:left;color:var(--ink);min-width:0}
+.calicon{display:grid;place-items:center;width:44px;height:44px;border-radius:12px;text-decoration:none;flex:none;font-size:18px}
+.calicon:hover{background:var(--sunk)}
