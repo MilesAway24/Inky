@@ -6,7 +6,7 @@ Store.on(function () { render(); });
 /* First run: seed when there is truly nothing, after db has answered (or
    straight away when there is no db). Never seed over real data. */
 function maybeSeed() {
-  if (Store.get('meta', 'setup')) return;
+  if (Store.get('meta', 'setup')) { upgradeSeed(); return; }
   if (Store.all('tasks').length || Store.all('areas').length) { Store.put('meta', { id: 'setup', seeded: Date.now(), examples: false }); return; }
   seedData();
 }

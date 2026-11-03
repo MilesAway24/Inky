@@ -33,18 +33,30 @@ VIEWS.today = function () {
   var q = playQueue();
   h += '<section><div class="sechead"><h2>Play</h2><span class="meta">one at a time · ' + q.length + ' left</span></div>';
   if (q.length) {
-    var x = q[0], tk = x.task;
-    h += '<div class="play"><div class="k"><span>' + areaDot(tk.area) + ' ' + esc(areaName(tk.area) || 'No area')
-      + (tk.prio && tk.prioDay === t ? ' · ' + tk.prio : '') + '</span><span>' + esc(tk.est ? '~' + tk.est : '') + '</span></div>'
-      + '<div class="t"><span>' + esc(tk.ic || '•') + '</span><span>' + esc(tk.t) + '</span></div>'
+    var x = q[0];
+    h += '<div class="play"><div class="k"><span>' + areaDot(x.area) + ' ' + esc(areaName(x.area) || 'No area')
+      + (x.tag ? ' · ' + esc(x.tag) : '') + '</span><span>' + esc(x.est ? '~' + x.est : '') + '</span></div>'
+      + '<div class="t"><span>' + esc(x.ic || '•') + '</span><span>' + esc(x.t) + '</span></div>'
       + '<div class="w">' + esc(x.why) + '</div>'
-      + '<div class="acts"><button class="btn accent" data-act="playdo" data-id="' + tk.id + '">Do it</button>'
-      + '<button class="btn soft" data-act="playskip" data-id="' + tk.id + '">Skip ›</button></div>'
-      + '<button class="link" style="justify-self:start" data-act="open" data-v="task" data-id="' + tk.id + '">Open the task</button></div>';
+      + '<div class="acts"><button class="btn accent" data-act="playdo" data-k="' + x.kind + '" data-id="' + x.id + '">' + (x.kind === 'habit' ? 'Mark done' : 'Do it') + '</button>'
+      + '<button class="btn soft" data-act="playskip" data-k="' + x.kind + '" data-id="' + x.id + '">Skip ›</button></div>'
+      + '<button class="link" style="justify-self:start" data-act="open" data-v="' + x.kind + '" data-id="' + x.id + '">Open the ' + x.kind + '</button></div>';
   } else {
     h += '<div class="empty">Nothing waiting. Capture something, or enjoy the gap.</div>';
   }
   h += '</section>';
+
+  // Habits due today
+  var hd = habitsDueToday();
+  if (hd.length) {
+    var hdone = hd.filter(function (x) { return mark(x, t) === 1; }).length;
+    h += '<section><div class="sechead"><h2>Habits today</h2><span class="meta">' + hdone + '/' + hd.length + '</span></div><div class="hchips">'
+      + hd.map(function (x) {
+        var m = mark(x, t);
+        return '<button class="hchip' + (m === 1 ? ' on' : '') + (m === 2 ? ' skip' : '') + '" style="--c:' + esc(x.color) + '" data-act="habtoggle" data-id="' + x.id + '" aria-pressed="' + (m === 1) + '">'
+          + '<span>' + esc(x.ic) + '</span>' + esc(x.n) + (m === 1 ? ' ✓' : '') + '</button>';
+      }).join('') + '</div></section>';
+  }
 
   // Areas
   h += '<section><div class="sechead"><h2>Life areas</h2><button class="link" data-act="tab" data-v="areas">All</button></div><div class="areas">'
@@ -89,11 +101,13 @@ ACTS.toggle = function (d) {
   toast(on ? 'Done' : 'Marked not done', function () { completeTask(d.id, !on); });
 };
 ACTS.playdo = function (d) {
+  if (d.k === 'habit') return toggleToday(d.id);
+  if (d.k === 'goal') return ACTS.goalnextdone({ id: d.id });
   completeTask(d.id, true);
   toast('Done. Next one is up.', function () { completeTask(d.id, false); });
 };
 ACTS.playskip = function (d) {
-  var k = today(); playSkips[k] = playSkips[k] || {}; playSkips[k][d.id] = 1; render();
+  var k = today(); playSkips[k] = playSkips[k] || {}; playSkips[k][(d.k || 'task') + d.id] = 1; render();
 };
 
 /* Pick a priority: choose from today's and this week's tasks, or swap. */

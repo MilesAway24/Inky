@@ -11,19 +11,21 @@ Running inside the Claude app is what gives it, with no server of its own:
 
 Opened anywhere else, such as a plain browser, it still works, but saves on that device only.
 
-## What's in it (Phase 1)
+## What's in it (Phases 1–2)
 
 | Screen | What it does |
 |---|---|
-| **Today** | Priorities (1 P1 + 2 P2; a fourth means swapping one to tomorrow), the Play card (one thing at a time, *Do it* / *Skip*), life areas, slipped-and-rescheduled, and a log that writes itself |
+| **Today** | Priorities (1 P1 + 2 P2; a fourth means swapping one to tomorrow), the Play card (one thing at a time from tasks, habits and goal next actions, *Do it* / *Skip*), habits due today, life areas, slipped-and-rescheduled, and a log that writes itself |
 | **Capture** (＋) | Type or dictate. Each line becomes an inbox item, or save straight to a task or note. Optional photo |
 | **Inbox** | Sort with Claude (type, area, day, first step; you confirm each) or by hand |
 | **Tasks** | Today / Tomorrow / This week / Later / Whenever / Drifted, area filter. Detail: notes before steps, Break it down, When, P1/P2, area. Sweep for slipped tasks |
 | **Life areas** | Work (EMS · iCare), HCPD, Gym, Inky, School, Partner, Money. State, focus, open tasks. Editable |
+| **Habits** | Mark done (on Today or the Habits page), skip a day on purpose without breaking the streak, week strip, 30-day grid, daily sparkline, streak and best run, a builder with templates, any days of the week |
+| **Goals** | Why, steps that set the progress, and one next action. *Put it on today* makes it a task; finishing it asks for the next one, and Claude can suggest three |
 | **Notes** | Basic list and editor. The full version comes with Phase 3 |
 | **Settings** | Sync status, theme, clear examples, erase |
 
-Habits, Goals, Journal, Projects, Calendar and Money are marked *Soon* in the app. The full plan is in the repo history and in `/root/.claude/plans/`.
+Journal, Projects, Calendar and Money are marked *Soon* in the app. The full plan is in the repo history and in `/root/.claude/plans/`.
 
 ## Build and test
 

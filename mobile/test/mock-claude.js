@@ -25,7 +25,8 @@
     doc: function (path) {
       return {
         path: path,
-        set: function (v) { docs[path] = v; save(); window.__mock.writes++; notify(path); return Promise.resolve(); },
+        // __mockDrop: simulate the app being suspended before a write lands.
+        set: function (v) { if (sessionStorage.getItem('__mockDrop')) return new Promise(function () {}); docs[path] = v; save(); window.__mock.writes++; notify(path); return Promise.resolve(); },
         delete: function () { delete docs[path]; save(); window.__mock.writes++; notify(path); return Promise.resolve(); },
         get: function () { return Promise.resolve({ exists: !!docs[path], data: function () { return docs[path]; } }); }
       };
@@ -48,6 +49,7 @@
           due: null, firstStep: 'Open the thing', icon: '📝' };
       }) });
     }
+    if (/Suggest three possible next actions/.test(prompt)) return Promise.resolve({ options: ['Book the PAT practice slot', 'Run the 1.5 mile test once', 'Print the packet checklist'] });
     if (/Break this task/.test(prompt)) return Promise.resolve({ steps: ['Open the file', 'Find the timeout', 'Write the fix'] });
     return Promise.resolve({});
   };

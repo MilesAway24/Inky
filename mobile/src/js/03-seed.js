@@ -41,11 +41,41 @@ function seedData() {
   var now = new Date(); now.setHours(7, 15, 0, 0);
   [['Morning brief opened, priorities set', null, 0], ['Leg day logged', 'gym', 145], ['3 slipped tasks moved to real dates', 'hcpd', 230]]
     .forEach(function (l) { if (now.getTime() + l[2] * 6e4 < Date.now()) Store.put('log', { example: true, at: now.getTime() + l[2] * 6e4, day: t, text: l[0], area: l[1] }, true); });
-  Store.put('meta', { id: 'setup', seeded: Date.now(), examples: true });
+  seedPhase2();
+  Store.put('meta', { id: 'setup', seeded: Date.now(), examples: true, v: 2 });
+}
+
+/* Habits and goals: added in phase 2, so they're also offered to people
+   who started on phase 1 while they still have examples showing. */
+function seedPhase2() {
+  var t = today();
+  var hist = function (bits) { var m = {}; bits.forEach(function (b, i) { if (b) m[addDays(t, i - bits.length)] = b; }); return m; };
+  [['💊', 'Meds', '#5FCF8E', null, 'Same time as coffee. The coffee is the cue.', [1,1,1,1,0,1,1,1,1,1,1,0,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1,1]],
+   ['🚶', 'Morning walk', '#7AA2F7', 'gym', 'Ten minutes counts. It is daylight, not exercise.', [1,0,1,1,1,0,1,1,1,0,1,1,1,1,0,1,1,1,1,1,0,1,1,1,0,1,1,1,1,0]],
+   ['📖', 'Read 20 pages', '#F0C889', 'school', 'Any book. Pages, not minutes.', [1,1,0,0,1,1,1,0,1,1,0,0,1,1,1,0,1,1,1,0,0,1,1,1,1,0,1,1,1,0]],
+   ['🧹', 'Tidy one thing', '#C39BD3', null, 'One thing. Not the room.', [0,1,0,1,1,0,1,0,1,1,0,1,0,1,1,1,0,1,0,1,1,0,1,1,0,1,1,1,0,1]],
+   ['🌙', 'No phone in bed', '#8FD3C7', 'partner', 'Charger lives in the kitchen.', [1,1,1,0,0,1,1,1,0,1,1,1,1,0,0,1,1,1,1,1,0,0,1,1,1,1,1,0,1,1]]]
+    .forEach(function (x, i) {
+      Store.put('habits', { example: true, ic: x[0], n: x[1], color: x[2], area: x[3], cue: x[4], days: [1, 1, 1, 1, 1, 1, 1], marks: hist(x[5]), since: addDays(t, -30), order: i + 1 }, true);
+    });
+  [['🚔', 'Get through the HCPD hiring process', 'hcpd', 'The job I actually want.', 'Finish the PAT prep block', '', [['Application submitted', 1], ['Pass the PAT', 0], ['Background check', 0], ['Oral board', 0]]],
+   ['🏋️', 'Three gym sessions a week', 'gym', 'It is the thing that makes the other things possible.', 'Move the gym bag to the door', 'ongoing', [['Push day', 1], ['Pull day', 1], ['Legs', 0]]],
+   ['💵', 'One month of runway saved', 'money', 'So a bad month is a bad month, not a crisis.', 'Move the standing order to the 2nd', 'Dec', [['Set the amount', 1], ['Automate it', 0], ['Leave it alone', 0]]],
+   ['🐙', 'Inky beta by Dec 3', 'inky', 'A tool you do not open is not a tool.', 'Fix the Generate Plan spinner', 'Dec 3', [['M0 AI fix', 0], ['New UI', 0], ['Five beta testers', 0]]]]
+    .forEach(function (x) {
+      Store.put('goals', { example: true, ic: x[0], n: x[1], area: x[2], why: x[3], next: x[4], due: x[5], status: 'live', touched: t,
+        steps: x[6].map(function (s) { return { t: s[0], done: !!s[1] }; }) }, true);
+    });
+}
+function upgradeSeed() {
+  var m = Store.get('meta', 'setup');
+  if (!m || (m.v || 1) >= 2) return;
+  if (m.examples && !Store.all('habits').length && !Store.all('goals').length) seedPhase2();
+  Store.patch('meta', 'setup', { v: 2 });
 }
 
 function clearExamples() {
-  ['tasks', 'inbox', 'notes', 'log'].forEach(function (c) {
+  ['tasks', 'inbox', 'notes', 'log', 'habits', 'goals'].forEach(function (c) {
     Store.all(c).forEach(function (o) { if (o.example) Store.del(c, o.id); });
   });
   var m = Store.get('meta', 'setup'); if (m) Store.patch('meta', 'setup', { examples: false });

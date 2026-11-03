@@ -76,8 +76,7 @@ ACTS.notetotask = function (d) {
 
 /* ═══ MORE ═══════════════════════════════════════════════════════════ */
 TITLES.more = 'More';
-var SOON = { habits: 'Habits arrive in the next update: mark done, week strip, 30-day grid and streaks.',
-  goals: 'Goals arrive in the next update: why, progress, and a next action that feeds the Play card.',
+var SOON = {
   journal: 'Journal arrives with Notes and Projects: mood plus an entry, prompted from today\'s log.',
   projects: 'Projects arrive with the Phase 3 update: Done when, Next, Where I left off, and panels.',
   calendar: 'Calendar arrives with the Phase 3 update: a month grid and a week view coloured by area.' };
@@ -93,7 +92,7 @@ VIEWS.soon = function () {
   var c = current();
   return '<div class="empty">' + esc(SOON[c.view] || 'Coming soon.') + '</div>';
 };
-['habits', 'goals', 'journal', 'projects', 'calendar'].forEach(function (k) {
+['journal', 'projects', 'calendar'].forEach(function (k) {
   TITLES[k] = k.charAt(0).toUpperCase() + k.slice(1); VIEWS[k] = VIEWS.soon;
 });
 

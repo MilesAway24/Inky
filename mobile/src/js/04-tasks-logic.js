@@ -59,6 +59,9 @@ function completeTask(id, on) {
   var val = on == null ? !t.done : on;
   Store.patch('tasks', id, { done: val, doneAt: val ? Date.now() : null });
   if (val) logEvent('Done: ' + t.t, t.area);
+  // A goal's next action, done from the task list, moves the goal on.
+  var g = val && t.goal ? Store.get('goals', t.goal) : null;
+  if (g && g.taskId === id) Store.patch('goals', g.id, { lastNext: g.next, next: '', taskId: null, touched: today() });
   return val;
 }
 function moveTask(id, dest) {
@@ -84,13 +87,24 @@ function rescheduled() {
 /* Play: one thing at a time. Priorities first, then the rest of today,
    then small "whenever" jobs. Skips last until the end of the day. */
 var playSkips = {};
+/* Each card: {kind: task|habit|goal, id, ic, t, area, why, est, tag}. */
 function playQueue() {
   var d = today(), seen = {}, q = [];
-  function add(t, why) { if (!t || seen[t.id] || t.done) return; seen[t.id] = 1; q.push({ task: t, why: why }); }
-  prios().forEach(function (t) { add(t, t.prio === 'P1' ? 'Your one P1 today.' : 'One of your two P2s today.'); });
-  tasksIn('today').forEach(function (t) { add(t, t.note ? t.note.split('\n')[0] : 'Due today.'); });
+  function addTask(t, why) {
+    if (!t || seen[t.id] || t.done) return; seen[t.id] = 1;
+    q.push({ kind: 'task', id: t.id, ic: t.ic, t: t.t, area: t.area, why: why, est: t.est, tag: t.prio && t.prioDay === d ? t.prio : '' });
+  }
+  prios().forEach(function (t) { addTask(t, t.prio === 'P1' ? 'Your one P1 today.' : 'One of your two P2s today.'); });
+  habitsDueToday().filter(function (h) { return !mark(h, d); }).forEach(function (h) {
+    var s = streak(h);
+    q.push({ kind: 'habit', id: h.id, ic: h.ic, t: h.n, area: h.area, why: h.cue || (s ? s + ' in a row. Keep it going.' : 'Today counts.'), est: '', tag: 'Habit' });
+  });
+  tasksIn('today').forEach(function (t) { addTask(t, t.note ? t.note.split('\n')[0] : 'Due today.'); });
+  goalsLive().filter(function (g) { return g.next && !(g.taskId && seen[g.taskId]); }).slice(0, 2).forEach(function (g) {
+    q.push({ kind: 'goal', id: g.id, ic: g.ic, t: g.next, area: g.area, why: 'Next action for ' + g.n + '.', est: '', tag: 'Goal' });
+  });
   tasksIn('whenever').filter(function (t) { return /^\d+\s*min/.test(t.est || '') && parseInt(t.est, 10) <= 15; })
-    .forEach(function (t) { add(t, 'Small. ' + t.est + ' and it is gone.'); });
+    .forEach(function (t) { addTask(t, 'Small. ' + t.est + ' and it is gone.'); });
   var skipped = playSkips[d] || {};
-  return q.filter(function (x) { return !skipped[x.task.id]; }).concat(q.filter(function (x) { return skipped[x.task.id]; }));
+  return q.filter(function (x) { return !skipped[x.kind + x.id]; }).concat(q.filter(function (x) { return skipped[x.kind + x.id]; }));
 }

@@ -89,12 +89,74 @@ const ok = (cond, msg) => { console.log((cond ? 'ok   ' : 'FAIL ') + msg); if (!
   // Reload: everything still there
   await p.reload(); await p.waitForTimeout(700);
   await p.click('.tabs [data-v=tasks]'); await p.waitForTimeout(150);
-  ok(await p.isVisible('text=Call the HCPD office about the packet'), 'tasks survive a reload');
+  const survived = await p.isVisible('text=Call the HCPD office about the packet');
+  if (!survived) { await p.screenshot({ path: shots + '/fail-reload.png', fullPage: true }); console.log(await p.evaluate(() => document.querySelector('#top').textContent + ' | ' + Object.values(window.__mock.docs).filter((d) => d.t).map((d) => d.t).join(' / '))); }
+  ok(survived, 'tasks survive a reload');
   await p.click('text=Send Sam the revised invoice'); await p.waitForTimeout(150);
   ok((await p.inputValue('#tnote')) === 'Edited note text', 'note edits survive a reload');
 
+  // A save that never reached the server (app suspended) is re-sent next launch
+  await p.evaluate(() => sessionStorage.setItem('__mockDrop', '1'));
+  await p.click('.tabs .cap'); await p.fill('#captext', 'Written just before the app was suspended');
+  await p.click('[data-act=capkind][data-k=task]'); await p.click('[data-act=capsave]'); await p.waitForTimeout(500);
+  const lostBefore = await p.evaluate(() => !Object.values(window.__mock.docs).some((d) => d.t === 'Written just before the app was suspended'));
+  await p.evaluate(() => sessionStorage.removeItem('__mockDrop'));
+  await p.reload(); await p.waitForTimeout(800);
+  const resent = await p.evaluate(() => Object.values(window.__mock.docs).some((d) => d.t === 'Written just before the app was suspended'));
+  ok(lostBefore && resent, 'an edit the server never received is kept and re-sent on the next launch');
+
+  // ── Phase 2: habits ──────────────────────────────────────────────
+  await p.click('.tabs [data-v=today]'); await p.waitForTimeout(150);
+  ok((await p.$$('.hchip')).length === 5, 'Today lists the 5 habits due today');
+  await p.click('.hchip >> nth=0'); await p.waitForTimeout(150);
+  ok(await p.isVisible('.hchip.on'), 'tapping a habit on Today marks it done');
+  ok(/in a row/.test(await p.textContent('#toast')), 'marking shows the streak');
+  await p.click('.tabs [data-v=more]'); await p.click('.menu [data-v=habits]'); await p.waitForTimeout(150);
+  ok((await p.$$('.hcard')).length === 5, 'Habits lists 5 habit cards');
+  const stat = await p.textContent('.stats4 > div:first-child b');
+  ok(/^1\/5/.test(stat.replace(/\s/g, '')), 'Done today reads 1/5 (' + stat + ')');
+  for (const v of ['month', 'daily', 'week']) { await p.click('[data-act=habview][data-v=' + v + ']'); await p.waitForTimeout(80); }
+  ok(await p.isVisible('.hweek'), 'Week / 30 days / Daily views switch');
+  await p.screenshot({ path: shots + '/phone-habits.png', fullPage: true });
+  await p.click('.hcard >> nth=1 >> .hhead'); await p.waitForTimeout(150);
+  const s0 = await p.textContent('.stats4 > div:first-child b');
+  await p.click('[data-act=habskip]'); await p.waitForTimeout(150);
+  ok(await p.isVisible('text=Undo skip'), 'skip today, on purpose');
+  ok((await p.textContent('.stats4 > div:first-child b')) === s0, 'a deliberate skip keeps the streak (' + s0 + ')');
+  const yday = await p.$('.hcard.big .hgrid button >> nth=28');
+  const before2 = await yday.getAttribute('class');
+  await yday.click(); await p.waitForTimeout(120);
+  ok((await (await p.$('.hcard.big .hgrid button >> nth=28')).getAttribute('class')) !== before2, 'tapping a past day changes its mark');
+  await p.click('.back'); await p.click('[data-act=newhabit]'); await p.waitForTimeout(120);
+  await p.click('.tpl >> text=Run'); await p.waitForTimeout(150);
+  ok(await p.isVisible('#hn') && (await p.inputValue('#hn')) === 'Run', 'a template creates a habit and opens it');
+  await p.click('.back'); await p.waitForTimeout(100);
+
+  // ── Phase 2: goals ───────────────────────────────────────────────
+  await p.click('.tabs [data-v=more]'); await p.click('.menu [data-v=goals]'); await p.waitForTimeout(150);
+  ok((await p.$$('.goal')).length === 4, 'Goals lists 4 live goals');
+  await p.screenshot({ path: shots + '/phone-goals.png', fullPage: true });
+  await p.click('.goal >> text=HCPD'); await p.waitForTimeout(150);
+  await p.click('[data-act=goaltask]'); await p.waitForTimeout(150);
+  ok(await p.isVisible('text=It\'s on your task list'), '"Put it on today" makes a task');
+  await p.click('[data-act=goalnextdone]'); await p.waitForTimeout(150);
+  ok(await p.isVisible('text=Nice. What\'s next?'), 'finishing the next action asks for the next one');
+  await p.click('[data-act=goalsuggest]'); await p.waitForTimeout(300);
+  await p.click('#gsugg .row >> nth=0'); await p.waitForTimeout(150);
+  ok(await p.isVisible('.nextcard >> text=Book the PAT practice slot'), 'Claude\'s suggestion becomes the next action');
+  const linked = await p.evaluate(() => Object.values(window.__mock.docs).filter((d) => d.t === 'Finish the PAT prep block')[0]);
+  ok(linked && linked.done, 'the goal\'s task was ticked off with it');
+  await p.click('[data-act=goaltask]'); await p.waitForTimeout(150);
+  await p.click('.back'); await p.click('.tabs [data-v=tasks]'); await p.waitForTimeout(150);
+  await p.click('.row:has-text("Book the PAT practice slot") .ck'); await p.waitForTimeout(150);
+  await p.click('.tabs [data-v=more]'); await p.click('.menu [data-v=goals]'); await p.waitForTimeout(150);
+  ok(await p.isVisible('.goal:has-text("HCPD") >> text=No next action yet'), 'ticking a goal task from Tasks clears the goal\'s next action');
+  await p.click('.tabs [data-v=today]'); await p.waitForTimeout(150);
+  const kinds = await p.evaluate(() => document.querySelector('.play [data-act=playdo]').dataset.k);
+  ok(['task', 'habit', 'goal'].includes(kinds), 'Play serves tasks, habits and goals (now: ' + kinds + ')');
+
   // Every screen: no sideways scrolling
-  const views = ['today', 'tasks', 'more', 'areas', 'inbox', 'notes', 'settings', 'money', 'habits'];
+  const views = ['today', 'tasks', 'more', 'areas', 'inbox', 'notes', 'settings', 'money', 'habits', 'goals'];
   let wide = [];
   for (const v of views) {
     await p.evaluate((v) => { document.querySelector('[data-act=tab][data-v="' + v + '"]') ? document.querySelector('[data-act=tab][data-v="' + v + '"]').click() : null; }, v);
@@ -116,6 +178,26 @@ const ok = (cond, msg) => { console.log((cond ? 'ok   ' : 'FAIL ') + msg); if (!
   await p.goto(URL); await p.waitForTimeout(600);
   ok(await p.isVisible('.side .brand'), 'iPad shows the sidebar instead of tabs');
   await p.screenshot({ path: shots + '/ipad-today.png' });
+  await ctx.close();
+
+  // ── someone who started on phase 1 gets habits and goals ─────────
+  ctx = await b.newContext({ ...devices['iPhone 13'], colorScheme: 'dark' });
+  await ctx.addInitScript(() => {
+    if (sessionStorage.getItem('__mockdb')) return;
+    const base = 'data/users/u_test/m/';
+    sessionStorage.setItem('__mockdb', JSON.stringify({
+      [base + 'meta/setup']: { id: 'setup', examples: true },
+      [base + 'areas/gym']: { id: 'gym', name: 'Gym', short: 'Gym', color: '#F08A4B', state: 'On track', order: 1 },
+      [base + 'tasks/t1']: { id: 't1', t: 'My real task', due: null, done: false, steps: [] }
+    }));
+  });
+  await ctx.addInitScript(mock); // after the planted data, so the fake db loads it
+  p = await ctx.newPage(); watch(p, 'upgrade');
+  await p.goto(URL); await p.waitForTimeout(700);
+  ok((await p.$$('.hchip')).length === 5, 'a phase-1 user with examples gets example habits');
+  const kept = await p.evaluate(() => Object.values(window.__mock.docs).some((d) => d.t === 'My real task'));
+  ok(kept, 'and their own data is untouched');
+  await p.screenshot({ path: shots + '/phone-today-dark.png', fullPage: true });
   await ctx.close();
 
   // ── plain browser, no window.claude ───────────────────────────────

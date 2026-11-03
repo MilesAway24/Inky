@@ -18,6 +18,10 @@ VIEWS.tasks = function () {
     h += '<section><div class="grouph">' + b[1] + ' <span class="c">' + list.filter(function (t) { return !t.done; }).length + '</span><span class="ln"></span></div>'
       + '<div class="list">' + list.map(taskRow).join('') + '</div></section>';
   });
+  var wk = Date.now() - 7 * 864e5;
+  var older = Store.all('tasks').filter(function (t) { return bucket(t) === 'done' && t.doneAt > wk && (!taskFilter || t.area === taskFilter); })
+    .sort(function (a, b) { return b.doneAt - a.doneAt; });
+  if (older.length) h += '<details class="donegrp"><summary>Done this week · ' + older.length + '</summary><div class="list">' + older.map(taskRow).join('') + '</div></details>';
   if (!any && !sl.length) h += '<div class="empty">No tasks' + (taskFilter ? ' in ' + esc(areaName(taskFilter)) : '') + '. Tap ＋ to capture one.</div>';
   h += '<button class="btn soft block" data-act="newtask">' + icon('plus', 'sm') + 'New task</button>';
   return h;
