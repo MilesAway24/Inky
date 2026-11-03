@@ -576,6 +576,7 @@ svg.i.chevdown{transform:rotate(90deg);width:14px;height:14px}
 .finnav .chip svg{margin-right:-4px}
 p.finline{margin:10px 2px 0}
 p.finline .bad{color:var(--bad)}
+.capbox.quick{min-height:132px;font-size:18px}
 </style>
 
 <div class="app" id="app">
@@ -1758,14 +1759,28 @@ ACTS.capture = function () {
   capState = { kind: 'smart', area: null, photo: null, sugg: null };
   openSheet(capHtml(), capWire);
 };
+/* Quick capture: what opens when MossOS is opened. Straight to the inbox,
+   Enter saves, Claude sorts later. */
+function quickCapture() {
+  capState = { kind: 'inbox', area: null, photo: null, sugg: null, quick: true };
+  openSheet(capHtml(), capWire);
+}
+ACTS.capsortnow = function () { capState.quick = false; capState.kind = 'smart'; capRedraw(); };
 function capWire(s) {
   var ta = $('#captext', s); if (!ta) return;
   ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length);
-  ta.addEventListener('keydown', function (e) { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) ACTS.capsave(); });
+  ta.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey || (capState.quick && !e.shiftKey))) { e.preventDefault(); ACTS.capsave(); }
+  });
   var f = $('#capfile', s); if (f) f.addEventListener('change', capPhoto);
 }
 function capHtml(text) {
   var k = capState.kind;
+  if (capState.quick) return '<div class="shead"><h2>Quick capture</h2><button class="iconbtn" data-act="close" aria-label="Close">' + icon('x') + '</button></div>'
+    + '<label class="sr" for="captext">What\'s on your mind</label>'
+    + '<textarea id="captext" class="capbox quick" placeholder="Dump it here. Enter saves to your inbox.">' + esc(text || '') + '</textarea>'
+    + '<div class="btnrow"><button class="btn accent" data-act="capsave">Save to inbox</button><button class="btn ghost" data-act="capsortnow">' + icon('sparkle', 'sm') + 'Sort now</button></div>'
+    + '<p class="note small">Claude sorts it later from the inbox. Shift+Enter for a new line.</p>';
   return '<div class="shead"><h2>Capture</h2><button class="iconbtn" data-act="close" aria-label="Close">' + icon('x') + '</button></div>'
     + '<label class="sr" for="captext">What\'s on your mind</label>'
     + '<textarea id="captext" class="capbox" placeholder="Anything. &quot;Call the recruiter Friday&quot;, &quot;took meds&quot;, &quot;watched Heat 9/10&quot;… Tap the mic on your keyboard to talk.">' + esc(text || '') + '</textarea>'
@@ -2231,6 +2246,10 @@ VIEWS.settings = function () {
     local: 'Saved on this device only. Open MossOS in the Claude app, signed in, to sync between devices.' }[s] || '';
   return '<section><div class="sechead"><h2>Sync</h2>' + syncBadge() + '</div><p class="note">' + esc(syncText) + '</p></section>'
     + '<section><div class="sechead"><h2>Claude</h2></div><p class="note">' + (AI.ready ? 'Available. Sorting and "Break it down" use Claude.' : 'Not available in this view. Sorting and "Break it down" need MossOS open in the Claude app.') + '</p></section>'
+    + '<section><div class="sechead"><h2>Opens to</h2></div><p class="note small" style="margin-bottom:10px">What you see when you open MossOS after being away 10 minutes or more.</p><div class="chips">'
+    + [['capture', 'Quick capture'], ['today', 'Today']].map(function (o) {
+      return '<button class="chip' + (openPref() === o[0] ? ' on' : '') + '" data-act="setopen" data-v="' + o[0] + '" aria-pressed="' + (openPref() === o[0]) + '">' + o[1] + '</button>';
+    }).join('') + '</div></section>'
     + '<section><div class="sechead"><h2>Bottom bar</h2></div><p class="note small" style="margin-bottom:10px">Pick the three sections that sit around Capture. Everything else is one tap away under More.</p>'
     + tabPrefs().map(function (cur, slot) {
       return '<div class="field" style="margin-bottom:10px"><label for="tab' + slot + '">' + ['First tab', 'Second tab', 'After Capture'][slot] + '</label><select id="tab' + slot + '" class="input sel" data-act-change="settab" data-slot="' + slot + '">'
@@ -2255,6 +2274,12 @@ ACTS.resetall = function () {
   resetAsked = 0; Store.resetLocal(); toast('Everything erased'); go('today');
 };
 
+function openPref() { var p = Store.get('meta', 'prefs'); return p && p.open === 'today' ? 'today' : 'capture'; }
+ACTS.setopen = function (d) {
+  var p = Store.get('meta', 'prefs');
+  if (p) Store.patch('meta', 'prefs', { open: d.v }); else Store.put('meta', { id: 'prefs', open: d.v });
+  toast(d.v === 'today' ? 'MossOS opens to Today' : 'MossOS opens to Quick capture');
+};
 ACTS.settab = function (d, el) {
   var t = tabPrefs().slice(), i = +d.slot, other = t.indexOf(el.value);
   if (other > -1 && other !== i) t[other] = t[i]; // swap rather than show a section twice
@@ -4003,6 +4028,22 @@ Store.connect(maybeSeed).then(function (live) { if (!live) maybeSeed(); });
 if (!hadCache && (!window.claude || !window.claude.use)) maybeSeed();
 aiInit(); assetsInit(); timerLoop();
 render(true);
+
+/* Opening MossOS after 10+ minutes away lands in Quick capture (Settings →
+   Opens to). Away = page closed or in the background. */
+var AWAY_MS = 10 * 60 * 1000;
+function lastSeen() { try { return +localStorage.getItem('mossos.lastSeen') || 0; } catch (e) { return 0; } }
+function markSeen() { try { localStorage.setItem('mossos.lastSeen', String(Date.now())); } catch (e) {} }
+function maybeQuickCapture() {
+  var away = Date.now() - lastSeen() >= AWAY_MS; markSeen();
+  if (!away || openPref() !== 'capture' || !$('#sheetbg').hidden) return;
+  var ae = document.activeElement; if (ae && /INPUT|TEXTAREA/.test(ae.tagName)) return;
+  quickCapture();
+}
+setTimeout(maybeQuickCapture, 250);
+document.addEventListener('visibilitychange', function () { if (document.hidden) markSeen(); else maybeQuickCapture(); });
+addEventListener('pagehide', markSeen);
+setInterval(function () { if (!document.hidden) markSeen(); }, 60000);
 
 /* A new day while the app stays open: repaint at midnight. */
 (function tick() {

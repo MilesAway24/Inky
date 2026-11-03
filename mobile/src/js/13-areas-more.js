@@ -137,6 +137,10 @@ VIEWS.settings = function () {
     local: 'Saved on this device only. Open MossOS in the Claude app, signed in, to sync between devices.' }[s] || '';
   return '<section><div class="sechead"><h2>Sync</h2>' + syncBadge() + '</div><p class="note">' + esc(syncText) + '</p></section>'
     + '<section><div class="sechead"><h2>Claude</h2></div><p class="note">' + (AI.ready ? 'Available. Sorting and "Break it down" use Claude.' : 'Not available in this view. Sorting and "Break it down" need MossOS open in the Claude app.') + '</p></section>'
+    + '<section><div class="sechead"><h2>Opens to</h2></div><p class="note small" style="margin-bottom:10px">What you see when you open MossOS after being away 10 minutes or more.</p><div class="chips">'
+    + [['capture', 'Quick capture'], ['today', 'Today']].map(function (o) {
+      return '<button class="chip' + (openPref() === o[0] ? ' on' : '') + '" data-act="setopen" data-v="' + o[0] + '" aria-pressed="' + (openPref() === o[0]) + '">' + o[1] + '</button>';
+    }).join('') + '</div></section>'
     + '<section><div class="sechead"><h2>Bottom bar</h2></div><p class="note small" style="margin-bottom:10px">Pick the three sections that sit around Capture. Everything else is one tap away under More.</p>'
     + tabPrefs().map(function (cur, slot) {
       return '<div class="field" style="margin-bottom:10px"><label for="tab' + slot + '">' + ['First tab', 'Second tab', 'After Capture'][slot] + '</label><select id="tab' + slot + '" class="input sel" data-act-change="settab" data-slot="' + slot + '">'
@@ -161,6 +165,12 @@ ACTS.resetall = function () {
   resetAsked = 0; Store.resetLocal(); toast('Everything erased'); go('today');
 };
 
+function openPref() { var p = Store.get('meta', 'prefs'); return p && p.open === 'today' ? 'today' : 'capture'; }
+ACTS.setopen = function (d) {
+  var p = Store.get('meta', 'prefs');
+  if (p) Store.patch('meta', 'prefs', { open: d.v }); else Store.put('meta', { id: 'prefs', open: d.v });
+  toast(d.v === 'today' ? 'MossOS opens to Today' : 'MossOS opens to Quick capture');
+};
 ACTS.settab = function (d, el) {
   var t = tabPrefs().slice(), i = +d.slot, other = t.indexOf(el.value);
   if (other > -1 && other !== i) t[other] = t[i]; // swap rather than show a section twice

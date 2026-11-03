@@ -21,14 +21,28 @@ ACTS.capture = function () {
   capState = { kind: 'smart', area: null, photo: null, sugg: null };
   openSheet(capHtml(), capWire);
 };
+/* Quick capture: what opens when MossOS is opened. Straight to the inbox,
+   Enter saves, Claude sorts later. */
+function quickCapture() {
+  capState = { kind: 'inbox', area: null, photo: null, sugg: null, quick: true };
+  openSheet(capHtml(), capWire);
+}
+ACTS.capsortnow = function () { capState.quick = false; capState.kind = 'smart'; capRedraw(); };
 function capWire(s) {
   var ta = $('#captext', s); if (!ta) return;
   ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length);
-  ta.addEventListener('keydown', function (e) { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) ACTS.capsave(); });
+  ta.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey || (capState.quick && !e.shiftKey))) { e.preventDefault(); ACTS.capsave(); }
+  });
   var f = $('#capfile', s); if (f) f.addEventListener('change', capPhoto);
 }
 function capHtml(text) {
   var k = capState.kind;
+  if (capState.quick) return '<div class="shead"><h2>Quick capture</h2><button class="iconbtn" data-act="close" aria-label="Close">' + icon('x') + '</button></div>'
+    + '<label class="sr" for="captext">What\'s on your mind</label>'
+    + '<textarea id="captext" class="capbox quick" placeholder="Dump it here. Enter saves to your inbox.">' + esc(text || '') + '</textarea>'
+    + '<div class="btnrow"><button class="btn accent" data-act="capsave">Save to inbox</button><button class="btn ghost" data-act="capsortnow">' + icon('sparkle', 'sm') + 'Sort now</button></div>'
+    + '<p class="note small">Claude sorts it later from the inbox. Shift+Enter for a new line.</p>';
   return '<div class="shead"><h2>Capture</h2><button class="iconbtn" data-act="close" aria-label="Close">' + icon('x') + '</button></div>'
     + '<label class="sr" for="captext">What\'s on your mind</label>'
     + '<textarea id="captext" class="capbox" placeholder="Anything. &quot;Call the recruiter Friday&quot;, &quot;took meds&quot;, &quot;watched Heat 9/10&quot;… Tap the mic on your keyboard to talk.">' + esc(text || '') + '</textarea>'

@@ -15,7 +15,11 @@ const wrapped = '<!doctype html><html><head><meta charset=utf8><meta name=viewpo
 const file = path.join(shots, 'index.html');
 fs.writeFileSync(file, wrapped);
 const URL = 'file://' + file;
-const mock = fs.readFileSync(path.join(__dirname, 'mock-claude.js'), 'utf8');
+const mockRaw = fs.readFileSync(path.join(__dirname, 'mock-claude.js'), 'utf8');
+// Most checks start on Today: pretend MossOS was open a moment ago, so it
+// doesn't land in Quick capture (checked on its own below).
+const seenNow = "try{localStorage.setItem('mossos.lastSeen',String(Date.now()))}catch(e){}\n";
+const mock = seenNow + mockRaw;
 
 let failures = 0;
 async function reloadKeeping(p, ctx) {
@@ -565,8 +569,27 @@ const ok = (cond, msg) => { console.log((cond ? 'ok   ' : 'FAIL ') + msg); if (!
   await p.screenshot({ path: shots + '/phone-today-dark.png', fullPage: true });
   await ctx.close();
 
+  // ── Opening after a while lands in Quick capture ─────────────────
+  ctx = await b.newContext({ ...devices['iPhone 13'] });
+  await ctx.addInitScript(mockRaw);
+  p = await ctx.newPage(); watch(p, 'quick');
+  await p.goto(URL); await p.waitForTimeout(900);
+  ok(await p.isVisible('#sheet h2:has-text("Quick capture")'), 'opening MossOS lands in Quick capture');
+  ok(await p.evaluate(() => document.activeElement && document.activeElement.id === 'captext'), 'the cursor is already in the box');
+  await p.fill('#captext', 'ask Dana about the overtime list'); await p.press('#captext', 'Enter'); await p.waitForTimeout(800);
+  ok(await p.isHidden('#sheetbg') && await p.evaluate(() => Object.values(window.__mock.docs).some((d) => d.text === 'ask Dana about the overtime list')), 'Enter saves it to the inbox and closes');
+  await p.reload(); await p.waitForTimeout(900);
+  ok(await p.isHidden('#sheetbg'), 'reopening within 10 minutes goes straight to Today');
+  await p.click('.tabs [data-v=more]'); await p.click('#view [data-act=tab][data-v=settings]'); await p.waitForTimeout(150);
+  await p.click('[data-act=setopen][data-v=today]'); await p.waitForTimeout(500);
+  await p.evaluate(() => localStorage.setItem('mossos.lastSeen', '1'));
+  await reloadKeeping(p, ctx); await p.waitForTimeout(400);
+  ok(await p.isHidden('#sheetbg'), 'Settings → Opens to Today turns it off');
+  await ctx.close();
+
   // ── plain browser, no window.claude ───────────────────────────────
   ctx = await b.newContext({ ...devices['iPhone 13'] });
+  await ctx.addInitScript(seenNow);
   p = await ctx.newPage(); watch(p, 'local');
   await p.goto(URL); await p.waitForTimeout(500);
   // Smart capture still sorts without Claude, by rules.

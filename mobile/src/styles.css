@@ -573,3 +573,4 @@ svg.i.chevdown{transform:rotate(90deg);width:14px;height:14px}
 .finnav .chip svg{margin-right:-4px}
 p.finline{margin:10px 2px 0}
 p.finline .bad{color:var(--bad)}
+.capbox.quick{min-height:132px;font-size:18px}

@@ -15,6 +15,22 @@ if (!hadCache && (!window.claude || !window.claude.use)) maybeSeed();
 aiInit(); assetsInit(); timerLoop();
 render(true);
 
+/* Opening MossOS after 10+ minutes away lands in Quick capture (Settings →
+   Opens to). Away = page closed or in the background. */
+var AWAY_MS = 10 * 60 * 1000;
+function lastSeen() { try { return +localStorage.getItem('mossos.lastSeen') || 0; } catch (e) { return 0; } }
+function markSeen() { try { localStorage.setItem('mossos.lastSeen', String(Date.now())); } catch (e) {} }
+function maybeQuickCapture() {
+  var away = Date.now() - lastSeen() >= AWAY_MS; markSeen();
+  if (!away || openPref() !== 'capture' || !$('#sheetbg').hidden) return;
+  var ae = document.activeElement; if (ae && /INPUT|TEXTAREA/.test(ae.tagName)) return;
+  quickCapture();
+}
+setTimeout(maybeQuickCapture, 250);
+document.addEventListener('visibilitychange', function () { if (document.hidden) markSeen(); else maybeQuickCapture(); });
+addEventListener('pagehide', markSeen);
+setInterval(function () { if (!document.hidden) markSeen(); }, 60000);
+
 /* A new day while the app stays open: repaint at midnight. */
 (function tick() {
   var n = new Date(), next = new Date(n.getFullYear(), n.getMonth(), n.getDate() + 1, 0, 0, 5);
