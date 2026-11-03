@@ -299,6 +299,24 @@ const ok = (cond, msg) => { console.log((cond ? 'ok   ' : 'FAIL ') + msg); if (!
   ok((await p.$$('.list .row')).length === 3, 'earlier entries are listed');
   await p.screenshot({ path: shots + '/phone-journal.png', fullPage: true });
 
+  // ── Tomorrow: one planning page ─────────────────────────────────
+  await p.click('.tabs [data-v=more]'); await p.click('#view [data-act=tab][data-v=plan]'); await p.waitForTimeout(200);
+  ok((await p.textContent('#top h1')) === 'Tomorrow', 'More opens the Tomorrow planning page');
+  const leftTitle = await p.$eval('.planrow .t', (e) => e.childNodes[1] ? e.textContent.trim() : '').catch(() => '');
+  const leftId = await p.$eval('.planrow [data-act=planmove][data-to=tomorrow]', (e) => e.dataset.id).catch(() => null);
+  ok(!!leftId, 'Left from today lists unfinished tasks with quick moves');
+  if (leftId) {
+    await p.click('.planrow [data-act=planmove][data-to=tomorrow][data-id="' + leftId + '"]'); await p.waitForTimeout(200);
+    ok(await p.isVisible('.trow[data-id="' + leftId + '"], [data-id="' + leftId + '"] >> nth=0') && !(await p.$('.planrow [data-id="' + leftId + '"]')), 'moving it to tomorrow lists it under Tomorrow');
+  }
+  await p.fill('#planadd', 'Drop off the uniform 7pm'); await p.press('#planadd', 'Enter'); await p.waitForTimeout(500);
+  const pa = await p.evaluate(() => Object.values(window.__mock.docs).filter((d) => d.t === 'Drop off the uniform')[0]);
+  const tmw = await p.evaluate(() => { const d = new Date(); d.setDate(d.getDate() + 1); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); });
+  ok(pa && pa.due === tmw && pa.time === '19:00', 'adding on Tomorrow dates it tomorrow and reads the time');
+  await p.fill('#planj', 'Long shift but got the PAT practice in'); await p.press('#planj', 'Enter'); await p.waitForTimeout(500);
+  ok(await p.evaluate(() => Object.values(window.__mock.docs).some((d) => d.day && /PAT practice in/.test(d.text || ''))), 'the one line about today saves to the journal');
+  await p.screenshot({ path: shots + '/phone-tomorrow.png', fullPage: true });
+
   // ── Phase 3: calendar ────────────────────────────────────────────
   await p.click('.tabs [data-v=more]'); await p.click('#view [data-act=tab][data-v=calendar]'); await p.waitForTimeout(150);
   ok(await p.isVisible('.cal .day.today'), 'the month grid marks today');
@@ -525,7 +543,7 @@ const ok = (cond, msg) => { console.log((cond ? 'ok   ' : 'FAIL ') + msg); if (!
   ok(await p.isVisible('.finline'), 'Today\'s Money section shows the next card to go');
 
   // Every screen: no sideways scrolling
-  const views = ['tools', 'ranks', 'decks', 'bored', 'gym', 'timer','today', 'tasks', 'more', 'areas', 'inbox', 'notes', 'settings', 'money', 'habits', 'goals', 'projects', 'journal', 'calendar'];
+  const views = ['plan', 'tools', 'ranks', 'decks', 'bored', 'gym', 'timer','today', 'tasks', 'more', 'areas', 'inbox', 'notes', 'settings', 'money', 'habits', 'goals', 'projects', 'journal', 'calendar'];
   let wide = [];
   for (const v of views) {
     await p.evaluate((v) => { document.querySelector('[data-act=tab][data-v="' + v + '"]') ? document.querySelector('[data-act=tab][data-v="' + v + '"]').click() : null; }, v);

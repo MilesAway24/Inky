@@ -574,3 +574,10 @@ svg.i.chevdown{transform:rotate(90deg);width:14px;height:14px}
 p.finline{margin:10px 2px 0}
 p.finline .bad{color:var(--bad)}
 .capbox.quick{min-height:132px;font-size:18px}
+/* ── tomorrow ─────────────────────────────────────────────────────── */
+.planrow{display:grid;gap:8px;padding:12px 0;border-bottom:1px solid var(--line)}
+.planrow:last-child{border-bottom:0}
+.planrow>.t{display:flex;flex-wrap:wrap;align-items:center;gap:6px;text-align:left;font-size:16px;color:var(--ink)}
+.planrow .s{flex-basis:100%;font-size:12.5px;color:var(--faint)}
+.planrow .chips{gap:6px}
+.planlink{justify-self:start;margin-top:6px;font-size:14px}

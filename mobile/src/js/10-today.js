@@ -14,7 +14,8 @@ VIEWS.today = function () {
   var inbox = Store.all('inbox').sort(function (a, b) { return a.created - b.created; }), sl = slipped();
   var todays = tasksIn('today'), open = todays.filter(function (x) { return !x.done; }), done = todays.filter(function (x) { return x.done; });
   var h = '<div class="overview"><div class="dateline">' + DOW[d.getDay()] + ', ' + MON[d.getMonth()] + ' ' + d.getDate() + ' · ' + partOfDay(d.getHours()) + '</div>'
-    + '<div class="ovcount">' + open.length + ' task' + (open.length === 1 ? '' : 's') + ' today' + (sl.length ? ' · <span class="bad">' + sl.length + ' overdue</span>' : '') + '</div></div>';
+    + '<div class="ovcount">' + open.length + ' task' + (open.length === 1 ? '' : 's') + ' today' + (sl.length ? ' · <span class="bad">' + sl.length + ' overdue</span>' : '') + '</div>'
+    + (d.getHours() >= 17 ? '<button class="link planlink" data-act="tab" data-v="plan">Plan tomorrow →</button>' : '') + '</div>';
   h += jumpTiles(['habits', 'goals', 'notes', 'projects', 'tools', 'calendar']);
 
   if (hasExamples()) h += '<div class="card flat"><p class="note">You\'re looking at example data so you can see how MossOS works. '
@@ -147,6 +148,7 @@ function sectionCount(k) {
   if (k === 'journal') { var e = entryFor(t); return e && (e.text || e.mood) ? 'written today' : 'not yet today'; }
   if (k === 'inbox') { return Store.all('inbox').length + ' to sort'; }
   if (k === 'tasks') { return tasksIn('today').filter(function (x) { return !x.done; }).length + ' today'; }
+  if (k === 'plan') { var tn = tasksOn(addDays(t, 1)).filter(function (x) { return !x.done; }).length; return tn + ' planned'; }
   if (k === 'areas') { return areasSorted().filter(function (a) { return a.state === 'Needs you'; }).length + ' need you'; }
   return '';
 }

@@ -15,6 +15,7 @@ VIEWS.calendar = function () {
     return '<button role="tab" aria-selected="' + (cal.mode === v[0]) + '" class="' + (cal.mode === v[0] ? 'on' : '') + '" data-act="calmode" data-v="' + v[0] + '">' + v[1] + '</button>';
   }).join('') + '</div>';
   h += cal.mode === 'month' ? monthView() : weekView();
+  h += '<button class="link planlink" data-act="tab" data-v="plan">Plan tomorrow →</button>';
   h += dayDetail(cal.sel);
   return h;
 };
