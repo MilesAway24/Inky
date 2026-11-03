@@ -12,7 +12,7 @@ function maybeSeed() {
 }
 Store.connect(maybeSeed).then(function (live) { if (!live) maybeSeed(); });
 if (!hadCache && (!window.claude || !window.claude.use)) maybeSeed();
-aiInit(); assetsInit();
+aiInit(); assetsInit(); timerLoop();
 render(true);
 
 /* A new day while the app stays open: repaint at midnight. */

@@ -11,13 +11,13 @@ Running inside the Claude app is what gives it, with no server of its own:
 
 Opened anywhere else, such as a plain browser, it still works, but saves on that device only.
 
-## What's in it (Phases 1–3)
+## What's in it
 
 | Screen | What it does |
 |---|---|
 | **Today** | Priorities (1 P1 + 2 P2; a fourth means swapping one to tomorrow), the Play card (one thing at a time from tasks, habits and goal next actions, *Do it* / *Skip*), habits due today, life areas, slipped-and-rescheduled, and a log that writes itself |
-| **Capture** (＋) | Type or dictate. Each line becomes an inbox item, or save straight to a task or note. Optional photo |
-| **Inbox** | Sort with Claude (type, area, day, first step; you confirm each) or by hand |
+| **Capture** (＋) | Type or dictate anything; each line is **smart-sorted** the moment you tap *Sort it*: a new task (with its day, area, project and first step), a task you already did (ticked off), a habit you did today (marked), a new habit, a goal, a note, an idea, a journal line, or a movie you watched (added to Movies and ranked). Claude sorts when it's available; built-in rules sort otherwise. You check each before it's filed. Or save to the inbox, or straight to a task or note. Optional photo |
+| **Inbox** | Anything you saved for later, sorted the same way when you're ready |
 | **Tasks** | Today / Tomorrow / This week / Later / Whenever / Drifted, area filter. Detail: notes before steps, Break it down, When, P1/P2, area. Sweep for slipped tasks |
 | **Life areas** | Work (EMS · iCare), HCPD, Gym, Inky, School, Partner, Money. State, focus, open tasks. Editable |
 | **Habits** | Mark done (on Today or the Habits page), skip a day on purpose without breaking the streak, week strip, 30-day grid, daily sparkline, streak and best run, a builder with templates, any days of the week |
@@ -26,7 +26,9 @@ Opened anywhere else, such as a plain browser, it still works, but saves on that
 | **Journal** | One entry a day: mood plus words, prompted from today's log. A week of moods at a glance |
 | **Calendar** | Month grid with a dot per task in its area's colour; week view as blocks coloured by area (the Status design); tap a day to see it and add to it |
 | **Notes** | Search, filter by kind or area, pin, link to a project, turn into a task |
-| **Settings** | Sync status, theme, clear examples, erase |
+| **Tools** | **Rank**: Movies and any list you make (books, burgers…), ranked head-to-head by binary insertion (about 7 taps for a list of 100), re-rank or nudge anything. **Flashcards**: decks with five-box spaced review. **Bored**: pick one thing. **Gym**: sets, reps, last time, a weight trend. **Focus timer**: 25 / 5 / 15 |
+| **Getting around** | Today and More open with one-tap tiles (Habits, Goals, Notes, Projects, Tools, Calendar…) with live counts. The bottom bar is Today · Tasks · ＋ · Habits · More by default; Settings lets you pick any three sections around ＋ |
+| **Settings** | Sync status, bottom bar, theme, clear examples, erase |
 
 Money is the next phase: Payday OS moves into it. Until then the Money tab links to Payday OS. The full plan is in the repo history and in `/root/.claude/plans/`.
 

@@ -405,6 +405,47 @@ textarea.input{resize:vertical;min-height:110px}
 .blk{font-size:13px;font-weight:500;padding:6px 9px;border-radius:9px;background:var(--c);color:#111;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left}
 .blk.done{opacity:.45;text-decoration:line-through}
 .wkday .hab{grid-column:2}
+
+/* ── jump tiles, more ─────────────────────────────────────────────── */
+.jump{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.jt2{display:grid;gap:2px;justify-items:start;padding:12px;border-radius:14px;background:var(--surface);border:1px solid var(--line);text-align:left;min-width:0;min-height:76px}
+.jt2 svg.i{color:var(--accent);margin-bottom:4px}
+.jt2 b{font-weight:500;font-size:15px}
+.jt2 span{font-size:12px;color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+@media (min-width:600px){.jump{grid-template-columns:repeat(6,minmax(0,1fr))}}
+select.input.sel{min-height:40px;padding:6px 10px;font-size:15px;width:auto;max-width:100%;flex:0 1 auto;appearance:auto}
+
+/* ── tools ───────────────────────────────────────────────────────── */
+.toolgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tool{display:grid;gap:4px;align-content:start;padding:14px;border-radius:16px;background:var(--surface);border:1px solid var(--line);text-align:left;min-width:0}
+.tool .tic{font-size:26px}
+.tool b{font-weight:500;font-size:16px}
+.tool small{font-size:12.5px;color:var(--faint);line-height:1.35}
+.ranked{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.rrow{display:flex;align-items:center;gap:12px;width:100%;padding:10px 12px;border-radius:14px;background:var(--surface);border:1px solid var(--line);text-align:left;min-height:56px}
+.rrow .pos{width:32px;flex:none;font-size:22px;font-weight:300;letter-spacing:-.03em;color:var(--faint);font-variant-numeric:tabular-nums;text-align:center}
+.rrow.top .pos{color:var(--accent);font-weight:400}
+.rrow .grow{display:grid;gap:2px;min-width:0}
+.rrow .t{font-size:16px;overflow-wrap:anywhere}
+.rrow .s{font-size:12.5px;color:var(--faint)}
+.vsgrid{display:grid;gap:8px}
+.vs{display:grid;gap:4px;padding:18px;border-radius:16px;background:var(--surface);border:1.5px solid var(--line2);text-align:left;min-height:84px}
+.vs:hover,.vs:focus-visible{border-color:var(--accent)}
+.vs b{font-size:19px;font-weight:500;letter-spacing:-.01em}
+.vs span{font-size:13px;color:var(--faint)}
+.vs small{font-size:13px;color:var(--muted)}
+.vsor{justify-self:center;font-size:13px;color:var(--faint)}
+.flash{display:grid;gap:14px;padding:22px 18px;border-radius:20px;background:var(--surface);border:1px solid var(--line)}
+.flash .q{font-size:22px;font-weight:500;letter-spacing:-.015em;line-height:1.3}
+.flash .a{font-size:18px;color:var(--accent);line-height:1.35}
+.cardform,.liftform{display:grid;gap:8px}
+.liftform{grid-template-columns:repeat(3,minmax(0,1fr))}
+.liftform .btn{grid-column:1/-1}
+.liftbars{display:flex;align-items:flex-end;gap:4px;height:70px;padding:8px;border-radius:14px;background:var(--surface);border:1px solid var(--line)}
+.liftbars i{flex:1;display:block;border-radius:4px 4px 0 0;background:var(--accent);opacity:.85}
+.timer{display:grid;gap:18px;justify-items:center;padding:28px 16px;border-radius:22px;background:var(--surface);border:1px solid var(--line)}
+.tclock{font-size:72px;font-weight:200;letter-spacing:-.04em;line-height:1;font-variant-numeric:tabular-nums}
+.timer .btnrow{width:100%;max-width:340px}
 </style>
 
 <div class="app" id="app">
@@ -477,6 +518,7 @@ var ICONS = {
   projects: '<path d="M3 7h7l2 2h9v10H3z"/>',
   calendar: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',
   settings: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
+  tools: '<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z"/>',
   inbox: '<path d="M3 13l3-8h12l3 8v6H3z"/><path d="M3 13h5l1 2h6l1-2h5"/>',
   broom: '<path d="M14 4l6 6M12.5 9.5l2 2M4 20l6.5-6.5M10.5 13.5l-2-2 4-4 4 4-4 4"/>',
   moss: '<path d="M2.8 20.6C4 18.2 6.2 17 8.6 17.2C10 16.1 13.2 16.3 14.6 17.4C17 17 19.6 18 21.2 20.6Z"/><path d="M8 17.6C7.6 15 7.2 12.6 7 10.9"/><path d="M12.2 17C12.4 13.6 12.6 9.8 12.7 6.6"/><path d="M16.2 17.4C16.5 14.6 16.8 11.4 17 9.2"/><circle cx="6.8" cy="9.9" r="1.1" fill="currentColor" stroke="none"/><circle cx="12.75" cy="5.5" r="1.2" fill="currentColor" stroke="none"/><circle cx="17.05" cy="8.2" r="1.1" fill="currentColor" stroke="none"/>'
@@ -493,7 +535,7 @@ function icon(name, cls) {
    That subtree is the viewer's own, so the same person on iPhone and iPad
    sees one set of data. Without db (signed out, or a plain browser) the
    app keeps working from the device cache. */
-var COLS = ['areas', 'tasks', 'inbox', 'notes', 'log', 'meta', 'habits', 'goals', 'projects', 'journal'];
+var COLS = ['areas', 'tasks', 'inbox', 'notes', 'log', 'meta', 'habits', 'goals', 'projects', 'journal', 'ranks', 'decks', 'lifts', 'tools'];
 var CACHE_KEY = 'mossos.mobile.v1';
 
 var Store = (function () {
@@ -663,8 +705,8 @@ function seedData() {
   var now = new Date(); now.setHours(7, 15, 0, 0);
   [['Morning brief opened, priorities set', null, 0], ['Leg day logged', 'gym', 145], ['3 slipped tasks moved to real dates', 'hcpd', 230]]
     .forEach(function (l) { if (now.getTime() + l[2] * 6e4 < Date.now()) Store.put('log', { example: true, at: now.getTime() + l[2] * 6e4, day: t, text: l[0], area: l[1] }, true); });
-  seedPhase2(); seedPhase3();
-  Store.put('meta', { id: 'setup', seeded: Date.now(), examples: true, v: 3 });
+  seedPhase2(); seedPhase3(); seedPhase4();
+  Store.put('meta', { id: 'setup', seeded: Date.now(), examples: true, v: 4 });
 }
 
 /* Habits and goals: added in phase 2, so they're also offered to people
@@ -690,11 +732,30 @@ function seedPhase2() {
     });
 }
 function upgradeSeed() {
-  var m = Store.get('meta', 'setup'), v = m ? (m.v || 1) : 3;
-  if (!m || v >= 3) return;
+  var m = Store.get('meta', 'setup'), v = m ? (m.v || 1) : 4;
+  if (!m || v >= 4) return;
   if (m.examples && v < 2 && !Store.all('habits').length && !Store.all('goals').length) seedPhase2();
-  if (m.examples && !Store.all('projects').length && !Store.all('journal').length) seedPhase3();
-  Store.patch('meta', 'setup', { v: 3 });
+  if (m.examples && v < 3 && !Store.all('projects').length && !Store.all('journal').length) seedPhase3();
+  if (m.examples && !Store.all('ranks').length && !Store.all('decks').length && !Store.all('lifts').length) seedPhase4();
+  Store.patch('meta', 'setup', { v: 4 });
+}
+
+/* Tools (phase 4): a ranked Movies list, a deck, Bored options, lifts. */
+function seedPhase4() {
+  var t = today();
+  var films = [['Heat', '1995', 'The diner scene.'], ['Arrival', '2016', ''], ['Sinners', '2025', 'Better than the trailer suggested.'], ['Top Gun: Maverick', '2022', ''], ['Paddington 2', '2017', '']];
+  var items = films.map(function (f, i) { return { id: 'rx' + i, t: f[0], year: f[1], note: f[2], watched: addDays(t, -10 * (i + 1)), added: addDays(t, -10 * (i + 1)) }; });
+  Store.put('ranks', { example: true, name: 'Movies', ic: '🎬', kind: 'movies', items: items.concat([{ id: 'rx9', t: 'The Fall Guy', year: '2024', note: '', watched: addDays(t, -1), added: addDays(t, -1) }]),
+    order: ['rx0', 'rx1', 'rx2', 'rx3', 'rx4'] }, true);
+  var cards = [['¿Dónde le duele?', 'Where does it hurt?'], ['¿Está herido?', 'Are you hurt?'], ['¿Cómo se llama?', 'What is your name?'],
+    ['¿Tiene alergias?', 'Do you have any allergies?'], ['Tranquilo, estoy aquí para ayudarle.', 'Stay calm, I\'m here to help you.']];
+  Store.put('decks', { example: true, name: 'Spanish for calls', cards: cards.map(function (c, i) { return { id: 'cx' + i, q: c[0], a: c[1], box: i < 2 ? 2 : 1, due: i < 2 ? addDays(t, 1) : t, seen: i < 2 }; }) }, true);
+  Store.put('tools', { example: true, id: 'bored', items: ['Walk to the end of the street and back', 'Ten push-ups', 'Text someone you haven\'t in a while', 'Tidy one surface',
+    'Read ten pages', 'Stretch for five minutes', 'Plan tomorrow\'s meals', 'Put on an album you love, start to finish'] }, true);
+  [['Bench press', [[125, 3, 8], [130, 3, 8], [135, 3, 6], [135, 3, 8]]], ['Squat', [[165, 3, 8], [175, 3, 8], [185, 3, 6]]], ['Deadlift', [[205, 3, 5], [215, 3, 5], [225, 3, 5]]]]
+    .forEach(function (x, j) {
+      Store.put('lifts', { example: true, n: x[0], unit: 'lb', lastAt: Date.now() - j * 864e5, log: x[1].map(function (r, i) { return { d: addDays(t, -(x[1].length - i) * 3 - j), w: r[0], sets: r[1], reps: r[2] }; }) }, true);
+    });
 }
 
 /* Projects (from the Sep 18 build's model, about Miles's own work) and a
@@ -739,7 +800,7 @@ function seedPhase3() {
 }
 
 function clearExamples() {
-  ['tasks', 'inbox', 'notes', 'log', 'habits', 'goals', 'projects', 'journal'].forEach(function (c) {
+  ['tasks', 'inbox', 'notes', 'log', 'habits', 'goals', 'projects', 'journal', 'ranks', 'decks', 'lifts', 'tools'].forEach(function (c) {
     Store.all(c).forEach(function (o) { if (o.example) Store.del(c, o.id); });
   });
   var m = Store.get('meta', 'setup'); if (m) Store.patch('meta', 'setup', { examples: false });
@@ -870,10 +931,20 @@ function playQueue() {
    listener that dispatches on data-act. */
 var nav = { tab: 'today', stack: [] };
 var VIEWS = {}, ACTS = {}, TITLES = {};
-var TABS = [['today', 'Today', 'today'], ['tasks', 'Tasks', 'tasks'], ['capture', 'Capture', 'plus'], ['money', 'Money', 'money'], ['more', 'More', 'more']];
-var SIDE_MORE = [['areas', 'Life areas', 'areas'], ['inbox', 'Inbox', 'inbox'], ['habits', 'Habits', 'habits'], ['goals', 'Goals', 'goals'],
-  ['notes', 'Notes', 'notes'], ['journal', 'Journal', 'journal'], ['projects', 'Projects', 'projects'],
-  ['calendar', 'Calendar', 'calendar'], ['settings', 'Settings', 'settings']];
+/* Every section. The bottom bar shows three of them (your choice, in
+   Settings) around Capture, then More. */
+var SECTIONS = {
+  today: ['Today', 'today'], tasks: ['Tasks', 'tasks'], habits: ['Habits', 'habits'], goals: ['Goals', 'goals'],
+  notes: ['Notes', 'notes'], projects: ['Projects', 'projects'], calendar: ['Calendar', 'calendar'], journal: ['Journal', 'journal'],
+  tools: ['Tools', 'tools'], money: ['Money', 'money'], inbox: ['Inbox', 'inbox'], areas: ['Life areas', 'areas'], settings: ['Settings', 'settings']
+};
+var TAB_DEFAULT = ['today', 'tasks', 'habits'];
+function tabPrefs() { var p = Store.get('meta', 'prefs'); var t = p && p.tabs; return t && t.length === 3 && t.every(function (x) { return SECTIONS[x]; }) ? t : TAB_DEFAULT; }
+function tabsNow() {
+  var t = tabPrefs();
+  return [[t[0]].concat(SECTIONS[t[0]]), [t[1]].concat(SECTIONS[t[1]]), ['capture', 'Capture', 'plus'], [t[2]].concat(SECTIONS[t[2]]), ['more', 'More', 'more']];
+}
+var SIDE_MORE = ['habits', 'goals', 'notes', 'projects', 'calendar', 'journal', 'tools', 'inbox', 'areas', 'settings'].map(function (k) { return [k, SECTIONS[k][0], SECTIONS[k][1]]; });
 
 function leaving() { if (current().view === 'project' && typeof maybeAskLeftOff === 'function') setTimeout(maybeAskLeftOff, 0); }
 function go(tab) { leaving(); nav.tab = tab; nav.stack = []; render(true); }
@@ -912,14 +983,14 @@ function render(scrollTop, force) {
 }
 function paintChrome() {
   var c = current(), active = nav.stack.length ? nav.tab : c.view;
-  $('#tabs').innerHTML = TABS.map(function (t) {
+  $('#tabs').innerHTML = tabsNow().map(function (t) {
     if (t[0] === 'capture') return '<button class="cap" data-act="capture" aria-label="Capture">' + '<span>' + icon('plus') + '</span></button>';
     return '<button class="' + (active === t[0] ? 'on' : '') + '" data-act="tab" data-v="' + t[0] + '" aria-current="' + (active === t[0] ? 'page' : 'false') + '">' + icon(t[2]) + '<span>' + t[1] + '</span></button>';
   }).join('');
   var inboxN = Store.all('inbox').length;
   $('#side').innerHTML = '<div class="brand">' + icon('moss') + 'MossOS</div>'
     + '<button class="capbtn" data-act="capture">' + icon('plus', 'sm') + 'Capture</button>'
-    + TABS.filter(function (t) { return t[0] !== 'capture' && t[0] !== 'more'; }).map(function (t) {
+    + [['today', 'Today', 'today'], ['tasks', 'Tasks', 'tasks'], ['money', 'Money', 'money']].map(function (t) {
       return '<button class="' + (active === t[0] ? 'on' : '') + '" data-act="tab" data-v="' + t[0] + '">' + icon(t[2]) + t[1] + '</button>';
     }).join('')
     + '<div class="grp">More</div>'
@@ -1010,6 +1081,7 @@ VIEWS.today = function () {
   var doneN = ps.filter(function (x) { return x.done; }).length;
   var inboxN = Store.all('inbox').length, slipN = slipped().length;
   var h = '<div class="dateline">' + DOWL[d.getDay()] + ' · ' + d.getDate() + ' ' + MON[d.getMonth()] + '</div>';
+  h += jumpTiles(['habits', 'goals', 'notes', 'projects', 'tools', 'calendar']);
 
   if (hasExamples()) h += '<div class="card flat"><p class="note">You\'re looking at example data so you can see how MossOS works. '
     + 'Items marked <span class="pill ex">example</span> go when you clear them.</p>'
@@ -1141,6 +1213,27 @@ function swapSheet(level) {
     }).join('') + '</div>');
 }
 ACTS.swap = function (d) { swapOut(d.id); closeSheet(); ACTS.pickprio({ l: d.l }); };
+
+/* One-tap tiles to the other sections, each with a live count. */
+function sectionCount(k) {
+  var t = today();
+  if (k === 'habits') { var hd = habitsDueToday(); return hd.length ? hd.filter(function (x) { return mark(x, t) === 1; }).length + '/' + hd.length + ' today' : 'none due'; }
+  if (k === 'goals') { var g = goalsLive(); return g.length + ' live'; }
+  if (k === 'notes') { var n = Store.all('notes').length; return n + ' note' + (n === 1 ? '' : 's'); }
+  if (k === 'projects') { var p = projectsAll('active').length; return p + ' active'; }
+  if (k === 'tools') { var r = Store.all('ranks').reduce(function (a, l) { return a + rankPending(l).length; }, 0), c = Store.all('decks').reduce(function (a, dk) { return a + dueCards(dk).length; }, 0); return r ? r + ' to rank' : c ? c + ' cards due' : 'Rank, cards, gym'; }
+  if (k === 'calendar') { var w = Store.all('tasks').filter(function (x) { return !x.done && x.due && x.due > t && dayDiff(t, x.due) <= 7; }).length; return w + ' this week'; }
+  if (k === 'journal') { var e = entryFor(t); return e && (e.text || e.mood) ? 'written today' : 'not yet today'; }
+  if (k === 'inbox') { return Store.all('inbox').length + ' to sort'; }
+  if (k === 'tasks') { return tasksIn('today').filter(function (x) { return !x.done; }).length + ' today'; }
+  if (k === 'areas') { return areasSorted().filter(function (a) { return a.state === 'Needs you'; }).length + ' need you'; }
+  return '';
+}
+function jumpTiles(keys) {
+  return '<nav class="jump" aria-label="Go to">' + keys.map(function (k) {
+    return '<button class="jt2" data-act="tab" data-v="' + k + '">' + icon(SECTIONS[k][1], 'sm') + '<b>' + SECTIONS[k][0] + '</b><span>' + esc(sectionCount(k)) + '</span></button>';
+  }).join('') + '</nav>';
+}
 
 /* ── 11-tasks.js ── */
 /* ═══ TASKS ═════════════════════════════════════════════════════════ */
@@ -1326,39 +1419,51 @@ ACTS.sweepdone = function (d) { completeTask(d.id, true); render(); };
 ACTS.sweepall = function () { slipped().forEach(function (t) { moveTask(t.id, 'whenever'); }); logEvent('Swept slipped tasks to Whenever'); toast('All moved to Whenever'); };
 
 /* ── 12-capture.js ── */
-/* ═══ CAPTURE ═══════════════════════════════════════════════════════
-   One tap, type or dictate, save. Sorting happens later, by hand or
-   with Claude. Each line of a brain-dump becomes its own item. */
+/* ═══ SMART CAPTURE ═════════════════════════════════════════════════
+   Put anything in. Each line is sorted into what it actually is: a new
+   task, a task you just did, a habit you just did, a new habit, a goal, a
+   note, an idea, a journal line, or a movie you watched (which then gets
+   ranked). Claude does the sorting when it's available; a rule-based
+   sorter does it otherwise. Nothing is filed until you confirm. */
 var ASSETS = null;
 function assetsInit() {
   if (!window.claude || !window.claude.use) return;
   window.claude.use('assets').then(function (a) { ASSETS = a; });
 }
-var capState = { kind: 'inbox', area: null, photo: null };
-var CAP_KINDS = [['inbox', 'Inbox', 'Sort later'], ['task', 'Task', 'Due today'], ['note', 'Note', 'Keep it']];
+var capState = { kind: 'smart', area: null, photo: null };
+var CAP_KINDS = [['smart', 'Smart sort'], ['inbox', 'Inbox'], ['task', 'Task'], ['note', 'Note']];
+var STYPES = {
+  task: ['Task', '✅'], done: ['Done ✓', '☑️'], habit_done: ['Habit ✓', '🔁'], habit_new: ['New habit', '🔁'],
+  goal: ['Goal', '🎯'], note: ['Note', '📝'], idea: ['Idea', '💡'], journal: ['Journal', '📔'],
+  movie: ['Movie watched', '🎬'], rank: ['Rank list', '🏆'], drop: ['Delete', '🗑']
+};
 
 ACTS.capture = function () {
-  capState = { kind: 'inbox', area: null, photo: null };
-  openSheet(capHtml(), function (s) {
-    var ta = $('#captext', s); ta.focus();
-    ta.addEventListener('keydown', function (e) { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) ACTS.capsave(); });
-    var f = $('#capfile', s); if (f) f.addEventListener('change', capPhoto);
-  });
+  capState = { kind: 'smart', area: null, photo: null, sugg: null };
+  openSheet(capHtml(), capWire);
 };
+function capWire(s) {
+  var ta = $('#captext', s); if (!ta) return;
+  ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length);
+  ta.addEventListener('keydown', function (e) { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) ACTS.capsave(); });
+  var f = $('#capfile', s); if (f) f.addEventListener('change', capPhoto);
+}
 function capHtml(text) {
+  var k = capState.kind;
   return '<div class="shead"><h2>Capture</h2><button class="iconbtn" data-act="close" aria-label="Close">' + icon('x') + '</button></div>'
     + '<label class="sr" for="captext">What\'s on your mind</label>'
-    + '<textarea id="captext" class="capbox" placeholder="What\'s on your mind? Tap the mic on your keyboard to talk.">' + esc(text || '') + '</textarea>'
+    + '<textarea id="captext" class="capbox" placeholder="Anything. &quot;Call the recruiter Friday&quot;, &quot;took meds&quot;, &quot;watched Heat 9/10&quot;… Tap the mic on your keyboard to talk.">' + esc(text || '') + '</textarea>'
     + '<div id="capphoto">' + capPhotoHtml() + '</div>'
-    + '<div class="chips" role="group" aria-label="Save as">' + CAP_KINDS.map(function (k) {
-      return '<button class="chip' + (capState.kind === k[0] ? ' on' : '') + '" data-act="capkind" data-k="' + k[0] + '">' + k[1] + '</button>';
+    + '<div class="chips" role="group" aria-label="Save as">' + CAP_KINDS.map(function (x) {
+      return '<button class="chip' + (k === x[0] ? ' on' : '') + '" data-act="capkind" data-k="' + x[0] + '" aria-pressed="' + (k === x[0]) + '">' + (x[0] === 'smart' ? icon('sparkle', 'sm') : '') + x[1] + '</button>';
     }).join('') + '</div>'
-    + (capState.kind !== 'inbox' ? '<div class="scrollx" role="group" aria-label="Area">' + areasSorted().map(function (a) {
+    + (k === 'task' || k === 'note' ? '<div class="scrollx" role="group" aria-label="Area">' + areasSorted().map(function (a) {
       return '<button class="chip' + (capState.area === a.id ? ' on' : '') + '" data-act="caparea" data-a="' + a.id + '"><i style="background:' + esc(a.color) + '"></i>' + esc(a.short) + '</button>';
-    }).join('') + '</div>' : '<p class="note small">Each line becomes its own item in your inbox.</p>')
+    }).join('') + '</div>'
+      : '<p class="note small">' + (k === 'smart' ? 'Each line is sorted into a task, a habit, a note, a movie and so on' + (AI.ready ? ' by Claude' : '') + '. You check it before anything is filed.' : 'Each line waits in your inbox until you sort it.') + '</p>')
     + '<div class="btnrow">'
     + (ASSETS ? '<label class="btn soft" style="flex:0 0 auto" aria-label="Add a photo">' + icon('camera', 'sm') + '<input id="capfile" type="file" accept="image/*" class="sr"></label>' : '')
-    + '<button class="btn accent" data-act="capsave">Save</button></div>';
+    + '<button class="btn accent" data-act="capsave">' + (k === 'smart' ? 'Sort it' : 'Save') + '</button></div>';
 }
 function capPhotoHtml() {
   if (!capState.photo) return '';
@@ -1373,10 +1478,8 @@ function capPhoto(e) {
 }
 ACTS.capunphoto = function () { capState.photo = null; $('#capphoto').innerHTML = ''; };
 function capRedraw() {
-  var text = $('#captext').value;
-  $('#sheet').innerHTML = '<div class="grab" aria-hidden="true"></div>' + capHtml(text);
-  var f = $('#capfile'); if (f) f.addEventListener('change', capPhoto);
-  var ta = $('#captext'); ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length);
+  var ta = $('#captext'), text = ta ? ta.value : '';
+  $('#sheet').innerHTML = '<div class="grab" aria-hidden="true"></div>' + capHtml(text); capWire($('#sheet'));
 }
 ACTS.capkind = function (d) { capState.kind = d.k; capRedraw(); };
 ACTS.caparea = function (d) { capState.area = capState.area === d.a ? null : d.a; capRedraw(); };
@@ -1384,47 +1487,238 @@ ACTS.capsave = function () {
   var text = $('#captext').value.trim(), photo = capState.photo && capState.photo.id ? capState.photo : null;
   if (!text && !photo) { $('#captext').focus(); return; }
   if (capState.photo === 'uploading') { toast('Wait for the photo to finish uploading'); return; }
-  var k = capState.kind, n = 0;
-  if (k === 'inbox') {
+  var k = capState.kind;
+  if (k === 'inbox' || k === 'smart') {
     var lines = text ? text.split(/\n+/).map(function (s) { return s.trim(); }).filter(Boolean) : [''];
-    lines.forEach(function (line, i) { Store.put('inbox', { text: line, photo: i === 0 && photo ? photo.id : null }, true); n++; });
-    logEvent('Captured ' + (n === 1 ? 'a thought' : n + ' thoughts'));
-  } else if (k === 'task') {
+    var items = lines.map(function (line, i) { return Store.put('inbox', { text: line, photo: i === 0 && photo ? photo.id : null }, true); });
+    logEvent('Captured ' + (items.length === 1 ? 'a thought' : items.length + ' thoughts'));
+    if (k === 'inbox') { closeSheet(); toast(items.length === 1 ? 'In your inbox' : items.length + ' items in your inbox'); return; }
+    // Smart: sort now, inside the sheet.
+    capState.ids = items.map(function (i) { return i.id; });
+    $('#sheet').innerHTML = '<div class="grab" aria-hidden="true"></div><div class="shead"><h2>Sorting…</h2></div><p class="note">' + (AI.ready ? 'Claude is reading ' : 'Reading ') + (items.length === 1 ? 'it' : 'all ' + items.length) + '.</p>';
+    smartSort(items).then(function (sugg) { capState.sugg = sugg; capReview(); });
+    return;
+  }
+  if (k === 'task') {
     var first = text.split('\n')[0], rest = text.split('\n').slice(1).join('\n').trim();
     Store.put('tasks', { t: first || 'Photo', note: rest, area: capState.area, due: today(), done: false, steps: [], photo: photo ? photo.id : null }, true);
     logEvent('Captured a task: ' + first, capState.area);
   } else {
-    var title = text.split('\n')[0];
-    Store.put('notes', { title: title.slice(0, 80) || 'Photo', body: text, area: capState.area, photo: photo ? photo.id : null }, true);
+    Store.put('notes', { title: text.split('\n')[0].slice(0, 80) || 'Photo', body: text, area: capState.area, photo: photo ? photo.id : null }, true);
     logEvent('Captured a note', capState.area);
   }
-  closeSheet();
-  toast(k === 'inbox' ? (n === 1 ? 'In your inbox' : n + ' items in your inbox') : k === 'task' ? 'Task added for today' : 'Note saved');
+  closeSheet(); toast(k === 'task' ? 'Task added for today' : 'Note saved');
 };
+function capReview() {
+  var live = (capState.sugg || []).filter(function (s) { return Store.get('inbox', s.id); });
+  if (!live.length) { closeSheet(); return; }
+  $('#sheet').innerHTML = '<div class="grab" aria-hidden="true"></div><div class="shead"><h2>Here\'s what I got</h2><button class="iconbtn" data-act="close" aria-label="Close and keep in inbox">' + icon('x') + '</button></div>'
+    + (capState.sortNote ? '<p class="note small">' + esc(capState.sortNote) + '</p>' : '')
+    + (live.length > 2 ? '<button class="btn accent block" data-act="suggall" data-w="cap">File all ' + live.length + '</button>' : '')
+    + suggCards(live, 'cap')
+    + '<div class="btnrow"><button class="btn accent" data-act="suggall" data-w="cap">File ' + (live.length === 1 ? 'it' : 'all ' + live.length) + '</button><button class="btn ghost" data-act="close">Keep in inbox</button></div>';
+}
 
-/* ═══ INBOX + SORT ══════════════════════════════════════════════════ */
-var sortRun = null; // {busy, items:[suggestion], err}
+/* ── the sorter ────────────────────────────────────────────────────── */
+function sortContext() {
+  return {
+    areas: areasSorted().map(function (a) { return { id: a.id, name: a.name }; }),
+    projects: projectsAll('active').map(function (p) { return { id: p.id, name: p.t }; }),
+    tasks: Store.all('tasks').filter(function (t) { return !t.done; }).slice(0, 80).map(function (t) { return { id: t.id, t: t.t }; }),
+    habits: habitsSorted().map(function (h) { return { id: h.id, name: h.n }; }),
+    lists: Store.all('ranks').map(function (l) { return { id: l.id, name: l.name }; })
+  };
+}
+/* Resolves to suggestions; never rejects. */
+function smartSort(items) {
+  var ctx = sortContext();
+  capState.sortNote = '';
+  if (!AI.ready) { capState.sortNote = 'Sorted on this device. Open MossOS in the Claude app for smarter sorting.'; return Promise.resolve(items.map(function (i) { return guessSort(i, ctx); })); }
+  var d = new Date();
+  return aiJson('You sort quick captures for a personal organizer. Today is ' + DOWL[d.getDay()] + ' ' + today() + '.\n'
+    + 'Context (JSON): ' + JSON.stringify(ctx) + '\n'
+    + 'For each item choose one type:\n'
+    + '- "task": something to do. Give title, area, project, due, firstStep.\n'
+    + '- "done": says a task in context.tasks was already done ("sent the invoice"). Give targetId.\n'
+    + '- "habit_done": says a habit in context.habits was done today ("took meds", "walked"). Give targetId.\n'
+    + '- "habit_new": wants to start doing something regularly ("start stretching every morning"). Give title (short, like "Stretch").\n'
+    + '- "goal": a longer outcome ("save $5k by summer"). Give title and firstStep as the next action.\n'
+    + '- "note": information to keep (a fact, a number, a reference). "idea": a thought to develop later.\n'
+    + '- "journal": about how the day or the person is going ("rough shift, tired").\n'
+    + '- "movie": a film or show they watched. Give title (clean, no score), year if stated, score (0-10) if stated, note (any opinion).\n'
+    + '- "rank": something to add to one of context.lists. Give targetId and title.\n'
+    + '- "drop": empty or meaningless.\n'
+    + 'Use only ids that appear in the context. area, project, due (YYYY-MM-DD, only if a day is named or clearly implied) may be null. icon: one emoji.\n'
+    + 'Items: ' + JSON.stringify(items.map(function (i) { return { id: i.id, text: i.text || '(photo with no text)' }; })) + '\n'
+    + 'Reply with JSON only: {"items":[{"id":"…","type":"task","title":"…","area":null,"project":null,"due":null,"firstStep":null,"targetId":null,"year":null,"score":null,"note":null,"icon":"📝"}]}')
+    .then(function (r) {
+      var byId = {}; (r && r.items || []).forEach(function (s) { if (s && s.id) byId[s.id] = s; });
+      return items.map(function (i) { return byId[i.id] ? cleanSugg(byId[i.id], i, ctx) : guessSort(i, ctx); });
+    }).catch(function (e) {
+      capState.sortNote = aiError(e) + ' Sorted on this device instead.';
+      return items.map(function (i) { return guessSort(i, ctx); });
+    });
+}
+function idIn(list, id) { return list.some(function (x) { return x.id === id; }) ? id : null; }
+function cleanSugg(s, item, ctx) {
+  var type = STYPES[s.type] ? s.type : 'task';
+  var o = { id: item.id, raw: item.text, type: type, title: String(s.title || item.text || '').slice(0, 140),
+    area: idIn(ctx.areas, s.area), project: idIn(ctx.projects, s.project),
+    due: /^\d{4}-\d\d-\d\d$/.test(s.due || '') ? s.due : null, firstStep: s.firstStep ? String(s.firstStep).slice(0, 120) : null,
+    year: s.year ? String(s.year).slice(0, 4) : '', score: s.score != null && !isNaN(+s.score) ? Math.max(0, Math.min(10, +s.score)) : null,
+    note: s.note ? String(s.note).slice(0, 200) : '', icon: typeof s.icon === 'string' ? s.icon.slice(0, 4) : '', targetId: null };
+  if (type === 'done') o.targetId = idIn(ctx.tasks, s.targetId);
+  if (type === 'habit_done') o.targetId = idIn(ctx.habits, s.targetId);
+  if (type === 'rank') o.targetId = idIn(ctx.lists, s.targetId);
+  if ((type === 'done' || type === 'habit_done' || type === 'rank') && !o.targetId) o.type = type === 'habit_done' ? 'habit_new' : 'task';
+  // A day named in the text that Claude didn't turn into a date.
+  if (o.type === 'task' && !o.due) o.due = guessSort(item, ctx).due || null;
+  return o;
+}
+/* Rule-based sorter: used without Claude, or when Claude fails. */
+function words(s) { return String(s).toLowerCase().replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter(function (w) { return w.length > 2 && ['the', 'and', 'for', 'with', 'did', 'done', 'just', 'finally', 'today'].indexOf(w) < 0; }); }
+function overlap(a, b) { var wa = words(a), wb = words(b); if (!wa.length || !wb.length) return 0; var n = wa.filter(function (w) { return wb.indexOf(w) > -1; }).length; return n / Math.min(wa.length, wb.length); }
+function guessSort(item, ctx) {
+  var text = item.text || '', low = text.toLowerCase().trim();
+  var o = { id: item.id, raw: text, type: 'task', title: text, area: null, project: null, due: null, firstStep: null, year: '', score: null, note: '', icon: '', targetId: null };
+  var sc = low.match(/\b(\d{1,2}(?:\.\d)?)\s*(?:\/\s*10|out of 10)\b/);
+  if (/^(i\s+)?(just\s+)?(watched|saw|rewatched|finished watching)\s+/.test(low) || /\b(movie|film)\b/.test(low) && sc) {
+    var title = text.replace(/^(i\s+)?(just\s+)?(watched|saw|rewatched|finished watching)\s+/i, '').replace(/\b\d{1,2}(\.\d)?\s*(\/\s*10|out of 10)\b/i, '').replace(/\b(movie|film)\b/i, '').trim();
+    var parts = title.split(/\s+[-–—]\s+|,\s+|\.\s+/), ym = /\((\d{4})\)/.exec(parts[0]);
+    o.type = 'movie'; o.title = parts[0].replace(/\(\d{4}\)/, '').trim(); o.year = ym ? ym[1] : ''; o.score = sc ? +sc[1] : null; o.note = parts.slice(1).join(', ');
+    return o;
+  }
+  var hab = ctx.habits.filter(function (h) { return overlap(h.name, text) >= 0.5 || low.indexOf(h.name.toLowerCase()) > -1; })[0];
+  if (hab && /^(took|did|done|went|walked|read|drank|finished|✓|x\b)|\b(done|today)\b/.test(low) || hab && words(text).length <= 3) { o.type = 'habit_done'; o.targetId = hab.id; o.title = hab.name; return o; }
+  if (/^(done|did|finished|sent|called|booked|paid|emailed|submitted|bought|fixed|cleaned)\b/.test(low)) {
+    var best = null, bs = 0; ctx.tasks.forEach(function (t) { var v = overlap(t.t, text); if (v > bs) { bs = v; best = t; } });
+    if (best && bs >= 0.5) { o.type = 'done'; o.targetId = best.id; o.title = best.t; return o; }
+  }
+  if (/\b(every (day|morning|night|evening|week)|each (day|morning|night)|daily|habit)\b/.test(low)) {
+    o.type = 'habit_new'; o.title = text.replace(/\b(start(ing)?|begin|i want to|i should)\b/ig, '').replace(/\b(every (day|morning|night|evening|week)|each (day|morning|night)|daily|habit)\b/ig, '').trim().replace(/^\w/, function (c) { return c.toUpperCase(); }) || text; return o;
+  }
+  if (/^idea\b[:\s-]*/i.test(text)) { o.type = 'idea'; o.title = text.replace(/^idea\b[:\s-]*/i, ''); return o; }
+  if (/^(feeling|felt|i feel|today was|rough|good day|bad day|tired|grateful|journal)\b/.test(low)) { o.type = 'journal'; return o; }
+  if (/^(note|remember that|fyi)\b[:\s-]*/i.test(text) || /https?:\/\//.test(low) || /\b(password|code|address|phone|number|ref)\b.*[:#]/.test(low)) { o.type = 'note'; o.title = text.replace(/^(note|remember that|fyi)\b[:\s-]*/i, '').slice(0, 80); return o; }
+  if (/\b(by|before)\s+(summer|winter|spring|fall|the end of|december|january|june|next year)|\bgoal\b/.test(low)) { o.type = 'goal'; return o; }
+  // A task. Pick up a day, an area and a project from the words.
+  var dw = /\b(today|tonight|tomorrow|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/.exec(low);
+  if (dw) {
+    var t = today();
+    if (dw[1] === 'today' || dw[1] === 'tonight') o.due = t;
+    else if (dw[1] === 'tomorrow') o.due = addDays(t, 1);
+    else { var target = DOWL.map(function (x) { return x.toLowerCase(); }).indexOf(dw[1]), n = (target - parseYmd(t).getDay() + 7) % 7 || 7; o.due = addDays(t, n); }
+  }
+  ctx.areas.forEach(function (a) { if (!o.area && new RegExp('\\b' + a.name.split(/\W/)[0].toLowerCase() + '\\b').test(low)) o.area = a.id; });
+  ctx.projects.forEach(function (p) { if (!o.project && overlap(p.name, text) >= 0.6) o.project = p.id; });
+  if (o.project && !o.area) { var pr = Store.get('projects', o.project); if (pr) o.area = pr.area || null; }
+  return o;
+}
+
+/* ── showing and filing suggestions ────────────────────────────────── */
+function suggCards(list, where) {
+  return list.map(function (s) {
+    var it = Store.get('inbox', s.id) || { text: s.raw };
+    var target = s.type === 'done' ? Store.get('tasks', s.targetId) : s.type === 'habit_done' ? Store.get('habits', s.targetId) : s.type === 'rank' ? Store.get('ranks', s.targetId) : null;
+    var line = s.type === 'done' ? 'Tick off: ' + (target ? target.t : '')
+      : s.type === 'habit_done' ? 'Mark done today: ' + (target ? target.ic + ' ' + target.n : '')
+      : s.type === 'rank' ? 'Add to ' + (target ? target.name : '') + ': ' + s.title
+      : s.type === 'movie' ? s.title + (s.year ? ' (' + s.year + ')' : '')
+      : s.title;
+    var meta = '<span class="pill">' + STYPES[s.type][1] + ' ' + STYPES[s.type][0] + '</span>'
+      + (s.area ? '<span class="pill">' + areaDot(s.area) + '&nbsp;' + esc(areaName(s.area)) + '</span>' : '')
+      + (s.project && Store.get('projects', s.project) ? '<span class="pill">' + esc(Store.get('projects', s.project).t) + '</span>' : '')
+      + (s.due ? '<span class="pill">' + esc(shortDate(s.due)) + '</span>' : '')
+      + (s.type === 'movie' && s.score != null ? '<span class="pill">said ' + esc(s.score) + '/10</span>' : '');
+    var opts = Object.keys(STYPES).filter(function (k) { return (k !== 'done' || s.type === 'done') && (k !== 'habit_done' || s.type === 'habit_done') && (k !== 'rank' || s.type === 'rank'); });
+    return '<div class="sugg"><div class="orig">“' + esc(it.text || '') + '”</div>'
+      + '<div class="t">' + esc(s.icon ? s.icon + ' ' : '') + esc(line) + '</div>'
+      + '<div class="meta">' + meta + '</div>'
+      + (s.firstStep ? '<div class="first">' + (s.type === 'goal' ? 'Next action: ' : 'First step: ') + esc(s.firstStep) + '</div>' : '')
+      + (s.type === 'movie' ? '<div class="first">Goes into Movies, then a few "which was better?" taps rank it.' + (s.note ? ' Note: ' + esc(s.note) : '') + '</div>' : '')
+      + '<div class="btnrow"><button class="btn sm accent" data-act="suggone" data-w="' + where + '" data-id="' + s.id + '">File it</button>'
+      + '<label class="sr" for="st' + s.id + '">Change type</label><select id="st' + s.id + '" class="input sel" data-act-change="suggtype" data-w="' + where + '" data-id="' + s.id + '">'
+      + opts.map(function (k) { return '<option value="' + k + '"' + (k === s.type ? ' selected' : '') + '>' + STYPES[k][0] + '</option>'; }).join('') + '</select></div></div>';
+  }).join('');
+}
+function suggList(where) { return where === 'cap' ? capState.sugg || [] : sortRun && sortRun.items || []; }
+function suggFind(where, id) { return suggList(where).filter(function (s) { return s.id === id; })[0]; }
+function suggRefresh(where) { if (where === 'cap') capReview(); else render(); }
+ACTS.suggtype = function (d, el) {
+  var s = suggFind(d.w, d.id); if (!s) return; s.type = el.value;
+  if (s.type === 'task' && s.title === s.raw) s.title = s.raw;
+  suggRefresh(d.w);
+};
+ACTS.suggone = function (d) {
+  var s = suggFind(d.w, d.id), it = Store.get('inbox', d.id); if (s && it) toast(applySuggestion(it, s)); suggRefresh(d.w);
+};
+ACTS.suggall = function (d) {
+  var out = [];
+  suggList(d.w).slice().forEach(function (s) { var it = Store.get('inbox', s.id); if (it) out.push(applySuggestion(it, s)); });
+  if (d.w === 'cap') closeSheet(); else { sortRun = null; render(); }
+  toast(out.length === 1 ? out[0] : out.length + ' filed');
+  var m = moviesList(); if (out.some(function (x) { return /Movies/.test(x); }) && rankPending(m).length) setTimeout(function () { startRanking(m.id, rankPending(m)[0].id); }, 300);
+};
+/* Files one suggestion and returns a short line saying what happened. */
+function applySuggestion(it, s) {
+  var title = (s.title || it.text || 'Untitled').slice(0, 140), msg = 'Filed';
+  if (s.type === 'task') {
+    var t = Store.put('tasks', { t: title, ic: s.icon || '', area: s.area || null, project: s.project || null, due: s.due || null, done: false,
+      note: s.title && s.title !== it.text ? it.text : '', steps: s.firstStep ? [{ t: s.firstStep, done: false }] : [], photo: it.photo || null }, true);
+    logEvent('New task: ' + t.t, t.area); msg = 'Task added' + (t.due ? ' for ' + shortDate(t.due).toLowerCase() : '');
+  } else if (s.type === 'done') {
+    var dt = Store.get('tasks', s.targetId);
+    if (dt) { completeTask(dt.id, true); msg = 'Ticked off: ' + esc(dt.t); }
+    else { Store.put('tasks', { t: title, done: true, doneAt: Date.now(), due: today(), steps: [] }, true); msg = 'Logged as done'; }
+  } else if (s.type === 'habit_done') {
+    var h = Store.get('habits', s.targetId);
+    if (h) { setMark(h.id, today(), 1); msg = esc(h.n) + ' done today'; }
+  } else if (s.type === 'habit_new') {
+    var nh = Store.put('habits', { ic: s.icon || '✨', n: title.slice(0, 60), color: '#5FCF8E', cue: '', area: s.area || null, days: [1, 1, 1, 1, 1, 1, 1], marks: {}, since: today() }, true);
+    logEvent('New habit: ' + nh.n); msg = 'New habit: ' + esc(nh.n);
+  } else if (s.type === 'goal') {
+    Store.put('goals', { n: title, ic: s.icon || '🎯', area: s.area || null, why: '', steps: [], next: s.firstStep || '', status: 'live', touched: today() }, true);
+    logEvent('New goal: ' + title, s.area); msg = 'New goal';
+  } else if (s.type === 'note' || s.type === 'idea') {
+    Store.put('notes', { title: title.slice(0, 80), body: it.text, area: s.area || null, project: s.project || null, kind: s.type, photo: it.photo || null }, true);
+    logEvent('Saved ' + (s.type === 'idea' ? 'an idea' : 'a note'), s.area); msg = s.type === 'idea' ? 'Idea saved' : 'Note saved';
+  } else if (s.type === 'journal') {
+    var e = entryFor(today());
+    saveEntry(today(), { text: (e && e.text ? e.text + '\n' : '') + it.text }); msg = 'Added to today\'s journal';
+  } else if (s.type === 'movie') {
+    var m = moviesList();
+    addToRank(m.id, { t: title, year: s.year || '', note: [s.score != null ? 'said ' + s.score + '/10' : '', s.note || ''].filter(Boolean).join(' · '), watched: today() });
+    logEvent('Watched ' + title); msg = esc(title) + ' added to Movies';
+  } else if (s.type === 'rank') {
+    var l = Store.get('ranks', s.targetId);
+    if (l) { addToRank(l.id, { t: title }); msg = 'Added to ' + esc(l.name); }
+  } else msg = 'Deleted';
+  Store.del('inbox', it.id);
+  return msg;
+}
+
+/* ═══ INBOX ═════════════════════════════════════════════════════════ */
+var sortRun = null; // {busy} | {items:[suggestion]} | {err}
 TITLES.inbox = 'Inbox';
 VIEWS.inbox = function () {
   var items = Store.all('inbox').sort(function (a, b) { return a.created - b.created; });
-  var h = '';
-  if (!items.length) { sortRun = null; return '<div class="empty">Inbox zero. Everything you capture lands here until you sort it.</div>'
+  if (!items.length) { sortRun = null; return '<div class="empty">Inbox zero. Anything you capture to the inbox waits here until you sort it.</div>'
     + '<button class="btn accent" data-act="capture">' + icon('plus', 'sm') + 'Capture something</button>'; }
-  if (sortRun && sortRun.items) return sortView(items);
-  h += '<div class="card"><p class="note">Claude reads each item and suggests what it is, which area it belongs to, a day if you mentioned one, and a first step. You confirm each one.</p>'
-    + '<div class="btnrow" style="margin-top:12px"><button class="btn accent" data-act="sortai"' + (AI.ready && !(sortRun && sortRun.busy) ? '' : ' disabled') + '>'
-    + icon('sparkle', 'sm') + (sortRun && sortRun.busy ? 'Sorting ' + items.length + '…' : 'Sort with Claude') + '</button></div>'
-    + (AI.ready ? '' : '<p class="note small" style="margin-top:8px">Claude sorting works when MossOS is open in the Claude app. You can sort by hand below.</p>')
-    + (sortRun && sortRun.err ? '<p class="note small" style="margin-top:8px;color:var(--warn)">' + esc(sortRun.err) + '</p>' : '') + '</div>';
-  h += '<div class="list">' + items.map(function (it) {
-    return '<div class="row" style="align-items:flex-start"><span class="grow"><div class="t">' + esc(it.text || '(photo)') + '</div>'
-      + (it.photo ? '<img src="/_blob/' + esc(it.photo) + '" alt="" style="width:80px;height:80px;object-fit:cover;border-radius:10px;margin-top:8px">' : '')
-      + '<div class="s">' + esc(timeAgo(it.created)) + ' ' + exPill(it) + '</div>'
-      + '<div class="chips" style="margin-top:8px"><button class="chip" data-act="file" data-id="' + it.id + '" data-k="task">→ Task</button>'
-      + '<button class="chip" data-act="file" data-id="' + it.id + '" data-k="note">→ Note</button>'
-      + '<button class="chip" data-act="file" data-id="' + it.id + '" data-k="drop">Delete</button></div></span></div>';
-  }).join('') + '</div>';
-  return h;
+  if (sortRun && sortRun.items) {
+    var live = sortRun.items.filter(function (s) { return Store.get('inbox', s.id); });
+    if (live.length) return '<div class="btnrow"><button class="btn accent" data-act="suggall" data-w="inbox">File all ' + live.length + '</button><button class="btn ghost" data-act="sortcancel">Cancel</button></div>'
+      + (sortRun.note ? '<p class="note small">' + esc(sortRun.note) + '</p>' : '') + suggCards(live, 'inbox');
+    sortRun = null;
+  }
+  return '<div class="card"><p class="note">Sorting reads each item and works out what it is: a task, something you already did, a habit, a note, a movie you watched. You check each one before it\'s filed.</p>'
+    + '<div class="btnrow" style="margin-top:12px"><button class="btn accent" data-act="sortai"' + (sortRun && sortRun.busy ? ' disabled' : '') + '>'
+    + icon('sparkle', 'sm') + (sortRun && sortRun.busy ? 'Sorting ' + items.length + '…' : AI.ready ? 'Sort with Claude' : 'Sort') + '</button></div></div>'
+    + '<div class="list">' + items.map(function (it) {
+      return '<div class="row" style="align-items:flex-start"><span class="grow"><div class="t">' + esc(it.text || '(photo)') + '</div>'
+        + (it.photo ? '<img src="/_blob/' + esc(it.photo) + '" alt="" style="width:80px;height:80px;object-fit:cover;border-radius:10px;margin-top:8px">' : '')
+        + '<div class="s">' + esc(timeAgo(it.created)) + ' ' + exPill(it) + '</div></span>'
+        + '<button class="iconbtn" data-act="inboxdel" data-id="' + it.id + '" aria-label="Delete">' + icon('x', 'sm') + '</button></div>';
+    }).join('') + '</div>';
 };
 function timeAgo(ts) {
   var m = Math.round((Date.now() - ts) / 6e4);
@@ -1432,77 +1726,13 @@ function timeAgo(ts) {
   var h = Math.round(m / 60); if (h < 24) return h + ' h ago';
   return shortDate(ymd(new Date(ts)));
 }
-ACTS.file = function (d) {
-  var it = Store.get('inbox', d.id); if (!it) return;
-  applySuggestion(it, { type: d.k, title: it.text, area: null, due: d.k === 'task' ? today() : null });
-};
-function applySuggestion(it, s) {
-  var title = (s.title || it.text || 'Untitled').slice(0, 140);
-  if (s.type === 'task') {
-    var t = Store.put('tasks', { t: title, ic: s.icon || '', area: s.area || null, project: s.project || null, due: s.due || null, done: false, note: s.title && s.title !== it.text ? it.text : '',
-      steps: s.firstStep ? [{ t: s.firstStep, done: false }] : [], photo: it.photo || null }, true);
-    logEvent('Sorted into a task: ' + t.t, t.area);
-  } else if (s.type === 'note' || s.type === 'idea') {
-    Store.put('notes', { title: title.slice(0, 80), body: it.text, area: s.area || null, project: s.project || null, kind: s.type, photo: it.photo || null }, true);
-    logEvent('Sorted into ' + (s.type === 'idea' ? 'an idea' : 'a note'), s.area);
-  }
-  Store.del('inbox', it.id);
-}
+ACTS.inboxdel = function (d) { var it = Store.get('inbox', d.id); Store.del('inbox', d.id); toast('Deleted', function () { Store.put('inbox', it); }); };
 ACTS.sortai = function () {
   var items = Store.all('inbox').sort(function (a, b) { return a.created - b.created; }).slice(0, 25);
   sortRun = { busy: true }; render();
-  var t = today(), d = new Date();
-  aiJson('You sort quick captures for a personal organizer. Today is ' + DOWL[d.getDay()] + ' ' + t + '.\n'
-    + 'Life areas (id: name): ' + areasSorted().map(function (a) { return a.id + ': ' + a.name; }).join('; ') + '.\n'
-    + 'Active projects (id: name): ' + (projectsAll('active').map(function (p) { return p.id + ': ' + p.t; }).join('; ') || 'none') + '.\n'
-    + 'For each item decide:\n- type: "task" (something to do), "note" (information to keep), "idea" (a thought to develop later) or "drop" (empty or meaningless)\n'
-    + '- title: a short, clear version in the person\'s own voice, under 70 characters\n- area: one area id from the list, or null\n'
-    + '- project: one project id from the list if it clearly belongs to that project, else null\n'
-    + '- due: YYYY-MM-DD only if the text names or clearly implies a day, else null\n- firstStep: for tasks, one concrete step under 5 minutes, else null\n- icon: one emoji\n'
-    + 'Items: ' + JSON.stringify(items.map(function (i) { return { id: i.id, text: i.text || '(photo with no text)' }; })) + '\n'
-    + 'Reply with JSON only: {"items":[{"id":"…","type":"task","title":"…","area":null,"project":null,"due":null,"firstStep":null,"icon":"📝"}]}')
-    .then(function (r) {
-      var ids = {}; items.forEach(function (i) { ids[i.id] = 1; });
-      var areaIds = {}; areasSorted().forEach(function (a) { areaIds[a.id] = 1; }); var projIds = {}; projectsAll('active').forEach(function (p) { projIds[p.id] = p; });
-      var out = (r && r.items || []).filter(function (s) { return s && ids[s.id]; }).map(function (s) {
-        return { id: s.id, type: ['task', 'note', 'idea', 'drop'].indexOf(s.type) > -1 ? s.type : 'task',
-          title: String(s.title || '').slice(0, 140), project: projIds[s.project] ? s.project : null, area: areaIds[s.area] ? s.area : (projIds[s.project] ? projIds[s.project].area || null : null),
-          due: /^\d{4}-\d\d-\d\d$/.test(s.due || '') ? s.due : null, firstStep: s.firstStep ? String(s.firstStep).slice(0, 120) : null,
-          icon: typeof s.icon === 'string' ? s.icon.slice(0, 4) : '' };
-      });
-      sortRun = out.length ? { items: out } : { err: 'Claude didn\'t return any suggestions. Try again, or sort by hand.' };
-      render();
-    }).catch(function (e) { sortRun = { err: aiError(e) }; render(); });
+  smartSort(items).then(function (s) { sortRun = { items: s, note: capState.sortNote }; render(); });
 };
-function sortView(items) {
-  var byId = {}; items.forEach(function (i) { byId[i.id] = i; });
-  var live = sortRun.items.filter(function (s) { return byId[s.id]; });
-  if (!live.length) { sortRun = null; return VIEWS.inbox(); }
-  return '<div class="btnrow"><button class="btn accent" data-act="sortacceptall">Accept all ' + live.length + '</button><button class="btn ghost" data-act="sortcancel">Cancel</button></div>'
-    + live.map(function (s) {
-      var it = byId[s.id];
-      return '<div class="sugg"><div class="orig">“' + esc(it.text) + '”</div>'
-        + '<div class="t">' + esc(s.icon ? s.icon + ' ' : '') + esc(s.title || it.text) + '</div>'
-        + '<div class="meta"><span class="pill">' + { task: 'Task', note: 'Note', idea: 'Idea', drop: 'Delete' }[s.type] + '</span>'
-        + (s.area ? '<span class="pill">' + areaDot(s.area) + '&nbsp;' + esc(areaName(s.area)) + '</span>' : '')
-        + (s.project && Store.get('projects', s.project) ? '<span class="pill">' + esc(Store.get('projects', s.project).t) + '</span>' : '')
-        + (s.due ? '<span class="pill">' + esc(shortDate(s.due)) + '</span>' : '') + '</div>'
-        + (s.firstStep ? '<div class="first">First step: ' + esc(s.firstStep) + '</div>' : '')
-        + '<div class="chips"><button class="chip on" data-act="sortaccept" data-id="' + s.id + '">Accept</button>'
-        + ['task', 'note', 'idea', 'drop'].filter(function (k) { return k !== s.type; }).map(function (k) {
-          return '<button class="chip" data-act="sorttype" data-id="' + s.id + '" data-k="' + k + '">' + { task: 'Task', note: 'Note', idea: 'Idea', drop: 'Delete' }[k] + ' instead</button>';
-        }).join('') + '</div></div>';
-    }).join('');
-}
-function sugg(id) { return sortRun && sortRun.items ? sortRun.items.filter(function (s) { return s.id === id; })[0] : null; }
-ACTS.sortaccept = function (d) { var s = sugg(d.id), it = Store.get('inbox', d.id); if (s && it) applySuggestion(it, s); };
-ACTS.sorttype = function (d) { var s = sugg(d.id); if (s) { s.type = d.k; render(); } };
 ACTS.sortcancel = function () { sortRun = null; render(); };
-ACTS.sortacceptall = function () {
-  var n = 0;
-  sortRun.items.slice().forEach(function (s) { var it = Store.get('inbox', s.id); if (it) { applySuggestion(it, s); n++; } });
-  sortRun = null; toast(n + ' sorted'); render();
-};
 
 /* ── 13-areas-more.js ── */
 /* ═══ LIFE AREAS ═══════════════════════════════════════════════════ */
@@ -1625,12 +1855,10 @@ ACTS.notetotask = function (d) {
 TITLES.more = 'More';
 var SOON = {};
 VIEWS.more = function () {
-  var inboxN = Store.all('inbox').length;
-  return '<div class="menu">' + SIDE_MORE.map(function (m) {
-    var soon = SOON[m[0]];
-    return '<button class="row" data-act="tab" data-v="' + m[0] + '">' + icon(m[2]) + '<span class="grow t">' + m[1] + '</span>'
-      + (m[0] === 'inbox' && inboxN ? '<span class="pill">' + inboxN + '</span>' : '') + (soon ? '<span class="soon">Soon</span>' : '') + icon('chev', 'sm chev') + '</button>';
-  }).join('') + '</div>';
+  return jumpTiles(['habits', 'goals', 'notes', 'projects', 'calendar', 'journal', 'tools', 'inbox', 'areas'])
+    + '<div class="menu">' + ['money', 'settings'].map(function (k) {
+      return '<button class="row" data-act="tab" data-v="' + k + '">' + icon(SECTIONS[k][1]) + '<span class="grow t">' + SECTIONS[k][0] + '</span>' + icon('chev', 'sm chev') + '</button>';
+    }).join('') + '</div>';
 };
 VIEWS.soon = function () {
   var c = current();
@@ -1654,6 +1882,11 @@ VIEWS.settings = function () {
     local: 'Saved on this device only. Open MossOS in the Claude app, signed in, to sync between devices.' }[s] || '';
   return '<section><div class="sechead"><h2>Sync</h2>' + syncBadge() + '</div><p class="note">' + esc(syncText) + '</p></section>'
     + '<section><div class="sechead"><h2>Claude</h2></div><p class="note">' + (AI.ready ? 'Available. Sorting and "Break it down" use Claude.' : 'Not available in this view. Sorting and "Break it down" need MossOS open in the Claude app.') + '</p></section>'
+    + '<section><div class="sechead"><h2>Bottom bar</h2></div><p class="note small" style="margin-bottom:10px">Pick the three sections that sit around Capture. Everything else is one tap away under More.</p>'
+    + tabPrefs().map(function (cur, slot) {
+      return '<div class="field" style="margin-bottom:10px"><label for="tab' + slot + '">' + ['First tab', 'Second tab', 'After Capture'][slot] + '</label><select id="tab' + slot + '" class="input sel" data-act-change="settab" data-slot="' + slot + '">'
+        + Object.keys(SECTIONS).filter(function (k) { return k !== 'settings'; }).map(function (k) { return '<option value="' + k + '"' + (k === cur ? ' selected' : '') + '>' + SECTIONS[k][0] + '</option>'; }).join('') + '</select></div>';
+    }).join('') + '</section>'
     + '<section><div class="sechead"><h2>Theme</h2></div><div class="chips">' + [['', 'Match device'], ['dark', 'Dark'], ['light', 'Light']].map(function (o) {
       return '<button class="chip' + ((document.documentElement.dataset.theme || '') === o[0] ? ' on' : '') + '" data-act="theme" data-t="' + o[0] + '">' + o[1] + '</button>';
     }).join('') + '</div></section>'
@@ -1670,6 +1903,15 @@ var resetAsked = 0;
 ACTS.resetall = function () {
   if (Date.now() - resetAsked > 6000) { resetAsked = Date.now(); toast('Tap "Erase everything" again to delete all your MossOS data on every device'); return; }
   resetAsked = 0; Store.resetLocal(); toast('Everything erased'); go('today');
+};
+
+ACTS.settab = function (d, el) {
+  var t = tabPrefs().slice(), i = +d.slot, other = t.indexOf(el.value);
+  if (other > -1 && other !== i) t[other] = t[i]; // swap rather than show a section twice
+  t[i] = el.value;
+  var p = Store.get('meta', 'prefs');
+  if (p) Store.patch('meta', 'prefs', { tabs: t }); else Store.put('meta', { id: 'prefs', tabs: t });
+  toast('Bottom bar updated');
 };
 
 /* ── 14-habits.js ── */
@@ -2384,6 +2626,334 @@ ACTS.form_caladd = function (d, f) {
   render(false, true); toast('Added to ' + shortDate(d.d));
 };
 
+/* ── 19-tools.js ── */
+/* ═══ TOOLS ═════════════════════════════════════════════════════════
+   The tools from the desktop builds, rebuilt for the phone: Rank (movies
+   and any other list, head-to-head instead of stars), Flashcards (spaced
+   review), Bored (pick one thing), Gym (sets, reps, last time) and a
+   focus timer. */
+var TOOL_LIST = [
+  ['rank', '🏆', 'Rank', 'Movies and anything else, ranked head-to-head, not with stars'],
+  ['cards', '🎴', 'Flashcards', 'Decks with spaced review: see a card again just before you\'d forget it'],
+  ['bored', '🎲', 'Bored', 'One thing to do when nothing appeals'],
+  ['gym', '🏋️', 'Gym', 'Sets, reps, and what you lifted last time'],
+  ['timer', '⏱', 'Focus timer', 'Twenty-five on, five off']
+];
+TITLES.tools = 'Tools';
+VIEWS.tools = function () {
+  var pending = Store.all('ranks').reduce(function (n, l) { return n + rankPending(l).length; }, 0);
+  var due = Store.all('decks').reduce(function (n, d) { return n + dueCards(d).length; }, 0);
+  var badge = { rank: pending ? pending + ' to rank' : '', cards: due ? due + ' due' : '', timer: timerState.running ? 'running' : '' };
+  return '<div class="toolgrid">' + TOOL_LIST.map(function (t) {
+    return '<button class="tool" data-act="open" data-v="' + (t[0] === 'rank' ? 'ranks' : t[0] === 'cards' ? 'decks' : t[0]) + '">'
+      + '<span class="tic">' + t[1] + '</span><b>' + t[2] + '</b><small>' + esc(t[3]) + '</small>'
+      + (badge[t[0]] ? '<span class="pill" style="justify-self:start">' + esc(badge[t[0]]) + '</span>' : '') + '</button>';
+  }).join('') + '</div>';
+};
+
+/* ── RANK ───────────────────────────────────────────────────────────────
+   A list keeps `items` (all of them) and `order` (ids, best first). An
+   item not in `order` is waiting to be ranked. Placing one asks "which was
+   better?" against the middle of the remaining range: binary insertion,
+   so a list of 100 takes about 7 taps. */
+function rankList(id) { return Store.get('ranks', id); }
+function rankPending(l) { var o = {}; (l.order || []).forEach(function (x) { o[x] = 1; }); return (l.items || []).filter(function (i) { return !o[i.id]; }); }
+function rankItem(l, iid) { return (l.items || []).filter(function (i) { return i.id === iid; })[0]; }
+function moviesList() {
+  var l = Store.all('ranks').filter(function (x) { return x.kind === 'movies'; })[0];
+  if (!l) l = Store.put('ranks', { name: 'Movies', ic: '🎬', kind: 'movies', items: [], order: [] }, true);
+  return l;
+}
+function addToRank(listId, item) {
+  var l = rankList(listId); if (!l) return null;
+  var it = Object.assign({ id: uid('r'), added: today() }, item);
+  Store.patch('ranks', listId, { items: (l.items || []).concat([it]) });
+  return it;
+}
+TITLES.ranks = 'Rank';
+VIEWS.ranks = function () {
+  var ls = Store.all('ranks').sort(function (a, b) { return (a.kind === 'movies' ? -1 : 0) - (b.kind === 'movies' ? -1 : 0) || a.created - b.created; });
+  return '<p class="note">Head-to-head, not stars. Each new entry is placed by asking which of two was better, a few times.</p>'
+    + (ls.length ? '<div class="list">' + ls.map(function (l) {
+      var p = rankPending(l).length, top = (l.order || [])[0], ti = top ? rankItem(l, top) : null;
+      return '<button class="row" data-act="open" data-v="rank" data-id="' + l.id + '"><span class="ic">' + esc(l.ic || '🏆') + '</span><span class="grow"><div class="t">' + esc(l.name) + '</div>'
+        + '<div class="s">' + (l.order || []).length + ' ranked' + (p ? ' · <b style="color:var(--accent);font-weight:500">' + p + ' to rank</b>' : '') + (ti ? ' · #1 ' + esc(ti.t) : '') + ' ' + exPill(l) + '</div></span>' + icon('chev', 'sm chev') + '</button>';
+    }).join('') + '</div>' : '')
+    + '<form class="addstep" data-form="newrank"><label class="sr" for="nrank">New list</label><input id="nrank" class="input" placeholder="New list: books, burgers, albums…" autocomplete="off"><button class="btn soft" type="submit">Add</button></form>';
+};
+ACTS.form_newrank = function (d, f) {
+  var v = $('input', f).value.trim(); if (!v) return;
+  var l = Store.put('ranks', { name: v, ic: '🏆', kind: 'custom', items: [], order: [] }); push('rank', l.id);
+};
+TITLES.rank = function (id) { var l = rankList(id); return l ? l.name : 'Rank'; };
+VIEWS.rank = function (id) {
+  var l = rankList(id); if (!l) return '<div class="empty">This list was deleted.</div>';
+  var pend = rankPending(l), isM = l.kind === 'movies';
+  var h = '';
+  if (pend.length) h += '<button class="inboxbar" data-act="rankgo" data-id="' + id + '">' + icon('sparkle') + '<span class="grow"><b>' + pend.length + ' to rank</b><span class="muted small"> · ' + esc(pend.map(function (p) { return p.t; }).slice(0, 3).join(', ')) + '</span></span>' + icon('chev', 'sm chev') + '</button>';
+  h += '<form class="addstep" data-form="rankadd" data-id="' + id + '"><label class="sr" for="radd">' + (isM ? 'A movie you watched' : 'Add to this list') + '</label><input id="radd" class="input" placeholder="' + (isM ? 'A movie you watched' : 'Add something') + '" autocomplete="off"><button class="btn accent" type="submit">Add</button></form>';
+  var order = l.order || [];
+  if (!order.length && !pend.length) h += '<div class="empty">' + (isM ? 'Add a movie you\'ve seen. The second one asks which was better, and the list builds itself from there.' : 'Add two things and the comparing starts.') + '</div>';
+  if (order.length) h += '<ol class="ranked">' + order.map(function (iid, i) {
+    var it = rankItem(l, iid); if (!it) return '';
+    return '<li><button class="rrow' + (i < 3 ? ' top' : '') + '" data-act="rankitem" data-id="' + id + '" data-i="' + iid + '"><span class="pos">' + (i + 1) + '</span><span class="grow"><span class="t">' + esc(it.t) + (it.year ? ' <span class="faint">(' + esc(it.year) + ')</span>' : '') + '</span>'
+      + (it.note || it.watched ? '<span class="s">' + (it.watched ? 'Watched ' + esc(shortDate(it.watched)) : '') + (it.note && it.watched ? ' · ' : '') + esc(it.note || '') + '</span>' : '') + '</span></button></li>';
+  }).join('') + '</ol>';
+  h += '<details class="card"><summary class="muted" style="cursor:pointer">List settings</summary><div style="display:grid;gap:12px;margin-top:12px">'
+    + '<div class="btnrow"><div class="field" style="flex:1"><label for="rname">Name</label><input id="rname" class="input" data-rfield="name" value="' + esc(l.name) + '"></div>'
+    + '<div class="field" style="flex:0 0 80px"><label for="ric">Icon</label><input id="ric" class="input" style="text-align:center" maxlength="4" data-rfield="ic" value="' + esc(l.ic || '') + '"></div></div>'
+    + '<button class="btn ghost" style="color:var(--bad);justify-self:start" data-act="delrank" data-id="' + id + '">Delete list</button></div></details>';
+  return h;
+};
+VIEWS.rank.after = function (id) {
+  $$('[data-rfield]').forEach(function (el) { el.addEventListener('input', function () { var f = {}; f[el.dataset.rfield] = el.value; Store.patch('ranks', id, f); }); });
+};
+ACTS.form_rankadd = function (d, f) {
+  var inp = $('input', f), v = inp.value.trim(); if (!v) return;
+  var l = rankList(d.id), m = /^(.*?)\s*\((\d{4})\)\s*$/.exec(v);
+  var it = addToRank(d.id, { t: m ? m[1] : v, year: m ? m[2] : '', watched: l.kind === 'movies' ? today() : null });
+  inp.value = '';
+  if (l.kind === 'movies') logEvent('Watched ' + it.t);
+  startRanking(d.id, it.id);
+};
+ACTS.rankgo = function (d) { var l = rankList(d.id), p = rankPending(l)[0]; if (p) startRanking(d.id, p.id); };
+ACTS.delrank = function (d) {
+  var l = rankList(d.id); Store.del('ranks', d.id); pop(); toast('List deleted', function () { Store.put('ranks', l); });
+};
+
+/* The comparison sheet. */
+var cmp = null; // {list, item, lo, hi, asked}
+function startRanking(listId, itemId) {
+  var l = rankList(listId), order = (l.order || []).filter(function (x) { return x !== itemId; });
+  if (!order.length) { Store.patch('ranks', listId, { order: [itemId] }); toast('Added. The next one gets compared to it.'); return; }
+  cmp = { list: listId, item: itemId, lo: 0, hi: order.length, asked: 0, total: Math.ceil(Math.log2(order.length + 1)) };
+  askNext();
+}
+function askNext() {
+  var l = rankList(cmp.list), order = (l.order || []).filter(function (x) { return x !== cmp.item; });
+  if (cmp.lo >= cmp.hi) {
+    order.splice(cmp.lo, 0, cmp.item); Store.patch('ranks', cmp.list, { order: order });
+    var it = rankItem(l, cmp.item), pos = cmp.lo + 1, next = rankPending(rankList(cmp.list))[0];
+    var listId = cmp.list; cmp = null;
+    if (next) { toast(esc(it.t) + ' is #' + pos + '. Next one…'); startRanking(listId, next.id); }
+    else { closeSheet(); toast(esc(it.t) + ' is #' + pos + ' of ' + order.length); }
+    return;
+  }
+  var mid = (cmp.lo + cmp.hi) >> 1, a = rankItem(l, cmp.item), b = rankItem(l, order[mid]);
+  cmp.mid = mid; cmp.asked++;
+  var card = function (it, side) {
+    return '<button class="vs" data-act="rankpick" data-s="' + side + '"><b>' + esc(it.t) + '</b>' + (it.year ? '<span>' + esc(it.year) + '</span>' : '')
+      + (it.note ? '<small>' + esc(it.note) + '</small>' : '') + '</button>';
+  };
+  openSheet('<div class="shead"><h2>' + (l.kind === 'movies' ? 'Which was better?' : 'Which is better?') + '</h2><button class="iconbtn" data-act="rankstop" aria-label="Stop for now">' + icon('x') + '</button></div>'
+    + '<p class="note small">Question ' + cmp.asked + ' of about ' + Math.max(cmp.asked, cmp.total) + '. Go with your gut.</p>'
+    + '<div class="vsgrid">' + card(a, 'new') + '<span class="vsor">or</span>' + card(b, 'old') + '</div>'
+    + '<button class="btn ghost block" data-act="rankpick" data-s="tie">Too close to call</button>', null, function () { cmp = null; });
+}
+ACTS.rankpick = function (d) {
+  if (!cmp) return;
+  if (d.s === 'new') cmp.hi = cmp.mid; else cmp.lo = cmp.mid + 1; // a tie places it just below
+  sheetOnClose = null; askNext();
+};
+ACTS.rankstop = function () { cmp = null; closeSheet(); toast('Saved. The rest wait under "to rank".'); };
+ACTS.rankitem = function (d) {
+  var l = rankList(d.id), it = rankItem(l, d.i), pos = (l.order || []).indexOf(d.i) + 1;
+  openSheet('<div class="shead"><h2>#' + pos + ' · ' + esc(it.t) + '</h2><button class="iconbtn" data-act="close" aria-label="Close">' + icon('x') + '</button></div>'
+    + '<div class="field"><label for="rinote">Note</label><input id="rinote" class="input" value="' + esc(it.note || '') + '" placeholder="What stuck with you"></div>'
+    + '<div class="btnrow"><button class="btn soft" data-act="rankmove" data-id="' + d.id + '" data-i="' + d.i + '" data-n="-1"' + (pos === 1 ? ' disabled' : '') + '>Move up</button>'
+    + '<button class="btn soft" data-act="rankmove" data-id="' + d.id + '" data-i="' + d.i + '" data-n="1"' + (pos === (l.order || []).length ? ' disabled' : '') + '>Move down</button></div>'
+    + '<div class="btnrow"><button class="btn accent" data-act="rerank" data-id="' + d.id + '" data-i="' + d.i + '">Rank it again</button>'
+    + '<button class="btn ghost" style="color:var(--bad)" data-act="rankdel" data-id="' + d.id + '" data-i="' + d.i + '">Remove</button></div>',
+    function (s) {
+      $('#rinote', s).addEventListener('input', function (e) {
+        var cur = rankList(d.id); Store.patch('ranks', d.id, { items: cur.items.map(function (x) { return x.id === d.i ? Object.assign({}, x, { note: e.target.value }) : x; }) });
+      });
+    });
+};
+ACTS.rankmove = function (d) {
+  var l = rankList(d.id), o = (l.order || []).slice(), i = o.indexOf(d.i), j = i + (+d.n);
+  if (j < 0 || j >= o.length) return; o.splice(i, 1); o.splice(j, 0, d.i);
+  Store.patch('ranks', d.id, { order: o }); closeSheet();
+};
+ACTS.rerank = function (d) {
+  var l = rankList(d.id); Store.patch('ranks', d.id, { order: (l.order || []).filter(function (x) { return x !== d.i; }) });
+  closeSheet(); startRanking(d.id, d.i);
+};
+ACTS.rankdel = function (d) {
+  var l = rankList(d.id);
+  Store.patch('ranks', d.id, { items: l.items.filter(function (x) { return x.id !== d.i; }), order: (l.order || []).filter(function (x) { return x !== d.i; }) });
+  closeSheet(); toast('Removed', function () { Store.put('ranks', l); });
+};
+
+/* ── FLASHCARDS ────────────────────────────────────────────────────────
+   Five boxes. Right moves a card up a box and pushes it further out
+   (1, 2, 4, 8, 16 days); wrong sends it back to box 1, due today. */
+var GAPS = [0, 1, 2, 4, 8, 16];
+function dueCards(dk) { var t = today(); return (dk.cards || []).filter(function (c) { return !c.due || c.due <= t; }); }
+TITLES.decks = 'Flashcards';
+VIEWS.decks = function () {
+  var ds = Store.all('decks').sort(function (a, b) { return a.created - b.created; });
+  return (ds.length ? '<div class="list">' + ds.map(function (dk) {
+    var due = dueCards(dk).length;
+    return '<button class="row" data-act="open" data-v="deck" data-id="' + dk.id + '"><span class="ic">🎴</span><span class="grow"><div class="t">' + esc(dk.name) + '</div>'
+      + '<div class="s">' + (dk.cards || []).length + ' cards' + (due ? ' · <b style="color:var(--accent);font-weight:500">' + due + ' due</b>' : ' · all caught up') + ' ' + exPill(dk) + '</div></span>' + icon('chev', 'sm chev') + '</button>';
+  }).join('') + '</div>' : '<div class="empty">No decks yet.</div>')
+    + '<form class="addstep" data-form="newdeck"><label class="sr" for="ndeck">New deck</label><input id="ndeck" class="input" placeholder="New deck" autocomplete="off"><button class="btn soft" type="submit">Add</button></form>';
+};
+ACTS.form_newdeck = function (d, f) { var v = $('input', f).value.trim(); if (!v) return; var dk = Store.put('decks', { name: v, cards: [] }); push('deck', dk.id); };
+TITLES.deck = function (id) { var dk = Store.get('decks', id); return dk ? dk.name : 'Deck'; };
+var review = null; // {deck, queue:[ids], shown}
+VIEWS.deck = function (id) {
+  var dk = Store.get('decks', id); if (!dk) return '<div class="empty">This deck was deleted.</div>';
+  var due = dueCards(dk), cards = dk.cards || [];
+  var h = '<div class="stats4">' + [['Due', due.length], ['Cards', cards.length], ['Learned', cards.filter(function (c) { return (c.box || 1) >= 4; }).length], ['New', cards.filter(function (c) { return !c.seen; }).length]]
+    .map(function (x) { return '<div><span>' + x[0] + '</span><b>' + x[1] + '</b></div>'; }).join('') + '</div>';
+  if (review && review.deck === id && review.queue.length) {
+    var c = cards.filter(function (x) { return x.id === review.queue[0]; })[0];
+    if (c) return h + '<div class="flash"><div class="small faint">' + review.queue.length + ' left · box ' + (c.box || 1) + '</div><div class="q">' + esc(c.q) + '</div>'
+      + (review.shown ? '<div class="a">' + esc(c.a) + '</div><div class="btnrow"><button class="btn soft" data-act="cardans" data-ok="0">Again</button><button class="btn accent" data-act="cardans" data-ok="1">Got it</button></div>'
+        : '<button class="btn accent block" data-act="cardshow">Show the answer</button>') + '</div>'
+      + '<button class="link" data-act="cardstop">Stop for now</button>';
+  }
+  h += due.length ? '<button class="btn accent block" data-act="cardstart" data-id="' + id + '">Review ' + due.length + ' card' + (due.length === 1 ? '' : 's') + '</button>' : '<div class="empty">All caught up. The next cards come due ' + esc(nextDue(dk)) + '.</div>';
+  h += '<form class="cardform" data-form="addcard" data-id="' + id + '"><label class="sr" for="cq">Front</label><input id="cq" class="input" name="q" placeholder="Front: the question" autocomplete="off">'
+    + '<label class="sr" for="ca">Back</label><input id="ca" class="input" name="a" placeholder="Back: the answer" autocomplete="off"><button class="btn soft" type="submit">Add card</button></form>';
+  h += cards.length ? '<details class="card"><summary class="muted" style="cursor:pointer">All ' + cards.length + ' cards</summary><div class="list" style="margin-top:6px">' + cards.map(function (c) {
+    return '<div class="row"><span class="grow"><div class="t">' + esc(c.q) + '</div><div class="s">' + esc(c.a) + ' · box ' + (c.box || 1) + '</div></span><button class="iconbtn" data-act="delcard" data-id="' + id + '" data-c="' + c.id + '" aria-label="Delete card">' + icon('x', 'sm') + '</button></div>';
+  }).join('') + '</div></details>' : '';
+  h += '<button class="btn ghost" style="color:var(--bad);justify-self:start" data-act="deldeck" data-id="' + id + '">Delete deck</button>';
+  return h;
+};
+function nextDue(dk) { var d = (dk.cards || []).map(function (c) { return c.due; }).filter(Boolean).sort()[0]; return d ? shortDate(d).toLowerCase() : 'later'; }
+ACTS.cardstart = function (d) { var dk = Store.get('decks', d.id); review = { deck: d.id, queue: dueCards(dk).map(function (c) { return c.id; }), shown: false, right: 0 }; render(); };
+ACTS.cardshow = function () { review.shown = true; render(); };
+ACTS.cardstop = function () { review = null; render(); };
+ACTS.cardans = function (d) {
+  var dk = Store.get('decks', review.deck), cid = review.queue.shift(), ok = d.ok === '1';
+  var cards = dk.cards.map(function (c) {
+    if (c.id !== cid) return c;
+    var box = ok ? Math.min(5, (c.box || 1) + 1) : 1;
+    return Object.assign({}, c, { box: box, due: ok ? addDays(today(), GAPS[box]) : today(), seen: true });
+  });
+  if (!ok) review.queue.push(cid); else review.right++;
+  review.shown = false;
+  Store.patch('decks', review.deck, { cards: cards });
+  if (!review.queue.length) { logEvent('Reviewed ' + dk.name + ': ' + review.right + ' cards'); toast('Done. ' + review.right + ' cards reviewed.'); review = null; render(); }
+};
+ACTS.form_addcard = function (d, f) {
+  var q = $('[name=q]', f).value.trim(), a = $('[name=a]', f).value.trim(); if (!q || !a) { toast('A card needs a front and a back'); return; }
+  var dk = Store.get('decks', d.id);
+  Store.patch('decks', d.id, { cards: (dk.cards || []).concat([{ id: uid('c'), q: q, a: a, box: 1, due: today() }]) });
+  render(false, true); var n = $('#cq'); if (n) n.focus();
+};
+ACTS.delcard = function (d) { var dk = Store.get('decks', d.id); Store.patch('decks', d.id, { cards: dk.cards.filter(function (c) { return c.id !== d.c; }) }); };
+ACTS.deldeck = function (d) { var dk = Store.get('decks', d.id); Store.del('decks', d.id); pop(); toast('Deck deleted', function () { Store.put('decks', dk); }); };
+
+/* ── BORED ─────────────────────────────────────────────────────────── */
+function boredDoc() { return Store.get('tools', 'bored') || Store.put('tools', { id: 'bored', items: [], last: null }, true); }
+TITLES.bored = 'Bored';
+var boredPick = null;
+VIEWS.bored = function () {
+  var b = boredDoc(), items = b.items || [];
+  return '<div class="flash" style="text-align:center"><div class="q">' + esc(boredPick || 'Nothing appeals? Let it choose.') + '</div>'
+    + '<button class="btn accent block" data-act="boredgo"' + (items.length ? '' : ' disabled') + '>🎲 ' + (boredPick ? 'Something else' : 'Pick one') + '</button>'
+    + (boredPick ? '<button class="link" data-act="boredtask">Put it on today</button>' : '') + '</div>'
+    + '<form class="addstep" data-form="boredadd"><label class="sr" for="badd">Add an option</label><input id="badd" class="input" placeholder="Add an option" autocomplete="off"><button class="btn soft" type="submit">Add</button></form>'
+    + '<div class="list">' + items.map(function (x, i) {
+      return '<div class="row"><span class="grow t">' + esc(x) + '</span><button class="iconbtn" data-act="boreddel" data-i="' + i + '" aria-label="Remove">' + icon('x', 'sm') + '</button></div>';
+    }).join('') + '</div>';
+};
+ACTS.boredgo = function () {
+  var items = boredDoc().items || []; if (!items.length) return;
+  var pool = items.length > 1 ? items.filter(function (x) { return x !== boredPick; }) : items;
+  boredPick = pool[Math.floor(Math.random() * pool.length)]; render();
+};
+ACTS.boredtask = function () { Store.put('tasks', { t: boredPick, due: today(), done: false, steps: [], note: 'Picked by Bored.' }); toast('On today'); };
+ACTS.form_boredadd = function (d, f) { var v = $('input', f).value.trim(); if (!v) return; var b = boredDoc(); Store.patch('tools', 'bored', { items: (b.items || []).concat([v]) }); render(false, true); var n = $('#badd'); if (n) n.focus(); };
+ACTS.boreddel = function (d) { var b = boredDoc(), items = (b.items || []).slice(); items.splice(+d.i, 1); Store.patch('tools', 'bored', { items: items }); };
+
+/* ── GYM ───────────────────────────────────────────────────────────── */
+TITLES.gym = 'Gym';
+VIEWS.gym = function () {
+  var ex = Store.all('lifts').sort(function (a, b) { return (b.lastAt || 0) - (a.lastAt || 0); });
+  return (ex.length ? '<div class="list">' + ex.map(function (e) {
+    var last = (e.log || [])[e.log.length - 1];
+    return '<button class="row" data-act="open" data-v="lift" data-id="' + e.id + '"><span class="ic">🏋️</span><span class="grow"><div class="t">' + esc(e.n) + '</div>'
+      + '<div class="s">' + (last ? 'Last: ' + liftLine(last, e.unit) + ' · ' + esc(shortDate(last.d)) : 'Not logged yet') + ' ' + exPill(e) + '</div></span>' + icon('chev', 'sm chev') + '</button>';
+  }).join('') + '</div>' : '<div class="empty">Add the lifts you do. Each one remembers what you did last time.</div>')
+    + '<form class="addstep" data-form="newlift"><label class="sr" for="nlift">New exercise</label><input id="nlift" class="input" placeholder="New exercise" autocomplete="off"><button class="btn soft" type="submit">Add</button></form>';
+};
+function liftLine(x, unit) { return (x.w ? x.w + ' ' + (unit || 'lb') + ' · ' : '') + x.sets + '×' + x.reps; }
+ACTS.form_newlift = function (d, f) { var v = $('input', f).value.trim(); if (!v) return; var e = Store.put('lifts', { n: v, unit: 'lb', log: [] }); push('lift', e.id); };
+TITLES.lift = function (id) { var e = Store.get('lifts', id); return e ? e.n : 'Exercise'; };
+VIEWS.lift = function (id) {
+  var e = Store.get('lifts', id); if (!e) return '<div class="empty">This exercise was deleted.</div>';
+  var log = e.log || [], last = log[log.length - 1], best = log.reduce(function (m, x) { return Math.max(m, +x.w || 0); }, 0);
+  var recent = log.slice(-12), maxW = recent.reduce(function (m, x) { return Math.max(m, +x.w || 0); }, 0) || 1;
+  return '<div class="stats4">' + [['Last', last ? (last.w || '—') : '—'], ['Best', best || '—'], ['Sessions', log.length], ['Unit', e.unit || 'lb']].map(function (x) { return '<div><span>' + x[0] + '</span><b>' + x[1] + '</b></div>'; }).join('') + '</div>'
+    + (recent.length > 1 ? '<div class="liftbars" aria-label="Weight over the last ' + recent.length + ' sessions">' + recent.map(function (x) { return '<i style="height:' + Math.max(8, Math.round((+x.w || 0) / maxW * 100)) + '%" title="' + esc(liftLine(x, e.unit)) + '"></i>'; }).join('') + '</div>' : '')
+    + '<form class="liftform" data-form="logset" data-id="' + id + '"><div class="field"><label for="lw">Weight</label><input id="lw" class="input" name="w" inputmode="decimal" value="' + esc(last ? last.w : '') + '"></div>'
+    + '<div class="field"><label for="ls">Sets</label><input id="ls" class="input" name="sets" inputmode="numeric" value="' + esc(last ? last.sets : '3') + '"></div>'
+    + '<div class="field"><label for="lr">Reps</label><input id="lr" class="input" name="reps" inputmode="numeric" value="' + esc(last ? last.reps : '8') + '"></div>'
+    + '<button class="btn accent" type="submit">Log today</button></form>'
+    + (last ? '<p class="note small">Last time: ' + esc(liftLine(last, e.unit)) + ' on ' + esc(shortDate(last.d)) + '. Same again counts.</p>' : '')
+    + (log.length ? '<div class="list">' + log.slice().reverse().slice(0, 20).map(function (x, i) {
+      return '<div class="row"><span class="grow"><div class="t">' + esc(liftLine(x, e.unit)) + '</div><div class="s">' + esc(shortDate(x.d)) + '</div></span>'
+        + '<button class="iconbtn" data-act="delset" data-id="' + id + '" data-i="' + (log.length - 1 - i) + '" aria-label="Delete">' + icon('x', 'sm') + '</button></div>';
+    }).join('') + '</div>' : '')
+    + '<div class="btnrow"><button class="btn soft" data-act="liftunit" data-id="' + id + '">Switch to ' + (e.unit === 'kg' ? 'lb' : 'kg') + '</button><button class="btn ghost" style="color:var(--bad)" data-act="dellift" data-id="' + id + '">Delete</button></div>';
+};
+ACTS.form_logset = function (d, f) {
+  var g = function (n) { return $('[name=' + n + ']', f).value.trim(); };
+  var x = { d: today(), w: parseFloat(g('w')) || 0, sets: parseInt(g('sets'), 10) || 1, reps: parseInt(g('reps'), 10) || 1 };
+  var e = Store.get('lifts', d.id);
+  Store.patch('lifts', d.id, { log: (e.log || []).concat([x]), lastAt: Date.now() });
+  logEvent(e.n + ': ' + liftLine(x, e.unit), 'gym'); toast('Logged');
+};
+ACTS.delset = function (d) { var e = Store.get('lifts', d.id), log = (e.log || []).slice(); log.splice(+d.i, 1); Store.patch('lifts', d.id, { log: log }); };
+ACTS.liftunit = function (d) { var e = Store.get('lifts', d.id); Store.patch('lifts', d.id, { unit: e.unit === 'kg' ? 'lb' : 'kg' }); };
+ACTS.dellift = function (d) { var e = Store.get('lifts', d.id); Store.del('lifts', d.id); pop(); toast('Deleted', function () { Store.put('lifts', e); }); };
+
+/* ── FOCUS TIMER ───────────────────────────────────────────────────── */
+var TMODES = [['Focus', 25], ['Short break', 5], ['Long break', 15]];
+var timerState = (function () { try { return JSON.parse(localStorage.getItem('mossos.timer') || 'null') || { m: 0, end: null, left: 1500, running: false }; } catch (e) { return { m: 0, end: null, left: 1500, running: false }; } })();
+function timerSave() { try { localStorage.setItem('mossos.timer', JSON.stringify(timerState)); } catch (e) {} }
+function timerLeft() { return timerState.running ? Math.max(0, Math.round((timerState.end - Date.now()) / 1000)) : timerState.left; }
+var timerTick = null;
+function timerLoop() {
+  clearInterval(timerTick);
+  if (!timerState.running) return;
+  timerTick = setInterval(function () {
+    var l = timerLeft(), el = $('#tclock');
+    if (el) el.textContent = fmtSecs(l);
+    if (l <= 0) {
+      clearInterval(timerTick); timerState.running = false; timerState.left = TMODES[timerState.m][1] * 60; timerSave();
+      if (timerState.m === 0) logEvent('Focused for ' + TMODES[0][1] + ' minutes');
+      toast(timerState.m === 0 ? 'Focus done. Take five.' : 'Break over.');
+      if (navigator.vibrate) navigator.vibrate(200);
+      render();
+    }
+  }, 500);
+}
+function fmtSecs(s) { return String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0'); }
+TITLES.timer = 'Focus timer';
+VIEWS.timer = function () {
+  return '<div class="seg" role="tablist">' + TMODES.map(function (m, i) {
+    return '<button role="tab" aria-selected="' + (timerState.m === i) + '" class="' + (timerState.m === i ? 'on' : '') + '" data-act="tmode" data-i="' + i + '">' + m[0] + '</button>';
+  }).join('') + '</div>'
+    + '<div class="timer"><div id="tclock" class="tclock" aria-live="off">' + fmtSecs(timerLeft()) + '</div>'
+    + '<div class="btnrow"><button class="btn accent" data-act="tgo">' + (timerState.running ? 'Pause' : 'Start') + '</button><button class="btn soft" data-act="treset">Reset</button></div></div>'
+    + '<p class="note">Keep MossOS open for the alert. If you leave, the time still counts down and you\'ll see where it got to when you come back.</p>';
+};
+VIEWS.timer.after = function () { timerLoop(); };
+ACTS.tmode = function (d) { timerState = { m: +d.i, end: null, left: TMODES[+d.i][1] * 60, running: false }; timerSave(); render(); };
+ACTS.tgo = function () {
+  if (timerState.running) { timerState.left = timerLeft(); timerState.running = false; }
+  else { timerState.end = Date.now() + timerState.left * 1000; timerState.running = true; }
+  timerSave(); render();
+};
+ACTS.treset = function () { timerState = { m: timerState.m, end: null, left: TMODES[timerState.m][1] * 60, running: false }; timerSave(); render(); };
+
 /* ── 99-boot.js ── */
 /* ═══ BOOT ══════════════════════════════════════════════════════════ */
 try { var th = localStorage.getItem('mossos.theme'); if (th) document.documentElement.dataset.theme = th; } catch (e) {}
@@ -2399,7 +2969,7 @@ function maybeSeed() {
 }
 Store.connect(maybeSeed).then(function (live) { if (!live) maybeSeed(); });
 if (!hadCache && (!window.claude || !window.claude.use)) maybeSeed();
-aiInit(); assetsInit();
+aiInit(); assetsInit(); timerLoop();
 render(true);
 
 /* A new day while the app stays open: repaint at midnight. */

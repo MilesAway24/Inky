@@ -402,3 +402,44 @@ textarea.input{resize:vertical;min-height:110px}
 .blk{font-size:13px;font-weight:500;padding:6px 9px;border-radius:9px;background:var(--c);color:#111;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left}
 .blk.done{opacity:.45;text-decoration:line-through}
 .wkday .hab{grid-column:2}
+
+/* ── jump tiles, more ─────────────────────────────────────────────── */
+.jump{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.jt2{display:grid;gap:2px;justify-items:start;padding:12px;border-radius:14px;background:var(--surface);border:1px solid var(--line);text-align:left;min-width:0;min-height:76px}
+.jt2 svg.i{color:var(--accent);margin-bottom:4px}
+.jt2 b{font-weight:500;font-size:15px}
+.jt2 span{font-size:12px;color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+@media (min-width:600px){.jump{grid-template-columns:repeat(6,minmax(0,1fr))}}
+select.input.sel{min-height:40px;padding:6px 10px;font-size:15px;width:auto;max-width:100%;flex:0 1 auto;appearance:auto}
+
+/* ── tools ───────────────────────────────────────────────────────── */
+.toolgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tool{display:grid;gap:4px;align-content:start;padding:14px;border-radius:16px;background:var(--surface);border:1px solid var(--line);text-align:left;min-width:0}
+.tool .tic{font-size:26px}
+.tool b{font-weight:500;font-size:16px}
+.tool small{font-size:12.5px;color:var(--faint);line-height:1.35}
+.ranked{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.rrow{display:flex;align-items:center;gap:12px;width:100%;padding:10px 12px;border-radius:14px;background:var(--surface);border:1px solid var(--line);text-align:left;min-height:56px}
+.rrow .pos{width:32px;flex:none;font-size:22px;font-weight:300;letter-spacing:-.03em;color:var(--faint);font-variant-numeric:tabular-nums;text-align:center}
+.rrow.top .pos{color:var(--accent);font-weight:400}
+.rrow .grow{display:grid;gap:2px;min-width:0}
+.rrow .t{font-size:16px;overflow-wrap:anywhere}
+.rrow .s{font-size:12.5px;color:var(--faint)}
+.vsgrid{display:grid;gap:8px}
+.vs{display:grid;gap:4px;padding:18px;border-radius:16px;background:var(--surface);border:1.5px solid var(--line2);text-align:left;min-height:84px}
+.vs:hover,.vs:focus-visible{border-color:var(--accent)}
+.vs b{font-size:19px;font-weight:500;letter-spacing:-.01em}
+.vs span{font-size:13px;color:var(--faint)}
+.vs small{font-size:13px;color:var(--muted)}
+.vsor{justify-self:center;font-size:13px;color:var(--faint)}
+.flash{display:grid;gap:14px;padding:22px 18px;border-radius:20px;background:var(--surface);border:1px solid var(--line)}
+.flash .q{font-size:22px;font-weight:500;letter-spacing:-.015em;line-height:1.3}
+.flash .a{font-size:18px;color:var(--accent);line-height:1.35}
+.cardform,.liftform{display:grid;gap:8px}
+.liftform{grid-template-columns:repeat(3,minmax(0,1fr))}
+.liftform .btn{grid-column:1/-1}
+.liftbars{display:flex;align-items:flex-end;gap:4px;height:70px;padding:8px;border-radius:14px;background:var(--surface);border:1px solid var(--line)}
+.liftbars i{flex:1;display:block;border-radius:4px 4px 0 0;background:var(--accent);opacity:.85}
+.timer{display:grid;gap:18px;justify-items:center;padding:28px 16px;border-radius:22px;background:var(--surface);border:1px solid var(--line)}
+.tclock{font-size:72px;font-weight:200;letter-spacing:-.04em;line-height:1;font-variant-numeric:tabular-nums}
+.timer .btnrow{width:100%;max-width:340px}

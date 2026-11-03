@@ -41,8 +41,8 @@ function seedData() {
   var now = new Date(); now.setHours(7, 15, 0, 0);
   [['Morning brief opened, priorities set', null, 0], ['Leg day logged', 'gym', 145], ['3 slipped tasks moved to real dates', 'hcpd', 230]]
     .forEach(function (l) { if (now.getTime() + l[2] * 6e4 < Date.now()) Store.put('log', { example: true, at: now.getTime() + l[2] * 6e4, day: t, text: l[0], area: l[1] }, true); });
-  seedPhase2(); seedPhase3();
-  Store.put('meta', { id: 'setup', seeded: Date.now(), examples: true, v: 3 });
+  seedPhase2(); seedPhase3(); seedPhase4();
+  Store.put('meta', { id: 'setup', seeded: Date.now(), examples: true, v: 4 });
 }
 
 /* Habits and goals: added in phase 2, so they're also offered to people
@@ -68,11 +68,30 @@ function seedPhase2() {
     });
 }
 function upgradeSeed() {
-  var m = Store.get('meta', 'setup'), v = m ? (m.v || 1) : 3;
-  if (!m || v >= 3) return;
+  var m = Store.get('meta', 'setup'), v = m ? (m.v || 1) : 4;
+  if (!m || v >= 4) return;
   if (m.examples && v < 2 && !Store.all('habits').length && !Store.all('goals').length) seedPhase2();
-  if (m.examples && !Store.all('projects').length && !Store.all('journal').length) seedPhase3();
-  Store.patch('meta', 'setup', { v: 3 });
+  if (m.examples && v < 3 && !Store.all('projects').length && !Store.all('journal').length) seedPhase3();
+  if (m.examples && !Store.all('ranks').length && !Store.all('decks').length && !Store.all('lifts').length) seedPhase4();
+  Store.patch('meta', 'setup', { v: 4 });
+}
+
+/* Tools (phase 4): a ranked Movies list, a deck, Bored options, lifts. */
+function seedPhase4() {
+  var t = today();
+  var films = [['Heat', '1995', 'The diner scene.'], ['Arrival', '2016', ''], ['Sinners', '2025', 'Better than the trailer suggested.'], ['Top Gun: Maverick', '2022', ''], ['Paddington 2', '2017', '']];
+  var items = films.map(function (f, i) { return { id: 'rx' + i, t: f[0], year: f[1], note: f[2], watched: addDays(t, -10 * (i + 1)), added: addDays(t, -10 * (i + 1)) }; });
+  Store.put('ranks', { example: true, name: 'Movies', ic: '🎬', kind: 'movies', items: items.concat([{ id: 'rx9', t: 'The Fall Guy', year: '2024', note: '', watched: addDays(t, -1), added: addDays(t, -1) }]),
+    order: ['rx0', 'rx1', 'rx2', 'rx3', 'rx4'] }, true);
+  var cards = [['¿Dónde le duele?', 'Where does it hurt?'], ['¿Está herido?', 'Are you hurt?'], ['¿Cómo se llama?', 'What is your name?'],
+    ['¿Tiene alergias?', 'Do you have any allergies?'], ['Tranquilo, estoy aquí para ayudarle.', 'Stay calm, I\'m here to help you.']];
+  Store.put('decks', { example: true, name: 'Spanish for calls', cards: cards.map(function (c, i) { return { id: 'cx' + i, q: c[0], a: c[1], box: i < 2 ? 2 : 1, due: i < 2 ? addDays(t, 1) : t, seen: i < 2 }; }) }, true);
+  Store.put('tools', { example: true, id: 'bored', items: ['Walk to the end of the street and back', 'Ten push-ups', 'Text someone you haven\'t in a while', 'Tidy one surface',
+    'Read ten pages', 'Stretch for five minutes', 'Plan tomorrow\'s meals', 'Put on an album you love, start to finish'] }, true);
+  [['Bench press', [[125, 3, 8], [130, 3, 8], [135, 3, 6], [135, 3, 8]]], ['Squat', [[165, 3, 8], [175, 3, 8], [185, 3, 6]]], ['Deadlift', [[205, 3, 5], [215, 3, 5], [225, 3, 5]]]]
+    .forEach(function (x, j) {
+      Store.put('lifts', { example: true, n: x[0], unit: 'lb', lastAt: Date.now() - j * 864e5, log: x[1].map(function (r, i) { return { d: addDays(t, -(x[1].length - i) * 3 - j), w: r[0], sets: r[1], reps: r[2] }; }) }, true);
+    });
 }
 
 /* Projects (from the Sep 18 build's model, about Miles's own work) and a
@@ -117,7 +136,7 @@ function seedPhase3() {
 }
 
 function clearExamples() {
-  ['tasks', 'inbox', 'notes', 'log', 'habits', 'goals', 'projects', 'journal'].forEach(function (c) {
+  ['tasks', 'inbox', 'notes', 'log', 'habits', 'goals', 'projects', 'journal', 'ranks', 'decks', 'lifts', 'tools'].forEach(function (c) {
     Store.all(c).forEach(function (o) { if (o.example) Store.del(c, o.id); });
   });
   var m = Store.get('meta', 'setup'); if (m) Store.patch('meta', 'setup', { examples: false });

@@ -41,12 +41,17 @@
   function sample() { return Promise.resolve({ text: 'ok', truncated: false }); }
   sample.json = function (prompt) {
     window.__mock.sampleCalls.push(prompt);
-    var m = /Items: (\[.*\])\n/.exec(prompt);
+    var m = /Items: (\[.*\])\n/.exec(prompt), cm = /Context \(JSON\): (\{.*\})\n/.exec(prompt);
     if (m) {
-      var items = JSON.parse(m[1]);
+      var items = JSON.parse(m[1]), ctx = cm ? JSON.parse(cm[1]) : { habits: [], tasks: [] };
       return Promise.resolve({ items: items.map(function (it, i) {
-        return { id: it.id, type: /idea/i.test(it.text) ? 'idea' : 'task', title: it.text.replace(/^Idea:\s*/i, ''), area: i % 2 ? 'inky' : 'hcpd',
-          due: null, firstStep: 'Open the thing', icon: '📝' };
+        var t = it.text, low = t.toLowerCase();
+        if (/^watched /.test(low)) { var sc = /(\d+)\/10/.exec(t); return { id: it.id, type: 'movie', title: t.replace(/^watched /i, '').replace(/\s*\d+\/10.*/, ''), score: sc ? +sc[1] : null, icon: '🎬' }; }
+        var hb = (ctx.habits || []).filter(function (h) { return low.indexOf(h.name.toLowerCase()) > -1; })[0];
+        if (hb) return { id: it.id, type: 'habit_done', targetId: hb.id, title: hb.name };
+        if (/every morning/.test(low)) return { id: it.id, type: 'habit_new', title: 'Stretch', icon: '🧘' };
+        if (/^idea/i.test(t)) return { id: it.id, type: 'idea', title: t.replace(/^Idea:\s*/i, ''), area: 'inky' };
+        return { id: it.id, type: 'task', title: t, area: i % 2 ? 'inky' : 'hcpd', due: null, firstStep: 'Open the thing', icon: '📝' };
       }) });
     }
     if (/Suggest three possible next actions/.test(prompt)) return Promise.resolve({ options: ['Book the PAT practice slot', 'Run the 1.5 mile test once', 'Print the packet checklist'] });

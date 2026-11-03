@@ -4,10 +4,20 @@
    listener that dispatches on data-act. */
 var nav = { tab: 'today', stack: [] };
 var VIEWS = {}, ACTS = {}, TITLES = {};
-var TABS = [['today', 'Today', 'today'], ['tasks', 'Tasks', 'tasks'], ['capture', 'Capture', 'plus'], ['money', 'Money', 'money'], ['more', 'More', 'more']];
-var SIDE_MORE = [['areas', 'Life areas', 'areas'], ['inbox', 'Inbox', 'inbox'], ['habits', 'Habits', 'habits'], ['goals', 'Goals', 'goals'],
-  ['notes', 'Notes', 'notes'], ['journal', 'Journal', 'journal'], ['projects', 'Projects', 'projects'],
-  ['calendar', 'Calendar', 'calendar'], ['settings', 'Settings', 'settings']];
+/* Every section. The bottom bar shows three of them (your choice, in
+   Settings) around Capture, then More. */
+var SECTIONS = {
+  today: ['Today', 'today'], tasks: ['Tasks', 'tasks'], habits: ['Habits', 'habits'], goals: ['Goals', 'goals'],
+  notes: ['Notes', 'notes'], projects: ['Projects', 'projects'], calendar: ['Calendar', 'calendar'], journal: ['Journal', 'journal'],
+  tools: ['Tools', 'tools'], money: ['Money', 'money'], inbox: ['Inbox', 'inbox'], areas: ['Life areas', 'areas'], settings: ['Settings', 'settings']
+};
+var TAB_DEFAULT = ['today', 'tasks', 'habits'];
+function tabPrefs() { var p = Store.get('meta', 'prefs'); var t = p && p.tabs; return t && t.length === 3 && t.every(function (x) { return SECTIONS[x]; }) ? t : TAB_DEFAULT; }
+function tabsNow() {
+  var t = tabPrefs();
+  return [[t[0]].concat(SECTIONS[t[0]]), [t[1]].concat(SECTIONS[t[1]]), ['capture', 'Capture', 'plus'], [t[2]].concat(SECTIONS[t[2]]), ['more', 'More', 'more']];
+}
+var SIDE_MORE = ['habits', 'goals', 'notes', 'projects', 'calendar', 'journal', 'tools', 'inbox', 'areas', 'settings'].map(function (k) { return [k, SECTIONS[k][0], SECTIONS[k][1]]; });
 
 function leaving() { if (current().view === 'project' && typeof maybeAskLeftOff === 'function') setTimeout(maybeAskLeftOff, 0); }
 function go(tab) { leaving(); nav.tab = tab; nav.stack = []; render(true); }
@@ -46,14 +56,14 @@ function render(scrollTop, force) {
 }
 function paintChrome() {
   var c = current(), active = nav.stack.length ? nav.tab : c.view;
-  $('#tabs').innerHTML = TABS.map(function (t) {
+  $('#tabs').innerHTML = tabsNow().map(function (t) {
     if (t[0] === 'capture') return '<button class="cap" data-act="capture" aria-label="Capture">' + '<span>' + icon('plus') + '</span></button>';
     return '<button class="' + (active === t[0] ? 'on' : '') + '" data-act="tab" data-v="' + t[0] + '" aria-current="' + (active === t[0] ? 'page' : 'false') + '">' + icon(t[2]) + '<span>' + t[1] + '</span></button>';
   }).join('');
   var inboxN = Store.all('inbox').length;
   $('#side').innerHTML = '<div class="brand">' + icon('moss') + 'MossOS</div>'
     + '<button class="capbtn" data-act="capture">' + icon('plus', 'sm') + 'Capture</button>'
-    + TABS.filter(function (t) { return t[0] !== 'capture' && t[0] !== 'more'; }).map(function (t) {
+    + [['today', 'Today', 'today'], ['tasks', 'Tasks', 'tasks'], ['money', 'Money', 'money']].map(function (t) {
       return '<button class="' + (active === t[0] ? 'on' : '') + '" data-act="tab" data-v="' + t[0] + '">' + icon(t[2]) + t[1] + '</button>';
     }).join('')
     + '<div class="grp">More</div>'

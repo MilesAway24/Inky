@@ -118,12 +118,10 @@ ACTS.notetotask = function (d) {
 TITLES.more = 'More';
 var SOON = {};
 VIEWS.more = function () {
-  var inboxN = Store.all('inbox').length;
-  return '<div class="menu">' + SIDE_MORE.map(function (m) {
-    var soon = SOON[m[0]];
-    return '<button class="row" data-act="tab" data-v="' + m[0] + '">' + icon(m[2]) + '<span class="grow t">' + m[1] + '</span>'
-      + (m[0] === 'inbox' && inboxN ? '<span class="pill">' + inboxN + '</span>' : '') + (soon ? '<span class="soon">Soon</span>' : '') + icon('chev', 'sm chev') + '</button>';
-  }).join('') + '</div>';
+  return jumpTiles(['habits', 'goals', 'notes', 'projects', 'calendar', 'journal', 'tools', 'inbox', 'areas'])
+    + '<div class="menu">' + ['money', 'settings'].map(function (k) {
+      return '<button class="row" data-act="tab" data-v="' + k + '">' + icon(SECTIONS[k][1]) + '<span class="grow t">' + SECTIONS[k][0] + '</span>' + icon('chev', 'sm chev') + '</button>';
+    }).join('') + '</div>';
 };
 VIEWS.soon = function () {
   var c = current();
@@ -147,6 +145,11 @@ VIEWS.settings = function () {
     local: 'Saved on this device only. Open MossOS in the Claude app, signed in, to sync between devices.' }[s] || '';
   return '<section><div class="sechead"><h2>Sync</h2>' + syncBadge() + '</div><p class="note">' + esc(syncText) + '</p></section>'
     + '<section><div class="sechead"><h2>Claude</h2></div><p class="note">' + (AI.ready ? 'Available. Sorting and "Break it down" use Claude.' : 'Not available in this view. Sorting and "Break it down" need MossOS open in the Claude app.') + '</p></section>'
+    + '<section><div class="sechead"><h2>Bottom bar</h2></div><p class="note small" style="margin-bottom:10px">Pick the three sections that sit around Capture. Everything else is one tap away under More.</p>'
+    + tabPrefs().map(function (cur, slot) {
+      return '<div class="field" style="margin-bottom:10px"><label for="tab' + slot + '">' + ['First tab', 'Second tab', 'After Capture'][slot] + '</label><select id="tab' + slot + '" class="input sel" data-act-change="settab" data-slot="' + slot + '">'
+        + Object.keys(SECTIONS).filter(function (k) { return k !== 'settings'; }).map(function (k) { return '<option value="' + k + '"' + (k === cur ? ' selected' : '') + '>' + SECTIONS[k][0] + '</option>'; }).join('') + '</select></div>';
+    }).join('') + '</section>'
     + '<section><div class="sechead"><h2>Theme</h2></div><div class="chips">' + [['', 'Match device'], ['dark', 'Dark'], ['light', 'Light']].map(function (o) {
       return '<button class="chip' + ((document.documentElement.dataset.theme || '') === o[0] ? ' on' : '') + '" data-act="theme" data-t="' + o[0] + '">' + o[1] + '</button>';
     }).join('') + '</div></section>'
@@ -163,4 +166,13 @@ var resetAsked = 0;
 ACTS.resetall = function () {
   if (Date.now() - resetAsked > 6000) { resetAsked = Date.now(); toast('Tap "Erase everything" again to delete all your MossOS data on every device'); return; }
   resetAsked = 0; Store.resetLocal(); toast('Everything erased'); go('today');
+};
+
+ACTS.settab = function (d, el) {
+  var t = tabPrefs().slice(), i = +d.slot, other = t.indexOf(el.value);
+  if (other > -1 && other !== i) t[other] = t[i]; // swap rather than show a section twice
+  t[i] = el.value;
+  var p = Store.get('meta', 'prefs');
+  if (p) Store.patch('meta', 'prefs', { tabs: t }); else Store.put('meta', { id: 'prefs', tabs: t });
+  toast('Bottom bar updated');
 };

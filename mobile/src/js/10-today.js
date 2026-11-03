@@ -8,6 +8,7 @@ VIEWS.today = function () {
   var doneN = ps.filter(function (x) { return x.done; }).length;
   var inboxN = Store.all('inbox').length, slipN = slipped().length;
   var h = '<div class="dateline">' + DOWL[d.getDay()] + ' · ' + d.getDate() + ' ' + MON[d.getMonth()] + '</div>';
+  h += jumpTiles(['habits', 'goals', 'notes', 'projects', 'tools', 'calendar']);
 
   if (hasExamples()) h += '<div class="card flat"><p class="note">You\'re looking at example data so you can see how MossOS works. '
     + 'Items marked <span class="pill ex">example</span> go when you clear them.</p>'
@@ -139,3 +140,24 @@ function swapSheet(level) {
     }).join('') + '</div>');
 }
 ACTS.swap = function (d) { swapOut(d.id); closeSheet(); ACTS.pickprio({ l: d.l }); };
+
+/* One-tap tiles to the other sections, each with a live count. */
+function sectionCount(k) {
+  var t = today();
+  if (k === 'habits') { var hd = habitsDueToday(); return hd.length ? hd.filter(function (x) { return mark(x, t) === 1; }).length + '/' + hd.length + ' today' : 'none due'; }
+  if (k === 'goals') { var g = goalsLive(); return g.length + ' live'; }
+  if (k === 'notes') { var n = Store.all('notes').length; return n + ' note' + (n === 1 ? '' : 's'); }
+  if (k === 'projects') { var p = projectsAll('active').length; return p + ' active'; }
+  if (k === 'tools') { var r = Store.all('ranks').reduce(function (a, l) { return a + rankPending(l).length; }, 0), c = Store.all('decks').reduce(function (a, dk) { return a + dueCards(dk).length; }, 0); return r ? r + ' to rank' : c ? c + ' cards due' : 'Rank, cards, gym'; }
+  if (k === 'calendar') { var w = Store.all('tasks').filter(function (x) { return !x.done && x.due && x.due > t && dayDiff(t, x.due) <= 7; }).length; return w + ' this week'; }
+  if (k === 'journal') { var e = entryFor(t); return e && (e.text || e.mood) ? 'written today' : 'not yet today'; }
+  if (k === 'inbox') { return Store.all('inbox').length + ' to sort'; }
+  if (k === 'tasks') { return tasksIn('today').filter(function (x) { return !x.done; }).length + ' today'; }
+  if (k === 'areas') { return areasSorted().filter(function (a) { return a.state === 'Needs you'; }).length + ' need you'; }
+  return '';
+}
+function jumpTiles(keys) {
+  return '<nav class="jump" aria-label="Go to">' + keys.map(function (k) {
+    return '<button class="jt2" data-act="tab" data-v="' + k + '">' + icon(SECTIONS[k][1], 'sm') + '<b>' + SECTIONS[k][0] + '</b><span>' + esc(sectionCount(k)) + '</span></button>';
+  }).join('') + '</nav>';
+}
