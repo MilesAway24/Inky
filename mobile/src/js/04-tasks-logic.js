@@ -150,7 +150,7 @@ function completeTask(id, on) {
   if (val) logEvent('Done: ' + t.t, t.area);
   // A goal's next action, or a project's next step, done from the task list moves it on.
   var g = val && t.goal ? Store.get('goals', t.goal) : null;
-  if (g && g.taskId === id) Store.patch('goals', g.id, { lastNext: g.next, next: '', taskId: null, touched: today() });
+  if (g && g.taskId === id) Store.patch('goals', g.id, { lastNext: g.next, next: '', taskId: null, touched: today(), sessions: (g.sessions || []).concat([today()]).slice(-400) });
   var pr = val && t.project ? Store.get('projects', t.project) : null;
   if (pr && pr.nextTask === id) {
     var data = Object.assign({}, pr.data || {}); data.log = (data.log || []).concat([{ t: 'Done: ' + pr.next, at: Date.now() }]);

@@ -229,25 +229,35 @@ const ok = (cond, msg) => { console.log((cond ? 'ok   ' : 'FAIL ') + msg); if (!
   ok(await p.isVisible('#hn') && (await p.inputValue('#hn')) === 'Run', 'a template creates a habit and opens it');
   await p.click('.back'); await p.waitForTimeout(100);
 
-  // ── Phase 2: goals ───────────────────────────────────────────────
+  // ── Goals, rebuilt from the demo ────────────────────────────────
   await p.click('.tabs [data-v=more]'); await p.click('#view [data-act=tab][data-v=goals]'); await p.waitForTimeout(150);
-  ok((await p.$$('.goal')).length === 4, 'Goals lists 4 live goals');
+  ok((await p.$$('.goal2')).length === 4, 'Goals lists 4 live goals');
+  ok(!/%/.test(await p.textContent('#view')), 'no percentage anywhere on Goals');
+  ok((await p.$$eval('.stats3 span', (x) => x.map((e) => e.textContent))).join('|') === 'Live|Next actions ready|Touched this week', 'tiles: Live · Next actions ready · Touched this week');
   await p.screenshot({ path: shots + '/phone-goals.png', fullPage: true });
-  await p.click('.goal >> text=HCPD'); await p.waitForTimeout(150);
+  await p.click('.goal2:has-text("HCPD")'); await p.waitForTimeout(150);
+  ok(!/%/.test(await p.textContent('#view')) && await p.isVisible('text=Last seven weeks') && await p.isVisible('text=No week is marked as a failure'), 'a goal shows its seven weeks, no percentage');
+  const goalDoc = () => p.evaluate(() => Object.values(window.__mock.docs).filter((d) => d.n === 'Get through the HCPD hiring process')[0]);
+  const g0 = ((await goalDoc()).sessions || []).length;
   await p.click('[data-act=goaltask]'); await p.waitForTimeout(150);
-  ok(await p.isVisible('text=It\'s on your task list'), '"Put it on today" makes a task');
-  await p.click('[data-act=goalnextdone]'); await p.waitForTimeout(150);
-  ok(await p.isVisible('text=Nice. What\'s next?'), 'finishing the next action asks for the next one');
-  await p.click('[data-act=goalsuggest]'); await p.waitForTimeout(300);
-  await p.click('#gsugg .row >> nth=0'); await p.waitForTimeout(150);
-  ok(await p.isVisible('.nextcard >> text=Book the PAT practice slot'), 'Claude\'s suggestion becomes the next action');
+  ok(await p.isVisible('text=On your task list'), '"Put it on today" makes a task');
+  await p.click('[data-act=goalnextdone]'); await p.waitForTimeout(500);
+  ok(await p.isVisible('text=What\'s next?') && ((await goalDoc()).sessions || []).length === g0 + 1, 'Done records a session and asks for the next action');
+  ok(!(await p.$('[data-act=goalsuggest]')), 'no Claude suggestions for goals');
   const linked = await p.evaluate(() => Object.values(window.__mock.docs).filter((d) => d.t === 'Finish the PAT prep block')[0]);
   ok(linked && linked.done, 'the goal\'s task was ticked off with it');
+  await p.click('#sheet [data-act=goalpick] >> nth=0'); await p.waitForTimeout(200);
+  ok(await p.isVisible('.nextcard >> text=Pass the PAT'), 'picking an unfinished step makes it the next action');
+  await p.click('[data-act=goalelse]'); await p.waitForTimeout(150);
+  await p.fill('#gnext', 'Book the PAT practice slot'); await p.press('#gnext', 'Enter'); await p.waitForTimeout(200);
+  ok(await p.isVisible('.nextcard >> text=Book the PAT practice slot'), '"Something else" swaps the action');
+  const bars = await p.$$eval('.wk1 b', (x) => x.reduce((s, e) => s + (+e.textContent || 0), 0));
+  ok(/across seven weeks/.test(await p.textContent('#view')) && bars >= 1, 'the seven-week bars count sessions (' + bars + ')');
   await p.click('[data-act=goaltask]'); await p.waitForTimeout(150);
   await p.click('.back'); await p.click('.tabs [data-v=tasks]'); await p.waitForTimeout(150);
   await p.click('.trow:has-text("Book the PAT practice slot") .ck'); await p.waitForTimeout(150);
   await p.click('.tabs [data-v=more]'); await p.click('#view [data-act=tab][data-v=goals]'); await p.waitForTimeout(150);
-  ok(await p.isVisible('.goal:has-text("HCPD") >> text=No next action yet'), 'ticking a goal task from Tasks clears the goal\'s next action');
+  ok(await p.isVisible('.goal2:has-text("HCPD") >> text=Nothing set yet'), 'ticking a goal task from Tasks clears the goal\'s next action');
   await p.click('.tabs [data-v=today]'); await p.waitForTimeout(150);
   const kinds = await p.evaluate(() => document.querySelector('.play [data-act=playdo]').dataset.k);
   ok(['task', 'habit', 'goal'].includes(kinds), 'Play serves tasks, habits and goals (now: ' + kinds + ')');
@@ -315,6 +325,7 @@ const ok = (cond, msg) => { console.log((cond ? 'ok   ' : 'FAIL ') + msg); if (!
   ok(kinds5.length === 5 && /Task/.test(kinds5[0]) && /Habit ✓/.test(kinds5[1]) && /Movie/.test(kinds5[2]) && /New habit/.test(kinds5[3]) && /Idea/.test(kinds5[4]),
     'smart capture sorts a task, a habit done, a movie, a new habit and an idea (' + kinds5.join(' | ') + ')');
   await p.screenshot({ path: shots + '/phone-smart.png', fullPage: true });
+  ok(!(await p.$('#sheet option[value=goal]')), 'smart capture never offers Goal');
   await p.selectOption('#sheet .sugg >> nth=0 >> select', 'note'); await p.waitForTimeout(100);
   ok(/Note/.test(await p.textContent('#sheet .sugg >> nth=0 >> .meta .pill')), 'changing a suggestion\'s type works');
   await p.selectOption('#sheet .sugg >> nth=0 >> select', 'task'); await p.waitForTimeout(100);

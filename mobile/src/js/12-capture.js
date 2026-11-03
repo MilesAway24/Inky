@@ -1,6 +1,6 @@
 /* ═══ SMART CAPTURE ═════════════════════════════════════════════════
    Put anything in. Each line is sorted into what it actually is: a new
-   task, a task you just did, a habit you just did, a new habit, a goal, a
+   task, a task you just did, a habit you just did, a new habit, a
    note, an idea, a journal line, or a movie you watched (which then gets
    ranked). Claude does the sorting when it's available; a rule-based
    sorter does it otherwise. Nothing is filed until you confirm. */
@@ -13,7 +13,7 @@ var capState = { kind: 'smart', area: null, photo: null };
 var CAP_KINDS = [['smart', 'Smart sort'], ['inbox', 'Inbox'], ['task', 'Task'], ['note', 'Note']];
 var STYPES = {
   task: ['Task', '✅'], done: ['Done ✓', '☑️'], habit_done: ['Habit ✓', '🔁'], habit_new: ['New habit', '🔁'],
-  goal: ['Goal', '🎯'], note: ['Note', '📝'], idea: ['Idea', '💡'], journal: ['Journal', '📔'],
+  note: ['Note', '📝'], idea: ['Idea', '💡'], journal: ['Journal', '📔'],
   movie: ['Movie watched', '🎬'], rank: ['Rank list', '🏆'], drop: ['Delete', '🗑']
 };
 
@@ -121,7 +121,6 @@ function smartSort(items) {
     + '- "done": says a task in context.tasks was already done ("sent the invoice"). Give targetId.\n'
     + '- "habit_done": says a habit in context.habits was done today ("took meds", "walked"). Give targetId.\n'
     + '- "habit_new": wants to start doing something regularly ("start stretching every morning"). Give title (short, like "Stretch").\n'
-    + '- "goal": a longer outcome ("save $5k by summer"). Give title and firstStep as the next action.\n'
     + '- "note": information to keep (a fact, a number, a reference). "idea": a thought to develop later.\n'
     + '- "journal": about how the day or the person is going ("rough shift, tired").\n'
     + '- "movie": a film or show they watched. Give title (clean, no score), year if stated, score (0-10) if stated, note (any opinion).\n'
@@ -190,7 +189,6 @@ function guessSort(item, ctx) {
   if (/^idea\b[:\s-]*/i.test(text)) { o.type = 'idea'; o.title = text.replace(/^idea\b[:\s-]*/i, ''); return o; }
   if (/^(feeling|felt|i feel|today was|rough|good day|bad day|tired|grateful|journal)\b/.test(low)) { o.type = 'journal'; return o; }
   if (/^(note|remember that|fyi)\b[:\s-]*/i.test(text) || /https?:\/\//.test(low) || /\b(password|code|address|phone|number|ref)\b.*[:#]/.test(low)) { o.type = 'note'; o.title = text.replace(/^(note|remember that|fyi)\b[:\s-]*/i, '').slice(0, 80); return o; }
-  if (/\b(by|before)\s+(summer|winter|spring|fall|the end of|december|january|june|next year)|\bgoal\b/.test(low)) { o.type = 'goal'; return o; }
   // A task: read its day, time, repeat, area and project from the words.
   var pt = parseTaskText(text);
   o.title = pt.title; o.due = pt.due; o.time = pt.time; o.repeat = pt.repeat; o.area = pt.area; o.project = pt.project;
@@ -218,7 +216,7 @@ function suggCards(list, where) {
     return '<div class="sugg"><div class="orig">“' + esc(it.text || '') + '”</div>'
       + '<div class="t">' + esc(s.icon ? s.icon + ' ' : '') + esc(line) + '</div>'
       + '<div class="meta">' + meta + '</div>'
-      + (s.firstStep ? '<div class="first">' + (s.type === 'goal' ? 'Next action: ' : 'First step: ') + esc(s.firstStep) + '</div>' : '')
+      + (s.firstStep ? '<div class="first">' + 'First step: ' + esc(s.firstStep) + '</div>' : '')
       + (s.type === 'movie' ? '<div class="first">Goes into Movies, then a few "which was better?" taps rank it.' + (s.note ? ' Note: ' + esc(s.note) : '') + '</div>' : '')
       + '<div class="btnrow"><button class="btn sm accent" data-act="suggone" data-w="' + where + '" data-id="' + s.id + '">File it</button>'
       + '<label class="sr" for="st' + s.id + '">Change type</label><select id="st' + s.id + '" class="input sel" data-act-change="suggtype" data-w="' + where + '" data-id="' + s.id + '">'
@@ -260,9 +258,6 @@ function applySuggestion(it, s) {
   } else if (s.type === 'habit_new') {
     var nh = Store.put('habits', { ic: s.icon || '✨', n: title.slice(0, 60), color: '#5FCF8E', cue: '', area: s.area || null, days: [1, 1, 1, 1, 1, 1, 1], marks: {}, since: today() }, true);
     logEvent('New habit: ' + nh.n); msg = 'New habit: ' + esc(nh.n);
-  } else if (s.type === 'goal') {
-    Store.put('goals', { n: title, ic: s.icon || '🎯', area: s.area || null, why: '', steps: [], next: s.firstStep || '', status: 'live', touched: today() }, true);
-    logEvent('New goal: ' + title, s.area); msg = 'New goal';
   } else if (s.type === 'note' || s.type === 'idea') {
     Store.put('notes', { title: title.slice(0, 80), body: it.text, area: s.area || null, project: s.project || null, kind: s.type, photo: it.photo || null }, true);
     logEvent('Saved ' + (s.type === 'idea' ? 'an idea' : 'a note'), s.area); msg = s.type === 'idea' ? 'Idea saved' : 'Note saved';

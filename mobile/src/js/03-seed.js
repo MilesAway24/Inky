@@ -65,7 +65,8 @@ function seedPhase2() {
    ['💵', 'One month of runway saved', 'money', 'So a bad month is a bad month, not a crisis.', 'Move the standing order to the 2nd', 'Dec', [['Set the amount', 1], ['Automate it', 0], ['Leave it alone', 0]]],
    ['🐙', 'Inky beta by Dec 3', 'inky', 'A tool you do not open is not a tool.', 'Fix the Generate Plan spinner', 'Dec 3', [['M0 AI fix', 0], ['New UI', 0], ['Five beta testers', 0]]]]
     .forEach(function (x) {
-      Store.put('goals', { example: true, ic: x[0], n: x[1], area: x[2], why: x[3], next: x[4], due: x[5], status: 'live', touched: t,
+      var sess = []; [3, 5, 9, 12, 16, 20, 26, 33, 38, 44].forEach(function (k, j) { if ((j + x[1].length) % 3) sess.push(addDays(t, -k)); });
+      Store.put('goals', { example: true, ic: x[0], n: x[1], area: x[2], why: x[3], next: x[4], due: x[5], status: 'live', touched: t, sessions: sess,
         steps: x[6].map(function (s) { return { t: s[0], done: !!s[1] }; }) }, true);
     });
 }
