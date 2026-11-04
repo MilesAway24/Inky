@@ -52,6 +52,18 @@ Opened anywhere else, such as a plain browser, it still works, but saves on that
   - A Claude reading companion: recap, discussion questions, "how does this apply to me", or ask anything. It is told your page and not to spoil past it or guess.
   - Capture understands "read 20 pages of …" and "“quote” — Book p. 27".
 
+- **Shifts** (More → Shifts): a week grid built for entering shifts week by week.
+  - **Entering shifts:** tap a day, then a preset (Truck day 7a–7p, Truck night, Safeway close 4p–11p), or set a custom time on the time ruler. **Copy last week** fills an empty week.
+  - **Pay estimate:** this pay week's hours per job, gross pay at your hourly rate, and the estimated Friday check at your take-home %.
+  - **On Today:**
+    - a **pre-shift checklist** (uniform, ID, meds, water, meals, charger; editable) from 2 hours before
+    - a **wind-down** after the shift: hours, how it went, what you captured on shift, plan tomorrow
+  - **Off days protected:**
+    - big tasks (45 min or more, or part of a project) put on a shift day get a "Move to <off day>" offer
+    - on shift days the Play card leaves them until last
+    - Tomorrow shows tomorrow's shift
+  - **Calendar:** shifts show as blocks in Week, as a bar in Month, and in the day panel with Add to Calendar (90 min alert).
+
 ### Money (Payday OS)
 
 The Money tab runs Payday OS **unchanged** (`mobile/finance/payday.html`) inside a frame on the MossOS page. `build.mjs` makes three checked edits to it, and the build fails if any of them stops matching:

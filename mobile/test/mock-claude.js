@@ -26,10 +26,8 @@
       return {
         path: path,
         // __mockDrop: simulate the app being suspended before a write lands.
-        set: function (v) { try { var L = JSON.parse(sessionStorage.getItem('__mlog') || '[]'); if (/\/tasks\//.test(path)) { L.push(Date.now() % 100000 + ' set ' + path.split('/').pop() + (sessionStorage.getItem('__mockDrop') ? ' DROP' : '') + ' ' + (v && v.t || '')); sessionStorage.setItem('__mlog', JSON.stringify(L.slice(-30))); } } catch (e) {}
-          if (sessionStorage.getItem('__mockDrop')) return new Promise(function () {}); docs[path] = v; save(); window.__mock.writes++; notify(path); return Promise.resolve(); },
-        delete: function () { try { if (/\/tasks\//.test(path)) { var L = JSON.parse(sessionStorage.getItem('__mlog') || '[]'); L.push(Date.now() % 100000 + ' DEL ' + path.split('/').pop() + (sessionStorage.getItem('__mockDrop') ? ' DROP' : '')); sessionStorage.setItem('__mlog', JSON.stringify(L.slice(-30))); } } catch (e) {}
-          delete docs[path]; save(); window.__mock.writes++; notify(path); return Promise.resolve(); },
+        set: function (v) { if (sessionStorage.getItem('__mockDrop')) return new Promise(function () {}); docs[path] = v; save(); window.__mock.writes++; notify(path); return Promise.resolve(); },
+        delete: function () { delete docs[path]; save(); window.__mock.writes++; notify(path); return Promise.resolve(); },
         get: function () { return Promise.resolve({ exists: !!docs[path], data: function () { return docs[path]; } }); },
         onSnapshot: function (fn) { return function () {}; }
       };
@@ -76,9 +74,17 @@
   var seeded = false;
   function seed() {
     if (seeded || !window.__mockSeed || sessionStorage.getItem('__seedUsed') === String(window.__mockSeedId)) return;
-    seeded = true; sessionStorage.setItem('__seedUsed', String(window.__mockSeedId)); try { var L2 = JSON.parse(sessionStorage.getItem('__mlog') || '[]'); L2.push(Date.now() % 100000 + ' SEED ' + window.__mockSeedId); sessionStorage.setItem('__mlog', JSON.stringify(L2)); } catch (e) {}
+    seeded = true; sessionStorage.setItem('__seedUsed', String(window.__mockSeedId));
     Object.keys(docs).forEach(function (k) { delete docs[k]; });
     Object.keys(window.__mockSeed).forEach(function (k) { docs[k] = window.__mockSeed[k]; }); save();
   }
-  window.claude = { use: function (n) { seed(); return new Promise(function (r) { setTimeout(function () { r(caps[n] || null); }, 30); }); } };
+  // Load the saved docs at first use, not at script start, so a test can
+  // restore sessionStorage for a new tab in a later init script.
+  var loadedOnce = false;
+  function load() {
+    if (loadedOnce) return; loadedOnce = true;
+    var raw = JSON.parse(sessionStorage.getItem(KEY) || '{}');
+    Object.keys(raw).forEach(function (k) { if (!(k in docs)) docs[k] = raw[k]; });
+  }
+  window.claude = { use: function (n) { load(); seed(); return new Promise(function (r) { setTimeout(function () { r(caps[n] || null); }, 30); }); } };
 })();

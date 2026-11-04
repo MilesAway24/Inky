@@ -4672,19 +4672,19 @@ TITLES.shifts = 'Shifts';
 VIEWS.shifts = function () {
   var t = today(); shWeek = shWeek || mondayOf(t);
   var pe = payEstimate(t), cfg = shiftCfg();
-  var h = '<section class="card hourscard"><div class="sechead" style="margin:0"><h2>This pay week</h2><span class="meta">' + esc(shortDate(pe.start)) + ' – ' + esc(shortDate(pe.end)) + '</span></div>'
+  var h = '<section class="card hourscard"><div class="sechead" style="margin:0"><h2>This pay week</h2><span class="meta">' + esc(absDate(pe.start)) + ' – ' + esc(absDate(pe.end)) + '</span></div>'
     + (pe.rows.length ? '<div class="list">' + pe.rows.map(function (r) {
       return '<div class="row"><span class="dot" style="background:' + esc(r.job.color) + '"></span><span class="grow"><div class="t">' + esc(r.job.name) + '</div><div class="s">' + fmtAmt(r.hours) + ' h'
         + (r.gross != null ? ' × ' + fmtMoney(r.job.rate) + ' = ' + fmtMoney(Math.round(r.gross)) + ' gross' : ' · add your rate below') + '</div></span>'
         + (r.take != null ? '<span class="amt">~' + fmtMoney(Math.round(r.take)) + '</span>' : '') + '</div>';
-    }).join('') + '</div><p class="estcheck"><b>Est. check ' + esc(dayShortName(pe.payday)) + ' ' + esc(shortDate(pe.payday)) + ': ~' + fmtMoney(Math.round(pe.take)) + '</b>'
+    }).join('') + '</div><p class="estcheck"><b>Est. check ' + esc(dayShortName(pe.payday)) + ' ' + esc(absDate(pe.payday)) + ': ~' + fmtMoney(Math.round(pe.take)) + '</b>'
       + '<span class="muted small"> · ' + fmtAmt(pe.hours) + ' h · take-home at your % ' + (pe.missingRate ? '· some hours have no rate yet' : '') + '</span></p>'
       : '<p class="note">No shifts this pay week yet.</p>') + '</section>';
   // Week grid
   var mon = shWeek, days = range(7).map(function (i) { return addDays(mon, i); });
   var weekN = Store.all('shifts').filter(function (s) { return s.date >= mon && s.date <= addDays(mon, 6); }).length;
   h += '<section><div class="calhead"><button class="iconbtn" data-act="shweek" data-n="-7" aria-label="Previous week">' + icon('back') + '</button>'
-    + '<b>' + (mon === mondayOf(t) ? 'This week' : mon === addDays(mondayOf(t), 7) ? 'Next week' : esc(absDate(mon))) + ' <span class="muted small">' + esc(shortDate(mon)) + ' – ' + esc(shortDate(addDays(mon, 6))) + '</span></b>'
+    + '<b>' + (mon === mondayOf(t) ? 'This week' : mon === addDays(mondayOf(t), 7) ? 'Next week' : esc(absDate(mon))) + ' <span class="muted small">' + esc(absDate(mon)) + ' – ' + esc(absDate(addDays(mon, 6))) + '</span></b>'
     + '<button class="iconbtn" data-act="shweek" data-n="7" aria-label="Next week">' + icon('chev') + '</button></div>'
     + '<div class="shweek">' + days.map(function (d) {
       var ss = shiftOn(d);
