@@ -6,7 +6,11 @@ VIEWS.plan = function () {
   var t = today(), tm = addDays(t, 1), td = parseYmd(tm);
   var left = Store.all('tasks').filter(function (x) { return !x.done && x.due && x.due <= t; }).sort(byWhen);
   var tom = tasksOn(tm).filter(function (x) { return !x.done; });
-  var h = '<div class="overview"><div class="dateline">Planning</div><div class="ovcount">' + DOWL[td.getDay()] + ', ' + MON[td.getMonth()] + ' ' + td.getDate() + '</div></div>';
+  var tsh = shiftOn(tm), bigTom = tom.filter(function (x) { return isBigTask(x) && !x.time; });
+  var h = '<div class="overview"><div class="dateline">Planning</div><div class="ovcount">' + DOWL[td.getDay()] + ', ' + MON[td.getMonth()] + ' ' + td.getDate() + '</div>'
+    + (tsh.length ? '<div class="shline">' + tsh.map(function (s) { var j = shiftJob(s.job); return '<span class="shblk" style="--c:' + esc(j.color) + '">' + esc(j.ic + ' ' + j.name + ' ' + shiftLabel(s)) + '</span>'; }).join('') + '</div>'
+      : '<div class="shline faint small">Off tomorrow</div>') + '</div>';
+  if (tsh.length && bigTom.length) h += '<div class="hurow card flat"><span>🛡</span><span class="grow"><b>' + bigTom.length + ' big job' + (bigTom.length === 1 ? '' : 's') + '</b> <span class="muted">on a shift day</span></span><button class="btn sm soft" data-act="shmovebig" data-d="' + tm + '">Move to ' + esc(dayShortName(nextOffDay(tm))) + '</button></div>';
 
   // 1. Left from today
   h += '<section><div class="sechead"><h2>Left from today</h2><span class="meta">' + left.length + '</span></div>';
@@ -14,6 +18,7 @@ VIEWS.plan = function () {
     return '<div class="planrow"><button class="grow t" data-act="open" data-v="task" data-id="' + x.id + '">' + areaDot(x.area) + ' ' + esc(x.t)
       + '<span class="s">' + (x.due < t ? 'from ' + esc(shortDate(x.due)) : 'today') + (x.time ? ' · ' + esc(fmtTime(x.time)) : '') + '</span></button>'
       + '<div class="chips">'
+      + (tsh.length && isBigTask(x) ? '<button class="chip" data-act="planmove" data-id="' + x.id + '" data-to="' + nextOffDay(tm) + '">' + esc(dayShortName(nextOffDay(tm))) + ' (off)</button>' : '')
       + '<button class="chip" data-act="planmove" data-id="' + x.id + '" data-to="tomorrow">Tomorrow</button>'
       + '<button class="chip" data-act="taskwhen" data-id="' + x.id + '">Pick a day</button>'
       + '<button class="chip" data-act="planmove" data-id="' + x.id + '" data-to="whenever">Someday</button>'
@@ -54,14 +59,14 @@ VIEWS.plan.after = function () { if (typeof wireSwipes === 'function') wireSwipe
 ACTS.planmove = function (d) {
   var undo = snapshot(d.id), tk = Store.get('tasks', d.id);
   moveTask(d.id, d.to);
-  toast(esc(tk ? tk.t : 'Task') + (d.to === 'tomorrow' ? ' → tomorrow' : ' → someday'), undo);
+  toast(esc(tk ? tk.t : 'Task') + (d.to === 'tomorrow' ? ' → tomorrow' : d.to === 'whenever' ? ' → someday' : ' → ' + esc(shortDate(d.to))), undo);
 };
 ACTS.form_planadd = function (d, f) {
   var inp = $('input', f), v = inp.value.trim(); if (!v) return; inp.value = '';
-  var pt = parseTaskText(v), tm = addDays(today(), 1);
+  var pt = parseTaskText(v), tm = addDays(today(), 1), ef = estFromText(pt.title || v);
   var due = pt.due || (pt.repeat ? nextOccurrence(pt.repeat, today()) : tm);
-  Store.put('tasks', { t: pt.title || v, area: pt.area, project: pt.project, due: due, time: pt.time, repeat: pt.repeat, done: false, steps: [], note: '' });
-  render(false, true); toast('Added for ' + shortDate(due).toLowerCase());
+  var nt = Store.put('tasks', { t: ef ? ef.rest : pt.title || v, area: pt.area, project: pt.project, due: due, time: pt.time, repeat: pt.repeat, est: ef ? ef.est : '', done: false, steps: [], note: '' });
+  render(false, true); if (!shiftHint(nt, 'Added')) toast('Added for ' + shortDate(due).toLowerCase());
 };
 ACTS.form_planjournal = function (d, f) {
   var inp = $('input', f), v = inp.value.trim(); if (!v) return; inp.value = '';

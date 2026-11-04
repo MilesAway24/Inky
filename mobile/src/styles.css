@@ -635,3 +635,31 @@ section.card{display:grid;gap:10px}
 /* Long titles (quotes) wrap instead of widening the page. */
 .row>.grow{min-width:0}
 .row .t{overflow-wrap:anywhere}
+/* ── shifts ───────────────────────────────────────────────────────── */
+.hourscard{display:grid;gap:8px}
+.estcheck{margin:4px 0 0}
+.shweek{display:grid;gap:6px}
+.shday{display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--line);min-height:56px}
+.shday.today .shd b{color:var(--accent)}
+.shd{display:grid;justify-items:center;width:44px;flex:none;color:var(--ink)}
+.shd b{font-size:12px;font-weight:600;color:var(--muted)}
+.shd span{font-size:18px}
+.shblocks{flex:1;display:flex;flex-wrap:wrap;gap:6px;min-width:0}
+.shblk{display:inline-flex;align-items:center;gap:4px;padding:6px 10px;border-radius:10px;font-size:13.5px;font-weight:500;color:var(--ink);
+  background:color-mix(in srgb,var(--c) 22%,var(--surface));border-left:3px solid var(--c)}
+.presetgrid{display:grid;gap:8px}
+.presetgrid .btn{justify-content:space-between}
+.presetgrid small{color:var(--muted);font-weight:400}
+.shset{display:grid;gap:10px;margin-top:10px}
+.shset .lbl{font-size:13px;color:var(--muted);margin-top:6px}
+.shjob{align-items:center}
+.chip .x{margin-left:4px;color:var(--faint);font-size:16px;line-height:1}
+.chk{display:flex;gap:8px;align-items:center;font-size:14px;margin:10px 0}
+.shcard{display:grid;gap:10px;padding:14px 16px;border-radius:18px;background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--c)}
+.shcard .lbl{font-size:13px;color:var(--muted)}
+.shcard .ready{margin:0;font-weight:600;color:var(--accent)}
+.ckrow{min-height:48px;padding:6px 0}
+.ckrow.on .grow{color:var(--faint);text-decoration:line-through}
+.shline{margin-top:6px;display:flex;gap:6px;flex-wrap:wrap}
+.cal .day .shbar{display:block;height:3px;width:60%;margin:1px auto 0;border-radius:2px}
+.blk.shiftblk{font-weight:600}

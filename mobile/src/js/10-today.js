@@ -14,13 +14,15 @@ VIEWS.today = function () {
   var inbox = Store.all('inbox').sort(function (a, b) { return a.created - b.created; }), sl = slipped();
   var todays = tasksIn('today'), open = todays.filter(function (x) { return !x.done; }), done = todays.filter(function (x) { return x.done; });
   var h = '<div class="overview"><div class="dateline">' + DOW[d.getDay()] + ', ' + MON[d.getMonth()] + ' ' + d.getDate() + ' · ' + partOfDay(d.getHours()) + '</div>'
-    + '<div class="ovcount">' + open.length + ' task' + (open.length === 1 ? '' : 's') + ' today' + (sl.length ? ' · <span class="bad">' + sl.length + ' overdue</span>' : '') + '</div>'
+    + '<div class="ovcount">' + open.length + ' task' + (open.length === 1 ? '' : 's') + ' today' + esc(shiftOverview()) + (sl.length ? ' · <span class="bad">' + sl.length + ' overdue</span>' : '') + '</div>'
     + (d.getHours() >= 17 ? '<button class="link planlink" data-act="tab" data-v="plan">Plan tomorrow →</button>' : '') + '</div>';
   h += jumpTiles(['habits', 'goals', 'notes', 'projects', 'tools', 'calendar']);
 
   if (hasExamples()) h += '<div class="card flat"><p class="note">You\'re looking at example data so you can see how MossOS works. '
     + 'Items marked <span class="pill ex">example</span> go when you clear them.</p>'
     + '<div class="btnrow" style="margin-top:12px"><button class="btn sm soft" data-act="clearex">Clear examples</button></div></div>';
+
+  h += shiftCards();
 
   // Heads up
   var rem = remindersNow(), hrem = habitRemindersNow();
@@ -148,6 +150,7 @@ function sectionCount(k) {
   if (k === 'journal') { var e = entryFor(t); return e && (e.text || e.mood) ? 'written today' : 'not yet today'; }
   if (k === 'inbox') { return Store.all('inbox').length + ' to sort'; }
   if (k === 'tasks') { return tasksIn('today').filter(function (x) { return !x.done; }).length + ' today'; }
+  if (k === 'shifts') { var mo = mondayOf(t), sn = Store.all('shifts').filter(function (x) { return x.date >= mo && x.date <= addDays(mo, 6); }).length; return sn + ' this week'; }
   if (k === 'books') { var br = booksReading(); return br.length ? br.length + ' reading' : 'add a book'; }
   if (k === 'plan') { var tn = tasksOn(addDays(t, 1)).filter(function (x) { return !x.done; }).length; return tn + ' planned'; }
   if (k === 'areas') { return areasSorted().filter(function (a) { return a.state === 'Needs you'; }).length + ' need you'; }

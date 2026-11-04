@@ -9,7 +9,7 @@ var VIEWS = {}, ACTS = {}, TITLES = {};
 var SECTIONS = {
   today: ['Today', 'today'], tasks: ['Tasks', 'tasks'], habits: ['Habits', 'habits'], goals: ['Goals', 'goals'],
   notes: ['Notes', 'notes'], projects: ['Projects', 'projects'], calendar: ['Calendar', 'calendar'], journal: ['Journal', 'journal'],
-  tools: ['Tools', 'tools'], books: ['Books', 'journal'], plan: ['Tomorrow', 'calendar'], money: ['Money', 'money'], inbox: ['Inbox', 'inbox'], areas: ['Life areas', 'areas'], settings: ['Settings', 'settings']
+  tools: ['Tools', 'tools'], books: ['Books', 'journal'], shifts: ['Shifts', 'calendar'], plan: ['Tomorrow', 'calendar'], money: ['Money', 'money'], inbox: ['Inbox', 'inbox'], areas: ['Life areas', 'areas'], settings: ['Settings', 'settings']
 };
 var TAB_DEFAULT = ['today', 'tasks', 'habits'];
 function tabPrefs() { var p = Store.get('meta', 'prefs'); var t = p && p.tabs; return t && t.length === 3 && t.every(function (x) { return SECTIONS[x]; }) ? t : TAB_DEFAULT; }
@@ -17,7 +17,7 @@ function tabsNow() {
   var t = tabPrefs();
   return [[t[0]].concat(SECTIONS[t[0]]), [t[1]].concat(SECTIONS[t[1]]), ['capture', 'Capture', 'plus'], [t[2]].concat(SECTIONS[t[2]]), ['more', 'More', 'more']];
 }
-var SIDE_MORE = ['plan', 'habits', 'goals', 'notes', 'books', 'projects', 'calendar', 'journal', 'tools', 'inbox', 'areas', 'settings'].map(function (k) { return [k, SECTIONS[k][0], SECTIONS[k][1]]; });
+var SIDE_MORE = ['plan', 'shifts', 'habits', 'goals', 'notes', 'books', 'projects', 'calendar', 'journal', 'tools', 'inbox', 'areas', 'settings'].map(function (k) { return [k, SECTIONS[k][0], SECTIONS[k][1]]; });
 
 function leaving() { if (current().view === 'project' && typeof maybeAskLeftOff === 'function') setTimeout(maybeAskLeftOff, 0); }
 function go(tab) { leaving(); nav.tab = tab; nav.stack = []; render(true); }
@@ -112,10 +112,10 @@ addEventListener('keydown', function (e) { if (e.key === 'Escape') closeSheet();
 
 /* ── toast with optional undo ───────────────────────────────────────── */
 var toastT = null;
-function toast(msg, undo) {
+function toast(msg, undo, label) {
   clearTimeout(toastT);
   var el = $('#toast');
-  el.innerHTML = '<span>' + msg + '</span>' + (undo ? '<button data-act="undo">Undo</button>' : '');
+  el.innerHTML = '<span>' + msg + '</span>' + (undo ? '<button data-act="undo">' + esc(label || 'Undo') + '</button>' : '');
   el.hidden = false; toast.undo = undo || null;
   toastT = setTimeout(function () { el.hidden = true; toast.undo = null; }, undo ? 5000 : 2600);
 }

@@ -122,7 +122,7 @@ ACTS.notetotask = function (d) {
 TITLES.more = 'More';
 var SOON = {};
 VIEWS.more = function () {
-  return jumpTiles(['plan', 'habits', 'goals', 'notes', 'books', 'projects', 'calendar', 'journal', 'tools', 'inbox', 'areas'])
+  return jumpTiles(['plan', 'shifts', 'habits', 'goals', 'notes', 'books', 'projects', 'calendar', 'journal', 'tools', 'inbox', 'areas'])
     + '<div class="menu">' + ['money', 'settings'].map(function (k) {
       return '<button class="row" data-act="tab" data-v="' + k + '">' + icon(SECTIONS[k][1]) + '<span class="grow t">' + SECTIONS[k][0] + '</span>' + icon('chev', 'sm chev') + '</button>';
     }).join('') + '</div>';

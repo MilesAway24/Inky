@@ -31,7 +31,7 @@ function monthView() {
   for (var dnum = 1; dnum <= days; dnum++) {
     var d = m.slice(0, 8) + String(dnum).padStart(2, '0'), ts = tasksOn(d), j = entryFor(d);
     h += '<button class="day' + (d === t ? ' today' : '') + (d === cal.sel ? ' sel' : '') + '" data-act="calday" data-d="' + d + '" aria-label="' + esc(shortDate(d)) + ', ' + ts.length + ' tasks">'
-      + '<span class="n">' + dnum + '</span><span class="dots">' + ts.slice(0, 4).map(function (x) {
+      + '<span class="n">' + dnum + '</span>' + shiftOn(d).slice(0, 1).map(function (s) { return '<span class="shbar" style="background:' + esc(shiftJob(s.job).color) + '"></span>'; }).join('') + '<span class="dots">' + ts.slice(0, 4).map(function (x) {
         return '<i style="background:' + areaColor(x.area) + (x.done ? ';opacity:.4' : '') + '"></i>';
       }).join('') + (fe[dnum] ? fe[dnum].map(function (e) { return '<i class="fin ' + e.type + '" title="' + esc(e.title) + '"></i>'; }).join('') : '') + '</span>' + (j && j.mood ? '<span class="mood">' + MOODS[j.mood][0] + '</span>' : '') + '</button>';
   }
@@ -46,7 +46,7 @@ function weekView() {
   h += '<div class="wk">' + range(7).map(function (i) {
     var d = addDays(mon, i), ts = tasksOn(d), hd = habitsSorted().filter(function (x) { return dueOn(x, d); }), hit = hd.filter(function (x) { return mark(x, d) === 1; }).length;
     return '<div class="wkday' + (d === t ? ' today' : '') + (d === sel ? ' sel' : '') + '"><button class="wkh" data-act="calday" data-d="' + d + '"><b>' + DOW[parseYmd(d).getDay()] + '</b><span>' + parseYmd(d).getDate() + '</span></button>'
-      + '<div class="blocks">' + (ts.length ? ts.map(function (x) {
+      + '<div class="blocks">' + shiftOn(d).map(function (s) { var j = shiftJob(s.job); return '<button class="blk shiftblk" style="--c:' + esc(j.color) + '" data-act="open" data-v="shift" data-id="' + s.id + '">' + esc(j.ic + ' ' + shiftLabel(s)) + '</button>'; }).join('') + (ts.length ? ts.map(function (x) {
         return '<button class="blk' + (x.done ? ' done' : '') + '" style="--c:' + areaColor(x.area) + '" data-act="open" data-v="task" data-id="' + x.id + '">' + (x.time ? esc(fmtTime(x.time)) + ' ' : '') + esc(x.t) + '</button>';
       }).join('') : '<span class="faint small">Nothing planned</span>') + '</div>'
       + (hd.length && d <= t ? '<span class="hab small faint">' + hit + '/' + hd.length + ' habits</span>' : '') + '</div>';
@@ -58,6 +58,9 @@ function dayDetail(d) {
   var hs = habitsSorted().filter(function (x) { return dueOn(x, d); });
   var h = '<section class="card" style="display:grid;gap:10px"><div class="sechead" style="margin:0"><h2>' + esc(shortDate(d)) + '</h2>'
     + '<span class="meta">' + ts.filter(function (x) { return !x.done; }).length + ' open</span></div>';
+  var shs = shiftOn(d);
+  if (shs.length) h += '<div class="list">' + shs.map(function (s) { var j = shiftJob(s.job);
+    return '<div class="row billrow"><button class="grow brow" data-act="open" data-v="shift" data-id="' + s.id + '"><span class="dot" style="background:' + esc(j.color) + '"></span><span class="grow t">' + esc(j.ic + ' ' + j.name) + '</span><span class="amt">' + esc(shiftLabel(s)) + '</span></button>' + calIcon(shiftCal(s)) + '</div>'; }).join('') + '</div>';
   h += ts.length ? '<div class="list">' + ts.map(taskRow).join('') + '</div>' : '<p class="note">Nothing due.</p>';
   var fe = typeof finEventsFor === 'function' ? (finEventsFor(monthStart(d))[parseYmd(d).getDate()] || []) : [];
   if (fe.length) h += '<div class="list">' + fe.map(function (e) {

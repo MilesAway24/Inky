@@ -202,9 +202,12 @@ const ok = (cond, msg) => { console.log((cond ? 'ok   ' : 'FAIL ') + msg); if (!
   await p.click('.tabs .cap'); await p.fill('#captext', 'Written just before the app was suspended');
   await p.click('[data-act=capkind][data-k=task]'); await p.click('[data-act=capsave]'); await p.waitForTimeout(500);
   const lostBefore = await p.evaluate(() => !Object.values(window.__mock.docs).some((d) => d.t === 'Written just before the app was suspended'));
+  const inCache = await p.evaluate(() => { const c = JSON.parse(localStorage.getItem('mossos.mobile.v1') || '{}'); return [Object.values((c.d || {}).tasks || {}).some((d) => d.t === 'Written just before the app was suspended'), Object.keys(c.o || {}).length, document.querySelector('#sheetbg').hidden, document.querySelector('#toast').textContent]; });
   await p.evaluate(() => sessionStorage.removeItem('__mockDrop'));
-  await p.reload(); await p.waitForTimeout(1600);
-  const resent = await p.evaluate(() => Object.values(window.__mock.docs).some((d) => d.t === 'Written just before the app was suspended'));
+  await p.reload();
+  const afterLoad = await p.evaluate(() => { const c = JSON.parse(localStorage.getItem('mossos.mobile.v1') || '{}'); return [Object.values((c.d || {}).tasks || {}).some((d) => d.t === 'Written just before the app was suspended'), Object.keys(c.o || {}).join(',')]; });
+  const resent = await p.waitForFunction(() => Object.values(window.__mock.docs).some((d) => d.t === 'Written just before the app was suspended'), null, { timeout: 6000 }).then(() => true, () => false);
+  if (!(lostBefore && resent)) console.log('OUTBOX', lostBefore, resent, JSON.stringify(inCache), JSON.stringify(afterLoad), await p.evaluate(() => sessionStorage.getItem('__mlog')), await p.evaluate(() => [localStorage.getItem('mossos.mobile.v1') ? JSON.stringify(JSON.parse(localStorage.getItem('mossos.mobile.v1')).o) : 'nocache', Object.keys(window.__mock.docs).length]));
   ok(lostBefore && resent, 'an edit the server never received is kept and re-sent on the next launch');
 
   // ── Phase 2: habits ──────────────────────────────────────────────
@@ -639,8 +642,92 @@ const ok = (cond, msg) => { console.log((cond ? 'ok   ' : 'FAIL ') + msg); if (!
   await p.click('.bookcard'); await p.waitForTimeout(200);
   await p.screenshot({ path: shots + '/phone-book.png', fullPage: true });
 
+  // ── Shifts ──────────────────────────────────────────────────────
+  const ymdIn = (n) => p.evaluate((n) => { const d = new Date(); d.setDate(d.getDate() + n); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }, n);
+  const shiftDocs = () => p.evaluate(() => Object.keys(window.__mock.docs).filter((k) => k.indexOf('/m/shifts/') > -1).map((k) => window.__mock.docs[k]));
+  await p.click('.tabs [data-v=more]'); await p.click('#view [data-act=tab][data-v=shifts]'); await p.waitForTimeout(200);
+  ok((await p.textContent('#top h1')) === 'Shifts' && (await p.$$('.shday')).length === 7, 'Shifts shows a 7-day week grid');
+  const tdy = await ymdIn(0);
+  await p.click('.shday.today .shd'); await p.waitForTimeout(150);
+  await p.click('#sheet [data-act=shadd][data-p=p1]'); await p.waitForTimeout(500);
+  let sd = await shiftDocs();
+  ok(sd.some((x) => x.date === tdy && x.job === 'icare' && x.start === '07:00' && x.end === '19:00'), 'tapping a day and "Truck day" adds a 7a–7p iCare shift');
+  await p.click('.shday:not(.today) .shd >> nth=0'); await p.waitForTimeout(150);
+  await p.click('#sheet [data-act=shcustom]'); await p.waitForTimeout(150);
+  await p.focus('#rs1'); for (let i = 0; i < 6; i++) await p.keyboard.press('ArrowRight');
+  await p.click('#sheet [data-act=shcsave]'); await p.waitForTimeout(500);
+  sd = await shiftDocs();
+  ok(sd.some((x) => x.start === '07:30' && x.end === '19:00'), 'a custom shift set with the time ruler saves 7:30a–7p');
+  await p.click('[data-act=shweek][data-n="7"]'); await p.waitForTimeout(150);
+  const before = (await shiftDocs()).length;
+  await p.click('[data-act=shcopy]'); await p.waitForTimeout(500);
+  const copied = (await shiftDocs()).length - before;
+  ok(copied === before && copied >= 2, 'Copy last week fills next week (' + copied + ' shifts)');
+  await p.click('#toast [data-act=undo]'); await p.waitForTimeout(500);
+  ok((await shiftDocs()).length === before, 'undo removes the copied shifts');
+  // Hours and the estimated check: two 7 h Safeway closes at $20.50
+  await p.evaluate(() => {
+    const pad = (n) => String(n).padStart(2, '0'), ymd = (d) => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+    const base = 'data/users/u_test/m/shifts/'; Object.keys(window.__mock.docs).filter((k) => k.indexOf(base) === 0).forEach((k) => delete window.__mock.docs[k]);
+    const fri = new Date(); fri.setDate(fri.getDate() - ((fri.getDay() - 5 + 7) % 7)); const sat = new Date(fri); sat.setDate(sat.getDate() + 1);
+    [[fri, 'sw1'], [sat, 'sw2']].forEach((x) => { window.__mock.docs[base + x[1]] = { id: x[1], date: ymd(x[0]), job: 'safeway', start: '01:00', end: '08:00', worked: null, note: '', created: 1, updated: 1 }; });
+  });
+  await reloadKeeping(p, ctx);
+  await p.click('.tabs [data-v=more]'); await p.click('#view [data-act=tab][data-v=shifts]'); await p.waitForTimeout(200);
+  const hc = await p.textContent('.hourscard');
+  ok(/14 h × \$20\.5 = \$287 gross/.test(hc) && /~\$230/.test(hc), 'the pay week shows 14 h, $287 gross and ~$230 take-home at 80% (' + hc.replace(/\s+/g, ' ').slice(0, 120) + ')');
+  await p.screenshot({ path: shots + '/phone-shifts.png', fullPage: true });
+  // Pre-shift checklist, wind-down, and protecting off days
+  await p.evaluate(() => {
+    const pad = (n) => String(n).padStart(2, '0'), ymd = (d) => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()), hm = (d) => pad(d.getHours()) + ':' + pad(d.getMinutes());
+    const base = 'data/users/u_test/m/shifts/'; Object.keys(window.__mock.docs).filter((k) => k.indexOf(base) === 0).forEach((k) => delete window.__mock.docs[k]);
+    const now = Date.now(), put = (id, o) => { window.__mock.docs[base + id] = Object.assign({ id: id, worked: null, note: '', created: 1, updated: 1 }, o); };
+    const ps = new Date(now + 60 * 60000); ps.setMinutes(Math.ceil(ps.getMinutes() / 5) * 5, 0, 0); const pe = new Date(ps.getTime() + 8 * 36e5);
+    put('pre', { date: ymd(ps), job: 'icare', start: hm(ps), end: hm(pe) });
+    const ws = new Date(now - 9 * 36e5), we = new Date(now - 60 * 60000); ws.setSeconds(0, 0); we.setSeconds(0, 0);
+    put('post', { date: ymd(ws), job: 'icare', start: hm(ws), end: hm(we) });
+    const tm = new Date(now); tm.setDate(tm.getDate() + 1); put('tom', { date: ymd(tm), job: 'icare', start: '09:00', end: '17:00' });
+    window.__mock.docs['data/users/u_test/m/inbox/ishift'] = { id: 'ishift', text: 'radio check idea for the unit', created: now - 2 * 36e5, updated: now - 2 * 36e5 };
+  });
+  await reloadKeeping(p, ctx);
+  await p.click('.tabs [data-v=today]'); await p.waitForTimeout(300);
+  ok(await p.isVisible('.shcard.pre'), 'an hour before a shift, Today shows the pre-shift checklist');
+  for (let i = 0; i < 8 && await p.$('.shcard.pre .ckrow'); i++) { await p.click('.shcard.pre .ckrow >> nth=0'); await p.waitForTimeout(150); }
+  ok(await p.isVisible('.shcard.pre .ready'), 'ticking every item shows Ready ✓');
+  ok(await p.isVisible('.shcard.post') && /Sort 1 captured on shift/.test(await p.textContent('.shcard.post')), 'after a shift, Today shows the wind-down with what you captured on shift');
+  await p.click('.shcard.post [data-act=shmood][data-m=good]'); await p.waitForTimeout(500);
+  const tj = await p.evaluate((t) => window.__mock.docs['data/users/u_test/m/journal/j' + t], tdy);
+  ok(tj && tj.mood === 'good', 'the wind-down mood saves to today\'s journal');
+  await p.screenshot({ path: shots + '/phone-shiftcards.png', fullPage: true });
+  await p.click('.shcard.post [data-act=shwound]'); await p.waitForTimeout(200);
+  ok(!(await p.isVisible('.shcard.post')), 'Done puts the wind-down away');
+  // A big task on a shift day gets offered the next off day
+  const offDay = await p.evaluate(() => {
+    const pad = (n) => String(n).padStart(2, '0'), ymd = (d) => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+    const busy = Object.keys(window.__mock.docs).filter((k) => k.indexOf('/m/shifts/') > -1).map((k) => window.__mock.docs[k].date);
+    const d = new Date(); d.setDate(d.getDate() + 2); while (busy.indexOf(ymd(d)) > -1) d.setDate(d.getDate() + 1); return ymd(d);
+  });
+  await p.click('.tabs [data-v=tasks]'); await p.waitForTimeout(150);
+  await p.fill('#qadd', 'Study the PAT packet tomorrow 60 min'); await p.press('#qadd', 'Enter'); await p.waitForTimeout(300);
+  ok(/shift day/.test(await p.textContent('#toast')) && /Move to/.test(await p.textContent('#toast [data-act=undo]')), 'adding a 60-min task on a shift day offers to move it');
+  await p.click('#toast [data-act=undo]'); await p.waitForTimeout(500);
+  const pat = await p.evaluate(() => Object.values(window.__mock.docs).filter((d) => d.t === 'Study the PAT packet')[0]);
+  ok(pat && pat.est === '60 min' && pat.due === offDay, 'Move puts it on the next off day (' + (pat && pat.due) + ' vs ' + offDay + ')');
+  // Calendar
+  await p.click('.tabs [data-v=more]'); await p.click('#view [data-act=tab][data-v=calendar]'); await p.waitForTimeout(200);
+  await p.click('[data-act=calmode][data-v=month]'); await p.waitForTimeout(150);
+  ok((await p.$$('.cal .shbar')).length >= 1, 'the month grid marks shift days');
+  const tmY = await ymdIn(1);
+  if (await p.$('.cal .day[data-d="' + tmY + '"]')) { await p.click('.cal .day[data-d="' + tmY + '"]'); await p.waitForTimeout(150); }
+  else { await p.click('[data-act=calnav][data-n="1"]'); await p.waitForTimeout(100); await p.click('.cal .day[data-d="' + tmY + '"]'); await p.waitForTimeout(150); }
+  const shHref = await p.getAttribute('.billrow:has([data-v=shift]) .calicon', 'href').catch(() => null);
+  ok(shHref && new NodeURL(shHref).searchParams.get('reminder') === '90', 'the day panel lists the shift with an Add to Calendar link alerting 90 min before');
+  await p.click('[data-act=calmode][data-v=week]'); await p.waitForTimeout(150);
+  ok((await p.$$('.blk.shiftblk')).length >= 1, 'the week view shows shift blocks');
+  await p.click('[data-act=calmode][data-v=month]'); await p.waitForTimeout(100);
+
   // Every screen: no sideways scrolling
-  const views = ['plan', 'books', 'notes', 'tools', 'ranks', 'decks', 'bored', 'gym', 'timer','today', 'tasks', 'more', 'areas', 'inbox', 'notes', 'settings', 'money', 'habits', 'goals', 'projects', 'journal', 'calendar'];
+  const views = ['plan', 'shifts', 'books', 'notes', 'tools', 'ranks', 'decks', 'bored', 'gym', 'timer','today', 'tasks', 'more', 'areas', 'inbox', 'notes', 'settings', 'money', 'habits', 'goals', 'projects', 'journal', 'calendar'];
   let wide = [];
   for (const v of views) {
     await p.evaluate((v) => { document.querySelector('[data-act=tab][data-v="' + v + '"]') ? document.querySelector('[data-act=tab][data-v="' + v + '"]').click() : null; }, v);

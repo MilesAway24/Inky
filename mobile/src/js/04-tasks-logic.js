@@ -194,7 +194,12 @@ function playQueue() {
   todays.filter(function (t) { return t.time && minsUntil(t.time) <= 60; }).forEach(function (t) {
     var m = minsUntil(t.time); addTask(t, m > 0 ? 'At ' + fmtTime(t.time) + ', in ' + m + ' min.' : 'It was for ' + fmtTime(t.time) + '.');
   });
-  todays.forEach(function (t) { addTask(t, t.note ? t.note.split('\n')[0] : t.time ? 'At ' + fmtTime(t.time) + '.' : 'Due today.'); });
+  // On a shift day, big untimed jobs wait until the end; they suit an off day.
+  var shiftDay = typeof isShiftDay === 'function' && isShiftDay(d), later = [];
+  todays.forEach(function (t) {
+    if (shiftDay && !t.time && isBigTask(t)) { later.push(t); return; }
+    addTask(t, t.note ? t.note.split('\n')[0] : t.time ? 'At ' + fmtTime(t.time) + '.' : 'Due today.');
+  });
   habitsDueToday().filter(function (h) { return !mark(h, d); }).forEach(function (h) {
     var s = streak(h);
     q.push({ kind: 'habit', id: h.id, ic: h.ic, t: h.n, area: h.area, why: h.cue || (s ? s + ' in a row. Keep it going.' : 'Today counts.'), est: '', tag: 'Habit' });
@@ -204,6 +209,7 @@ function playQueue() {
   });
   tasksIn('whenever').filter(function (t) { return /^\d+\s*min/.test(t.est || '') && parseInt(t.est, 10) <= 15; })
     .forEach(function (t) { addTask(t, 'Small. ' + t.est + ' and it is gone.'); });
+  later.forEach(function (t) { var off = nextOffDay(d); addTask(t, 'Shift day. Better on ' + DOW[parseYmd(off).getDay()] + ' (off).'); });
   var skipped = playSkips[d] || {};
   return q.filter(function (x) { return !skipped[x.kind + x.id]; }).concat(q.filter(function (x) { return skipped[x.kind + x.id]; }));
 }

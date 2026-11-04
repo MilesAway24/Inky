@@ -56,10 +56,11 @@ function taskRow(t) {
 ACTS.tfilter = function (d) { taskFilter = d.id || null; render(); };
 ACTS.form_quickadd = function (d, f) {
   var inp = $('input', f), v = inp.value.trim(); if (!v) return;
-  var p = parseTaskText(v);
-  var t = Store.put('tasks', { t: p.title, ic: '', area: p.area || taskFilter, project: p.project, due: p.due || today(), time: p.time, repeat: p.repeat, done: false, steps: [], note: '' });
+  var p = parseTaskText(v), ef = estFromText(p.title);
+  var t = Store.put('tasks', { t: ef ? ef.rest || p.title : p.title, ic: '', area: p.area || taskFilter, project: p.project, due: p.due || today(), time: p.time, repeat: p.repeat, est: ef ? ef.est : '', done: false, steps: [], note: '' });
   inp.value = ''; logEvent('New task: ' + t.t, t.area);
   render(false, true); var n = $('#qadd'); if (n) n.focus();
+  if (shiftHint(t, 'Added ' + esc(t.t))) return;
   toast('Added: ' + esc([t.t, shortDate(t.due), t.time ? fmtTime(t.time) : '', t.repeat ? '↻ ' + repeatLabel(t.repeat) : ''].filter(Boolean).join(' · ')), function () { Store.del('tasks', t.id); });
 };
 ACTS.newtask = function () {
@@ -212,6 +213,7 @@ ACTS.taskwhen = function (d) {
     var undo = snapshot(d.id);
     if (r.due !== t.due) moveTask(d.id, r.due || 'whenever');
     Store.patch('tasks', d.id, { time: r.time, remind: r.remind });
+    if (r.due !== t.due && shiftHint(Store.get('tasks', d.id))) return;
     toast(esc([r.due ? shortDate(r.due) : 'Someday', r.time ? fmtTime(r.time) : 'all day'].join(' · ')), undo);
   });
 };

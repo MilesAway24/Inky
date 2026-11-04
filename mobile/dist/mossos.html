@@ -638,6 +638,34 @@ section.card{display:grid;gap:10px}
 /* Long titles (quotes) wrap instead of widening the page. */
 .row>.grow{min-width:0}
 .row .t{overflow-wrap:anywhere}
+/* ── shifts ───────────────────────────────────────────────────────── */
+.hourscard{display:grid;gap:8px}
+.estcheck{margin:4px 0 0}
+.shweek{display:grid;gap:6px}
+.shday{display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--line);min-height:56px}
+.shday.today .shd b{color:var(--accent)}
+.shd{display:grid;justify-items:center;width:44px;flex:none;color:var(--ink)}
+.shd b{font-size:12px;font-weight:600;color:var(--muted)}
+.shd span{font-size:18px}
+.shblocks{flex:1;display:flex;flex-wrap:wrap;gap:6px;min-width:0}
+.shblk{display:inline-flex;align-items:center;gap:4px;padding:6px 10px;border-radius:10px;font-size:13.5px;font-weight:500;color:var(--ink);
+  background:color-mix(in srgb,var(--c) 22%,var(--surface));border-left:3px solid var(--c)}
+.presetgrid{display:grid;gap:8px}
+.presetgrid .btn{justify-content:space-between}
+.presetgrid small{color:var(--muted);font-weight:400}
+.shset{display:grid;gap:10px;margin-top:10px}
+.shset .lbl{font-size:13px;color:var(--muted);margin-top:6px}
+.shjob{align-items:center}
+.chip .x{margin-left:4px;color:var(--faint);font-size:16px;line-height:1}
+.chk{display:flex;gap:8px;align-items:center;font-size:14px;margin:10px 0}
+.shcard{display:grid;gap:10px;padding:14px 16px;border-radius:18px;background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--c)}
+.shcard .lbl{font-size:13px;color:var(--muted)}
+.shcard .ready{margin:0;font-weight:600;color:var(--accent)}
+.ckrow{min-height:48px;padding:6px 0}
+.ckrow.on .grow{color:var(--faint);text-decoration:line-through}
+.shline{margin-top:6px;display:flex;gap:6px;flex-wrap:wrap}
+.cal .day .shbar{display:block;height:3px;width:60%;margin:1px auto 0;border-radius:2px}
+.blk.shiftblk{font-weight:600}
 </style>
 
 <div class="app" id="app">
@@ -728,7 +756,7 @@ function icon(name, cls) {
    That subtree is the viewer's own, so the same person on iPhone and iPad
    sees one set of data. Without db (signed out, or a plain browser) the
    app keeps working from the device cache. */
-var COLS = ['areas', 'tasks', 'inbox', 'notes', 'log', 'meta', 'habits', 'goals', 'projects', 'journal', 'ranks', 'decks', 'lifts', 'tools', 'challenges', 'books'];
+var COLS = ['areas', 'tasks', 'inbox', 'notes', 'log', 'meta', 'habits', 'goals', 'projects', 'journal', 'ranks', 'decks', 'lifts', 'tools', 'challenges', 'books', 'shifts'];
 var CACHE_KEY = 'mossos.mobile.v1';
 
 var Store = (function () {
@@ -1203,7 +1231,12 @@ function playQueue() {
   todays.filter(function (t) { return t.time && minsUntil(t.time) <= 60; }).forEach(function (t) {
     var m = minsUntil(t.time); addTask(t, m > 0 ? 'At ' + fmtTime(t.time) + ', in ' + m + ' min.' : 'It was for ' + fmtTime(t.time) + '.');
   });
-  todays.forEach(function (t) { addTask(t, t.note ? t.note.split('\n')[0] : t.time ? 'At ' + fmtTime(t.time) + '.' : 'Due today.'); });
+  // On a shift day, big untimed jobs wait until the end; they suit an off day.
+  var shiftDay = typeof isShiftDay === 'function' && isShiftDay(d), later = [];
+  todays.forEach(function (t) {
+    if (shiftDay && !t.time && isBigTask(t)) { later.push(t); return; }
+    addTask(t, t.note ? t.note.split('\n')[0] : t.time ? 'At ' + fmtTime(t.time) + '.' : 'Due today.');
+  });
   habitsDueToday().filter(function (h) { return !mark(h, d); }).forEach(function (h) {
     var s = streak(h);
     q.push({ kind: 'habit', id: h.id, ic: h.ic, t: h.n, area: h.area, why: h.cue || (s ? s + ' in a row. Keep it going.' : 'Today counts.'), est: '', tag: 'Habit' });
@@ -1213,6 +1246,7 @@ function playQueue() {
   });
   tasksIn('whenever').filter(function (t) { return /^\d+\s*min/.test(t.est || '') && parseInt(t.est, 10) <= 15; })
     .forEach(function (t) { addTask(t, 'Small. ' + t.est + ' and it is gone.'); });
+  later.forEach(function (t) { var off = nextOffDay(d); addTask(t, 'Shift day. Better on ' + DOW[parseYmd(off).getDay()] + ' (off).'); });
   var skipped = playSkips[d] || {};
   return q.filter(function (x) { return !skipped[x.kind + x.id]; }).concat(q.filter(function (x) { return skipped[x.kind + x.id]; }));
 }
@@ -1229,7 +1263,7 @@ var VIEWS = {}, ACTS = {}, TITLES = {};
 var SECTIONS = {
   today: ['Today', 'today'], tasks: ['Tasks', 'tasks'], habits: ['Habits', 'habits'], goals: ['Goals', 'goals'],
   notes: ['Notes', 'notes'], projects: ['Projects', 'projects'], calendar: ['Calendar', 'calendar'], journal: ['Journal', 'journal'],
-  tools: ['Tools', 'tools'], books: ['Books', 'journal'], plan: ['Tomorrow', 'calendar'], money: ['Money', 'money'], inbox: ['Inbox', 'inbox'], areas: ['Life areas', 'areas'], settings: ['Settings', 'settings']
+  tools: ['Tools', 'tools'], books: ['Books', 'journal'], shifts: ['Shifts', 'calendar'], plan: ['Tomorrow', 'calendar'], money: ['Money', 'money'], inbox: ['Inbox', 'inbox'], areas: ['Life areas', 'areas'], settings: ['Settings', 'settings']
 };
 var TAB_DEFAULT = ['today', 'tasks', 'habits'];
 function tabPrefs() { var p = Store.get('meta', 'prefs'); var t = p && p.tabs; return t && t.length === 3 && t.every(function (x) { return SECTIONS[x]; }) ? t : TAB_DEFAULT; }
@@ -1237,7 +1271,7 @@ function tabsNow() {
   var t = tabPrefs();
   return [[t[0]].concat(SECTIONS[t[0]]), [t[1]].concat(SECTIONS[t[1]]), ['capture', 'Capture', 'plus'], [t[2]].concat(SECTIONS[t[2]]), ['more', 'More', 'more']];
 }
-var SIDE_MORE = ['plan', 'habits', 'goals', 'notes', 'books', 'projects', 'calendar', 'journal', 'tools', 'inbox', 'areas', 'settings'].map(function (k) { return [k, SECTIONS[k][0], SECTIONS[k][1]]; });
+var SIDE_MORE = ['plan', 'shifts', 'habits', 'goals', 'notes', 'books', 'projects', 'calendar', 'journal', 'tools', 'inbox', 'areas', 'settings'].map(function (k) { return [k, SECTIONS[k][0], SECTIONS[k][1]]; });
 
 function leaving() { if (current().view === 'project' && typeof maybeAskLeftOff === 'function') setTimeout(maybeAskLeftOff, 0); }
 function go(tab) { leaving(); nav.tab = tab; nav.stack = []; render(true); }
@@ -1332,10 +1366,10 @@ addEventListener('keydown', function (e) { if (e.key === 'Escape') closeSheet();
 
 /* ── toast with optional undo ───────────────────────────────────────── */
 var toastT = null;
-function toast(msg, undo) {
+function toast(msg, undo, label) {
   clearTimeout(toastT);
   var el = $('#toast');
-  el.innerHTML = '<span>' + msg + '</span>' + (undo ? '<button data-act="undo">Undo</button>' : '');
+  el.innerHTML = '<span>' + msg + '</span>' + (undo ? '<button data-act="undo">' + esc(label || 'Undo') + '</button>' : '');
   el.hidden = false; toast.undo = undo || null;
   toastT = setTimeout(function () { el.hidden = true; toast.undo = null; }, undo ? 5000 : 2600);
 }
@@ -1392,13 +1426,15 @@ VIEWS.today = function () {
   var inbox = Store.all('inbox').sort(function (a, b) { return a.created - b.created; }), sl = slipped();
   var todays = tasksIn('today'), open = todays.filter(function (x) { return !x.done; }), done = todays.filter(function (x) { return x.done; });
   var h = '<div class="overview"><div class="dateline">' + DOW[d.getDay()] + ', ' + MON[d.getMonth()] + ' ' + d.getDate() + ' · ' + partOfDay(d.getHours()) + '</div>'
-    + '<div class="ovcount">' + open.length + ' task' + (open.length === 1 ? '' : 's') + ' today' + (sl.length ? ' · <span class="bad">' + sl.length + ' overdue</span>' : '') + '</div>'
+    + '<div class="ovcount">' + open.length + ' task' + (open.length === 1 ? '' : 's') + ' today' + esc(shiftOverview()) + (sl.length ? ' · <span class="bad">' + sl.length + ' overdue</span>' : '') + '</div>'
     + (d.getHours() >= 17 ? '<button class="link planlink" data-act="tab" data-v="plan">Plan tomorrow →</button>' : '') + '</div>';
   h += jumpTiles(['habits', 'goals', 'notes', 'projects', 'tools', 'calendar']);
 
   if (hasExamples()) h += '<div class="card flat"><p class="note">You\'re looking at example data so you can see how MossOS works. '
     + 'Items marked <span class="pill ex">example</span> go when you clear them.</p>'
     + '<div class="btnrow" style="margin-top:12px"><button class="btn sm soft" data-act="clearex">Clear examples</button></div></div>';
+
+  h += shiftCards();
 
   // Heads up
   var rem = remindersNow(), hrem = habitRemindersNow();
@@ -1526,6 +1562,7 @@ function sectionCount(k) {
   if (k === 'journal') { var e = entryFor(t); return e && (e.text || e.mood) ? 'written today' : 'not yet today'; }
   if (k === 'inbox') { return Store.all('inbox').length + ' to sort'; }
   if (k === 'tasks') { return tasksIn('today').filter(function (x) { return !x.done; }).length + ' today'; }
+  if (k === 'shifts') { var mo = mondayOf(t), sn = Store.all('shifts').filter(function (x) { return x.date >= mo && x.date <= addDays(mo, 6); }).length; return sn + ' this week'; }
   if (k === 'books') { var br = booksReading(); return br.length ? br.length + ' reading' : 'add a book'; }
   if (k === 'plan') { var tn = tasksOn(addDays(t, 1)).filter(function (x) { return !x.done; }).length; return tn + ' planned'; }
   if (k === 'areas') { return areasSorted().filter(function (a) { return a.state === 'Needs you'; }).length + ' need you'; }
@@ -1596,10 +1633,11 @@ function taskRow(t) {
 ACTS.tfilter = function (d) { taskFilter = d.id || null; render(); };
 ACTS.form_quickadd = function (d, f) {
   var inp = $('input', f), v = inp.value.trim(); if (!v) return;
-  var p = parseTaskText(v);
-  var t = Store.put('tasks', { t: p.title, ic: '', area: p.area || taskFilter, project: p.project, due: p.due || today(), time: p.time, repeat: p.repeat, done: false, steps: [], note: '' });
+  var p = parseTaskText(v), ef = estFromText(p.title);
+  var t = Store.put('tasks', { t: ef ? ef.rest || p.title : p.title, ic: '', area: p.area || taskFilter, project: p.project, due: p.due || today(), time: p.time, repeat: p.repeat, est: ef ? ef.est : '', done: false, steps: [], note: '' });
   inp.value = ''; logEvent('New task: ' + t.t, t.area);
   render(false, true); var n = $('#qadd'); if (n) n.focus();
+  if (shiftHint(t, 'Added ' + esc(t.t))) return;
   toast('Added: ' + esc([t.t, shortDate(t.due), t.time ? fmtTime(t.time) : '', t.repeat ? '↻ ' + repeatLabel(t.repeat) : ''].filter(Boolean).join(' · ')), function () { Store.del('tasks', t.id); });
 };
 ACTS.newtask = function () {
@@ -1752,6 +1790,7 @@ ACTS.taskwhen = function (d) {
     var undo = snapshot(d.id);
     if (r.due !== t.due) moveTask(d.id, r.due || 'whenever');
     Store.patch('tasks', d.id, { time: r.time, remind: r.remind });
+    if (r.due !== t.due && shiftHint(Store.get('tasks', d.id))) return;
     toast(esc([r.due ? shortDate(r.due) : 'Someday', r.time ? fmtTime(r.time) : 'all day'].join(' · ')), undo);
   });
 };
@@ -2324,7 +2363,7 @@ ACTS.notetotask = function (d) {
 TITLES.more = 'More';
 var SOON = {};
 VIEWS.more = function () {
-  return jumpTiles(['plan', 'habits', 'goals', 'notes', 'books', 'projects', 'calendar', 'journal', 'tools', 'inbox', 'areas'])
+  return jumpTiles(['plan', 'shifts', 'habits', 'goals', 'notes', 'books', 'projects', 'calendar', 'journal', 'tools', 'inbox', 'areas'])
     + '<div class="menu">' + ['money', 'settings'].map(function (k) {
       return '<button class="row" data-act="tab" data-v="' + k + '">' + icon(SECTIONS[k][1]) + '<span class="grow t">' + SECTIONS[k][0] + '</span>' + icon('chev', 'sm chev') + '</button>';
     }).join('') + '</div>';
@@ -3164,7 +3203,7 @@ function monthView() {
   for (var dnum = 1; dnum <= days; dnum++) {
     var d = m.slice(0, 8) + String(dnum).padStart(2, '0'), ts = tasksOn(d), j = entryFor(d);
     h += '<button class="day' + (d === t ? ' today' : '') + (d === cal.sel ? ' sel' : '') + '" data-act="calday" data-d="' + d + '" aria-label="' + esc(shortDate(d)) + ', ' + ts.length + ' tasks">'
-      + '<span class="n">' + dnum + '</span><span class="dots">' + ts.slice(0, 4).map(function (x) {
+      + '<span class="n">' + dnum + '</span>' + shiftOn(d).slice(0, 1).map(function (s) { return '<span class="shbar" style="background:' + esc(shiftJob(s.job).color) + '"></span>'; }).join('') + '<span class="dots">' + ts.slice(0, 4).map(function (x) {
         return '<i style="background:' + areaColor(x.area) + (x.done ? ';opacity:.4' : '') + '"></i>';
       }).join('') + (fe[dnum] ? fe[dnum].map(function (e) { return '<i class="fin ' + e.type + '" title="' + esc(e.title) + '"></i>'; }).join('') : '') + '</span>' + (j && j.mood ? '<span class="mood">' + MOODS[j.mood][0] + '</span>' : '') + '</button>';
   }
@@ -3179,7 +3218,7 @@ function weekView() {
   h += '<div class="wk">' + range(7).map(function (i) {
     var d = addDays(mon, i), ts = tasksOn(d), hd = habitsSorted().filter(function (x) { return dueOn(x, d); }), hit = hd.filter(function (x) { return mark(x, d) === 1; }).length;
     return '<div class="wkday' + (d === t ? ' today' : '') + (d === sel ? ' sel' : '') + '"><button class="wkh" data-act="calday" data-d="' + d + '"><b>' + DOW[parseYmd(d).getDay()] + '</b><span>' + parseYmd(d).getDate() + '</span></button>'
-      + '<div class="blocks">' + (ts.length ? ts.map(function (x) {
+      + '<div class="blocks">' + shiftOn(d).map(function (s) { var j = shiftJob(s.job); return '<button class="blk shiftblk" style="--c:' + esc(j.color) + '" data-act="open" data-v="shift" data-id="' + s.id + '">' + esc(j.ic + ' ' + shiftLabel(s)) + '</button>'; }).join('') + (ts.length ? ts.map(function (x) {
         return '<button class="blk' + (x.done ? ' done' : '') + '" style="--c:' + areaColor(x.area) + '" data-act="open" data-v="task" data-id="' + x.id + '">' + (x.time ? esc(fmtTime(x.time)) + ' ' : '') + esc(x.t) + '</button>';
       }).join('') : '<span class="faint small">Nothing planned</span>') + '</div>'
       + (hd.length && d <= t ? '<span class="hab small faint">' + hit + '/' + hd.length + ' habits</span>' : '') + '</div>';
@@ -3191,6 +3230,9 @@ function dayDetail(d) {
   var hs = habitsSorted().filter(function (x) { return dueOn(x, d); });
   var h = '<section class="card" style="display:grid;gap:10px"><div class="sechead" style="margin:0"><h2>' + esc(shortDate(d)) + '</h2>'
     + '<span class="meta">' + ts.filter(function (x) { return !x.done; }).length + ' open</span></div>';
+  var shs = shiftOn(d);
+  if (shs.length) h += '<div class="list">' + shs.map(function (s) { var j = shiftJob(s.job);
+    return '<div class="row billrow"><button class="grow brow" data-act="open" data-v="shift" data-id="' + s.id + '"><span class="dot" style="background:' + esc(j.color) + '"></span><span class="grow t">' + esc(j.ic + ' ' + j.name) + '</span><span class="amt">' + esc(shiftLabel(s)) + '</span></button>' + calIcon(shiftCal(s)) + '</div>'; }).join('') + '</div>';
   h += ts.length ? '<div class="list">' + ts.map(taskRow).join('') + '</div>' : '<p class="note">Nothing due.</p>';
   var fe = typeof finEventsFor === 'function' ? (finEventsFor(monthStart(d))[parseYmd(d).getDate()] || []) : [];
   if (fe.length) h += '<div class="list">' + fe.map(function (e) {
@@ -4165,7 +4207,11 @@ VIEWS.plan = function () {
   var t = today(), tm = addDays(t, 1), td = parseYmd(tm);
   var left = Store.all('tasks').filter(function (x) { return !x.done && x.due && x.due <= t; }).sort(byWhen);
   var tom = tasksOn(tm).filter(function (x) { return !x.done; });
-  var h = '<div class="overview"><div class="dateline">Planning</div><div class="ovcount">' + DOWL[td.getDay()] + ', ' + MON[td.getMonth()] + ' ' + td.getDate() + '</div></div>';
+  var tsh = shiftOn(tm), bigTom = tom.filter(function (x) { return isBigTask(x) && !x.time; });
+  var h = '<div class="overview"><div class="dateline">Planning</div><div class="ovcount">' + DOWL[td.getDay()] + ', ' + MON[td.getMonth()] + ' ' + td.getDate() + '</div>'
+    + (tsh.length ? '<div class="shline">' + tsh.map(function (s) { var j = shiftJob(s.job); return '<span class="shblk" style="--c:' + esc(j.color) + '">' + esc(j.ic + ' ' + j.name + ' ' + shiftLabel(s)) + '</span>'; }).join('') + '</div>'
+      : '<div class="shline faint small">Off tomorrow</div>') + '</div>';
+  if (tsh.length && bigTom.length) h += '<div class="hurow card flat"><span>🛡</span><span class="grow"><b>' + bigTom.length + ' big job' + (bigTom.length === 1 ? '' : 's') + '</b> <span class="muted">on a shift day</span></span><button class="btn sm soft" data-act="shmovebig" data-d="' + tm + '">Move to ' + esc(dayShortName(nextOffDay(tm))) + '</button></div>';
 
   // 1. Left from today
   h += '<section><div class="sechead"><h2>Left from today</h2><span class="meta">' + left.length + '</span></div>';
@@ -4173,6 +4219,7 @@ VIEWS.plan = function () {
     return '<div class="planrow"><button class="grow t" data-act="open" data-v="task" data-id="' + x.id + '">' + areaDot(x.area) + ' ' + esc(x.t)
       + '<span class="s">' + (x.due < t ? 'from ' + esc(shortDate(x.due)) : 'today') + (x.time ? ' · ' + esc(fmtTime(x.time)) : '') + '</span></button>'
       + '<div class="chips">'
+      + (tsh.length && isBigTask(x) ? '<button class="chip" data-act="planmove" data-id="' + x.id + '" data-to="' + nextOffDay(tm) + '">' + esc(dayShortName(nextOffDay(tm))) + ' (off)</button>' : '')
       + '<button class="chip" data-act="planmove" data-id="' + x.id + '" data-to="tomorrow">Tomorrow</button>'
       + '<button class="chip" data-act="taskwhen" data-id="' + x.id + '">Pick a day</button>'
       + '<button class="chip" data-act="planmove" data-id="' + x.id + '" data-to="whenever">Someday</button>'
@@ -4213,14 +4260,14 @@ VIEWS.plan.after = function () { if (typeof wireSwipes === 'function') wireSwipe
 ACTS.planmove = function (d) {
   var undo = snapshot(d.id), tk = Store.get('tasks', d.id);
   moveTask(d.id, d.to);
-  toast(esc(tk ? tk.t : 'Task') + (d.to === 'tomorrow' ? ' → tomorrow' : ' → someday'), undo);
+  toast(esc(tk ? tk.t : 'Task') + (d.to === 'tomorrow' ? ' → tomorrow' : d.to === 'whenever' ? ' → someday' : ' → ' + esc(shortDate(d.to))), undo);
 };
 ACTS.form_planadd = function (d, f) {
   var inp = $('input', f), v = inp.value.trim(); if (!v) return; inp.value = '';
-  var pt = parseTaskText(v), tm = addDays(today(), 1);
+  var pt = parseTaskText(v), tm = addDays(today(), 1), ef = estFromText(pt.title || v);
   var due = pt.due || (pt.repeat ? nextOccurrence(pt.repeat, today()) : tm);
-  Store.put('tasks', { t: pt.title || v, area: pt.area, project: pt.project, due: due, time: pt.time, repeat: pt.repeat, done: false, steps: [], note: '' });
-  render(false, true); toast('Added for ' + shortDate(due).toLowerCase());
+  var nt = Store.put('tasks', { t: ef ? ef.rest : pt.title || v, area: pt.area, project: pt.project, due: due, time: pt.time, repeat: pt.repeat, est: ef ? ef.est : '', done: false, steps: [], note: '' });
+  render(false, true); if (!shiftHint(nt, 'Added')) toast('Added for ' + shortDate(due).toLowerCase());
 };
 ACTS.form_planjournal = function (d, f) {
   var inp = $('input', f), v = inp.value.trim(); if (!v) return; inp.value = '';
@@ -4576,6 +4623,249 @@ function parseQuote(text) {
   if (!m) return null;
   var b = bookFind(m[2]); if (!b) return null;
   return { text: m[1], book: b, page: m[3] ? +m[3] : b.page || null };
+}
+
+/* ── 26-shifts.js ── */
+/* ═══ SHIFTS ════════════════════════════════════════════════════════
+   His week runs on shifts (iCare EMS truck, Safeway closes) that change
+   weekly. Enter them fast on a week grid; MossOS then shows a pre-shift
+   checklist, a post-shift wind-down, keeps big tasks off shift days, and
+   estimates the paycheck from hours.
+   shifts: { date, job, start:'HH:MM', end:'HH:MM' (earlier = past midnight), worked, note, checks:[bool], wound } */
+var SHIFT_DEFAULTS = {
+  id: 'shiftcfg',
+  jobs: [{ id: 'icare', name: 'iCare EMS', ic: '🚑', color: '#E2574C', rate: null, takeHome: 80 },
+    { id: 'safeway', name: 'Safeway', ic: '🛒', color: '#5B9BF5', rate: 20.5, takeHome: 80 }],
+  presets: [{ id: 'p1', label: 'Truck day', job: 'icare', start: '07:00', end: '19:00' },
+    { id: 'p2', label: 'Truck night', job: 'icare', start: '19:00', end: '07:00' },
+    { id: 'p3', label: 'Safeway close', job: 'safeway', start: '16:00', end: '23:00' }],
+  checklist: ['Uniform + boots', 'ID + badge', 'Meds', 'Water jug', 'Packed meals', 'Phone charger'],
+  before: 120
+};
+function shiftCfg() { var c = Store.get('meta', 'shiftcfg'); return c ? Object.assign({}, SHIFT_DEFAULTS, c) : JSON.parse(JSON.stringify(SHIFT_DEFAULTS)); }
+function shiftCfgSave(f) { var c = shiftCfg(); Store.put('meta', Object.assign(c, f, { id: 'shiftcfg' })); }
+function shiftJob(id) { return shiftCfg().jobs.filter(function (j) { return j.id === id; })[0] || { id: id, name: 'Work', ic: '💼', color: '#8E8E8A', rate: null, takeHome: 80 }; }
+function shiftOn(d) { return Store.all('shifts').filter(function (s) { return s.date === d; }).sort(function (a, b) { return a.start.localeCompare(b.start); }); }
+function shiftStartAt(s) { return new Date(s.date + 'T' + s.start + ':00'); }
+function shiftEndAt(s) { var e = new Date(s.date + 'T' + s.end + ':00'); if (s.end <= s.start) e.setDate(e.getDate() + 1); return e; }
+function shiftHours(s) { return s.worked != null ? +s.worked : Math.round((shiftEndAt(s) - shiftStartAt(s)) / 36e5 * 100) / 100; }
+function tShort(t) { var h = +t.slice(0, 2), m = t.slice(3), ap = h < 12 ? 'a' : 'p'; h = h % 12 || 12; return h + (m !== '00' ? ':' + m : '') + ap; }
+function shiftLabel(s) { return tShort(s.start) + '–' + tShort(s.end); }
+function mondayOf(d) { return addDays(d, -wd(d)); }
+function payWeekStart(d) { return addDays(d, -((wd(d) - 4 + 7) % 7)); } // Friday on or before
+function isShiftDay(d) { return shiftOn(d).length > 0; }
+function nextOffDay(from) { var d = addDays(from, 1); for (var i = 0; i < 14 && isShiftDay(d); i++) d = addDays(d, 1); return d; }
+function isBigTask(t) { return !!t && (estMinutes(t.est) >= 45 && !!t.est || !!t.project); }
+function dayShortName(d) { return DOW[parseYmd(d).getDay()]; }
+/* Pay week Fri–Thu: hours per job and an estimated check. */
+function payEstimate(d) {
+  var ws = payWeekStart(d), we = addDays(ws, 6), by = {};
+  Store.all('shifts').filter(function (s) { return s.date >= ws && s.date <= we; }).forEach(function (s) { by[s.job] = (by[s.job] || 0) + shiftHours(s); });
+  var rows = Object.keys(by).map(function (k) { var j = shiftJob(k), h = Math.round(by[k] * 100) / 100, g = j.rate ? h * j.rate : null; return { job: j, hours: h, gross: g, take: g != null ? g * (j.takeHome || 80) / 100 : null }; });
+  var take = rows.reduce(function (a, r) { return a + (r.take || 0); }, 0);
+  return { start: ws, end: we, payday: addDays(ws, 7), rows: rows, hours: rows.reduce(function (a, r) { return a + r.hours; }, 0), take: take, missingRate: rows.some(function (r) { return r.take == null; }) };
+}
+
+/* ── the Shifts page ─────────────────────────────────────────────── */
+var shWeek = null;
+TITLES.shifts = 'Shifts';
+VIEWS.shifts = function () {
+  var t = today(); shWeek = shWeek || mondayOf(t);
+  var pe = payEstimate(t), cfg = shiftCfg();
+  var h = '<section class="card hourscard"><div class="sechead" style="margin:0"><h2>This pay week</h2><span class="meta">' + esc(shortDate(pe.start)) + ' – ' + esc(shortDate(pe.end)) + '</span></div>'
+    + (pe.rows.length ? '<div class="list">' + pe.rows.map(function (r) {
+      return '<div class="row"><span class="dot" style="background:' + esc(r.job.color) + '"></span><span class="grow"><div class="t">' + esc(r.job.name) + '</div><div class="s">' + fmtAmt(r.hours) + ' h'
+        + (r.gross != null ? ' × ' + fmtMoney(r.job.rate) + ' = ' + fmtMoney(Math.round(r.gross)) + ' gross' : ' · add your rate below') + '</div></span>'
+        + (r.take != null ? '<span class="amt">~' + fmtMoney(Math.round(r.take)) + '</span>' : '') + '</div>';
+    }).join('') + '</div><p class="estcheck"><b>Est. check ' + esc(dayShortName(pe.payday)) + ' ' + esc(shortDate(pe.payday)) + ': ~' + fmtMoney(Math.round(pe.take)) + '</b>'
+      + '<span class="muted small"> · ' + fmtAmt(pe.hours) + ' h · take-home at your % ' + (pe.missingRate ? '· some hours have no rate yet' : '') + '</span></p>'
+      : '<p class="note">No shifts this pay week yet.</p>') + '</section>';
+  // Week grid
+  var mon = shWeek, days = range(7).map(function (i) { return addDays(mon, i); });
+  var weekN = Store.all('shifts').filter(function (s) { return s.date >= mon && s.date <= addDays(mon, 6); }).length;
+  h += '<section><div class="calhead"><button class="iconbtn" data-act="shweek" data-n="-7" aria-label="Previous week">' + icon('back') + '</button>'
+    + '<b>' + (mon === mondayOf(t) ? 'This week' : mon === addDays(mondayOf(t), 7) ? 'Next week' : esc(absDate(mon))) + ' <span class="muted small">' + esc(shortDate(mon)) + ' – ' + esc(shortDate(addDays(mon, 6))) + '</span></b>'
+    + '<button class="iconbtn" data-act="shweek" data-n="7" aria-label="Next week">' + icon('chev') + '</button></div>'
+    + '<div class="shweek">' + days.map(function (d) {
+      var ss = shiftOn(d);
+      return '<div class="shday' + (d === t ? ' today' : '') + '"><button class="shd" data-act="shday" data-d="' + d + '" aria-label="Add a shift on ' + esc(longDate(d)) + '"><b>' + dayShortName(d) + '</b><span>' + parseYmd(d).getDate() + '</span></button>'
+        + '<div class="shblocks">' + (ss.length ? ss.map(function (s) { var j = shiftJob(s.job);
+          return '<button class="shblk" style="--c:' + esc(j.color) + '" data-act="open" data-v="shift" data-id="' + s.id + '">' + esc(j.ic) + ' ' + esc(shiftLabel(s)) + '</button>'; }).join('') : '<span class="faint small">Off</span>') + '</div>'
+        + '<button class="iconbtn" data-act="shday" data-d="' + d + '" aria-label="Add a shift">' + icon('plus', 'sm') + '</button></div>';
+    }).join('') + '</div>'
+    + (!weekN ? '<button class="btn soft block" data-act="shcopy" style="margin-top:10px">Copy last week</button>' : '') + '</section>';
+  // Settings
+  h += '<details class="card flat"><summary><b>Jobs, presets and checklist</b></summary><div class="shset">'
+    + '<div class="lbl">Jobs · hourly rate and take-home %</div>' + cfg.jobs.map(function (j, i) {
+      return '<div class="btnrow shjob"><span class="dot" style="background:' + esc(j.color) + '"></span><input class="input" aria-label="Job name" data-sjob="' + i + '" data-k="name" value="' + esc(j.name) + '" style="flex:2">'
+        + '<input class="input" aria-label="Hourly rate for ' + esc(j.name) + '" inputmode="decimal" placeholder="$/h" data-sjob="' + i + '" data-k="rate" value="' + esc(j.rate == null ? '' : j.rate) + '" style="flex:1">'
+        + '<input class="input" aria-label="Take-home percent for ' + esc(j.name) + '" inputmode="numeric" placeholder="%" data-sjob="' + i + '" data-k="takeHome" value="' + esc(j.takeHome) + '" style="flex:1"></div>';
+    }).join('')
+    + '<div class="lbl">Presets</div><div class="chips">' + cfg.presets.map(function (p) {
+      return '<span class="chip">' + esc(shiftJob(p.job).ic) + ' ' + esc(p.label) + ' · ' + esc(tShort(p.start) + '–' + tShort(p.end)) + ' <button class="x" data-act="shpredel" data-id="' + p.id + '" aria-label="Remove preset ' + esc(p.label) + '">×</button></span>';
+    }).join('') + '</div><p class="note small">Add presets from "Custom time" when you add a shift.</p>'
+    + '<div class="lbl">Pre-shift checklist · shows ' + cfg.before / 60 + ' h before</div><div class="chips">' + [60, 90, 120, 180].map(function (m) {
+      return '<button class="chip' + (cfg.before === m ? ' on' : '') + '" data-act="shbefore" data-m="' + m + '">' + (m % 60 ? m / 60 : m / 60) + ' h</button>';
+    }).join('') + '</div><div class="list">' + cfg.checklist.map(function (c, i) {
+      return '<div class="row"><span class="grow">' + esc(c) + '</span><button class="iconbtn" data-act="shckdel" data-i="' + i + '" aria-label="Remove ' + esc(c) + '">' + icon('x', 'sm') + '</button></div>';
+    }).join('') + '</div><form class="addstep" data-form="shckadd"><label class="sr" for="shck">Add a checklist item</label><input id="shck" class="input" placeholder="Add an item" autocomplete="off"><button class="btn soft" type="submit">Add</button></form>'
+    + '</div></details>';
+  return h;
+};
+VIEWS.shifts.after = function () {
+  document.querySelectorAll('[data-sjob]').forEach(function (el) {
+    el.addEventListener('change', function () {
+      var cfg = shiftCfg(), j = cfg.jobs[+el.dataset.sjob], k = el.dataset.k, v = el.value.trim(); if (!j) return;
+      if (k === 'name') { if (v) j.name = v.slice(0, 40); } else if (k === 'rate') j.rate = v === '' ? null : Math.max(0, +v || 0); else j.takeHome = Math.max(1, Math.min(100, Math.round(+v || 80)));
+      shiftCfgSave({ jobs: cfg.jobs }); toast('Saved');
+    });
+  });
+};
+ACTS.shweek = function (d) { shWeek = addDays(shWeek || mondayOf(today()), +d.n); render(); };
+ACTS.shbefore = function (d) { shiftCfgSave({ before: +d.m }); };
+ACTS.shckdel = function (d) { var c = shiftCfg().checklist.slice(); c.splice(+d.i, 1); shiftCfgSave({ checklist: c }); };
+ACTS.form_shckadd = function (d, f) { var v = $('input', f).value.trim(); if (!v) return; shiftCfgSave({ checklist: shiftCfg().checklist.concat([v.slice(0, 60)]) }); render(false, true); };
+ACTS.shpredel = function (d) { shiftCfgSave({ presets: shiftCfg().presets.filter(function (p) { return p.id !== d.id; }) }); };
+ACTS.shcopy = function () {
+  var mon = shWeek, prev = addDays(mon, -7), made = [];
+  Store.all('shifts').filter(function (s) { return s.date >= prev && s.date <= addDays(prev, 6); }).forEach(function (s) {
+    made.push(Store.put('shifts', { date: addDays(s.date, 7), job: s.job, start: s.start, end: s.end, worked: null, note: '' }, true).id);
+  });
+  render();
+  if (!made.length) { toast('Last week has no shifts to copy'); return; }
+  toast('Copied ' + made.length + ' shift' + (made.length === 1 ? '' : 's'), function () { made.forEach(function (id) { Store.del('shifts', id); }); });
+};
+/* Tap a day: presets, or a custom time. */
+ACTS.shday = function (d) {
+  var cfg = shiftCfg(), ss = shiftOn(d.d);
+  openSheet('<div class="shead"><h2>' + esc(longDate(d.d)) + '</h2><button class="iconbtn" data-act="close" aria-label="Close">' + icon('x') + '</button></div>'
+    + (ss.length ? '<p class="note small">Already: ' + ss.map(function (s) { return esc(shiftJob(s.job).ic + ' ' + shiftLabel(s)); }).join(', ') + '</p>' : '')
+    + '<div class="presetgrid">' + cfg.presets.map(function (p) { var j = shiftJob(p.job);
+      return '<button class="btn soft big3" style="--c:' + esc(j.color) + '" data-act="shadd" data-d="' + d.d + '" data-p="' + p.id + '">' + esc(j.ic) + ' ' + esc(p.label) + '<small>' + esc(tShort(p.start) + '–' + tShort(p.end)) + '</small></button>'; }).join('')
+    + '<button class="btn ghost big3" data-act="shcustom" data-d="' + d.d + '">Custom time…</button></div>');
+};
+function addShift(date, job, start, end) {
+  var s = Store.put('shifts', { date: date, job: job, start: start, end: end, worked: null, note: '' }, true);
+  closeSheet(); toast(esc(shiftJob(job).ic + ' ' + shiftLabel(s)) + ' on ' + esc(shortDate(date)), function () { Store.del('shifts', s.id); });
+  return s;
+}
+ACTS.shadd = function (d) { var p = shiftCfg().presets.filter(function (x) { return x.id === d.p; })[0]; if (p) addShift(d.d, p.job, p.start, p.end); };
+var shCustom = null;
+ACTS.shcustom = function (d) {
+  shCustom = { date: d.d, job: shiftCfg().jobs[0].id, start: '07:00', end: '19:00' };
+  shCustomPaint();
+};
+function shCustomPaint() {
+  var x = shCustom, cfg = shiftCfg();
+  $('#sheet').innerHTML = '<div class="grab" aria-hidden="true"></div><div class="shead"><h2>Custom shift · ' + esc(shortDate(x.date)) + '</h2><button class="iconbtn" data-act="close" aria-label="Close">' + icon('x') + '</button></div>'
+    + '<div class="chips">' + cfg.jobs.map(function (j) { return '<button class="chip' + (x.job === j.id ? ' on' : '') + '" data-act="shcjob" data-j="' + j.id + '">' + esc(j.ic + ' ' + j.name) + '</button>'; }).join('') + '</div>'
+    + '<div class="wlab"><span>Starts</span><b id="shcs">' + esc(fmtTime(x.start)) + '</b></div>' + rulerHtml('rs1', x.start)
+    + '<div class="wlab"><span>Ends</span><b id="shce">' + esc(fmtTime(x.end)) + '</b></div>' + rulerHtml('rs2', x.end)
+    + '<label class="chk"><input type="checkbox" id="shcpre"> Save as a preset</label>'
+    + '<button class="btn accent block" data-act="shcsave">Add shift</button>';
+  makeRuler({ ruler: $('#rs1'), strip: $('#rs1 .rstrip'), start: mins(x.start), onMove: function (m) { x.start = hm(m); $('#shcs').textContent = fmtTime(x.start); }, onSet: function () {} });
+  makeRuler({ ruler: $('#rs2'), strip: $('#rs2 .rstrip'), start: mins(x.end), onMove: function (m) { x.end = hm(m); $('#shce').textContent = fmtTime(x.end); }, onSet: function () {} });
+}
+ACTS.shcjob = function (d) { shCustom.job = d.j; shCustomPaint(); };
+ACTS.shcsave = function () {
+  var x = shCustom; if (!x || x.start === x.end) { toast('Start and end can\'t be the same'); return; }
+  if ($('#shcpre') && $('#shcpre').checked) {
+    var j = shiftJob(x.job); shiftCfgSave({ presets: shiftCfg().presets.concat([{ id: 'p' + Date.now().toString(36), label: j.name + ' ' + tShort(x.start), job: x.job, start: x.start, end: x.end }]) });
+  }
+  addShift(x.date, x.job, x.start, x.end); shCustom = null;
+};
+
+/* ── one shift ───────────────────────────────────────────────────── */
+TITLES.shift = function (id) { var s = Store.get('shifts', id); return s ? shiftJob(s.job).name + ' · ' + shortDate(s.date) : 'Shift'; };
+VIEWS.shift = function (id) {
+  var s = Store.get('shifts', id); if (!s) return '<div class="empty">This shift was removed.</div>';
+  var cfg = shiftCfg();
+  return '<div class="chips">' + cfg.jobs.map(function (j) { return '<button class="chip' + (s.job === j.id ? ' on' : '') + '" data-act="shsetjob" data-id="' + id + '" data-j="' + j.id + '">' + esc(j.ic + ' ' + j.name) + '</button>'; }).join('') + '</div>'
+    + '<div class="props"><div class="prop"><span class="k">Date</span><span class="v">' + esc(longDate(s.date)) + '</span></div>'
+    + '<div class="prop"><span class="k">Starts</span><span class="v"><label class="sr" for="shs">Starts</label><input id="shs" type="time" class="input" style="max-width:160px" data-shf="start" value="' + s.start + '"></span></div>'
+    + '<div class="prop"><span class="k">Ends</span><span class="v"><label class="sr" for="she">Ends</label><input id="she" type="time" class="input" style="max-width:160px" data-shf="end" value="' + s.end + '"></span></div>'
+    + '<div class="prop"><span class="k">Hours</span><span class="v">' + fmtAmt(shiftHours(s)) + ' h' + (s.worked != null ? ' (worked)' : ' (planned)') + '</span></div>'
+    + '<div class="prop"><span class="k">Ran long?</span><span class="v"><label class="sr" for="shw">Hours actually worked</label><input id="shw" class="input" inputmode="decimal" style="max-width:160px" placeholder="Worked, e.g. 13.5" data-shf="worked" value="' + (s.worked != null ? s.worked : '') + '"></span></div>'
+    + '<div class="prop"><span class="k">Calendar</span><span class="v">' + calBtn(shiftCal(s)) + '</span></div></div>'
+    + '<label class="sr" for="shn">Note</label><textarea id="shn" class="input" rows="3" data-shf="note" placeholder="Note (partner, unit, anything)">' + esc(s.note || '') + '</textarea>'
+    + '<div class="btnrow"><button class="btn ghost" data-act="shdel" data-id="' + id + '">Delete shift</button></div>';
+};
+VIEWS.shift.after = function (id) {
+  document.querySelectorAll('[data-shf]').forEach(function (el) {
+    el.addEventListener('change', function () {
+      var k = el.dataset.shf, v = el.value.trim(), f = {};
+      if (k === 'worked') f.worked = v === '' ? null : Math.max(0, Math.min(36, +v || 0));
+      else if (k === 'start' || k === 'end') { if (!/^\d\d:\d\d$/.test(v)) return; f[k] = v; }
+      else f.note = v.slice(0, 500);
+      Store.patch('shifts', id, f);
+    });
+  });
+};
+function shiftCal(s) { var j = shiftJob(s.job); return { title: j.ic + ' ' + j.name + ' shift', date: s.date, time: s.start, minutes: Math.round(shiftHours(s) * 60), notes: s.note || '', alarmMin: 90 }; }
+ACTS.shsetjob = function (d) { Store.patch('shifts', d.id, { job: d.j }); };
+ACTS.shdel = function (d) { var s = Store.get('shifts', d.id); Store.del('shifts', d.id); pop(); toast('Shift deleted', function () { Store.put('shifts', s); }); };
+
+/* ── Today: pre-shift checklist, wind-down, overview line ─────────── */
+function shiftsNear() {
+  var t = today(); return shiftOn(addDays(t, -1)).concat(shiftOn(t), shiftOn(addDays(t, 1)));
+}
+function shiftNow() { var n = Date.now(); return shiftsNear().filter(function (s) { return shiftStartAt(s) <= n && n < shiftEndAt(s); })[0] || null; }
+function shiftUpcoming() { var n = Date.now(), b = shiftCfg().before * 60000; return shiftsNear().filter(function (s) { var st = shiftStartAt(s) - n; return st > 0 && st <= b; })[0] || null; }
+function shiftJustDone() { var n = Date.now(); return shiftsNear().filter(function (s) { var e = shiftEndAt(s); return !s.wound && e <= n && n - e < 4 * 36e5; })[0] || null; }
+function untilShort(ms) { var m = Math.round(ms / 60000), h = Math.floor(m / 60); return h ? h + ' h ' + (m % 60) + ' min' : m + ' min'; }
+function shiftOverview() {
+  var on = shiftNow(); if (on) return ' · on shift ' + shiftLabel(on);
+  var ts = shiftOn(today()).filter(function (s) { return shiftStartAt(s) > Date.now(); })[0];
+  return ts ? ' · shift at ' + fmtTime(ts.start) : '';
+}
+function shiftCards() {
+  var h = '', up = shiftUpcoming(), done = shiftJustDone(), cfg = shiftCfg();
+  if (up) {
+    var j = shiftJob(up.job), ck = up.checks || [], all = cfg.checklist.length && cfg.checklist.every(function (x, i) { return ck[i]; });
+    h += '<section class="shcard pre" style="--c:' + esc(j.color) + '"><div class="sechead" style="margin:0"><h2>' + esc(j.ic) + ' ' + esc(j.name) + ' at ' + esc(fmtTime(up.start)) + '</h2><span class="meta">in ' + esc(untilShort(shiftStartAt(up) - Date.now())) + '</span></div>'
+      + (all ? '<p class="ready">Ready ✓</p>' : '<div class="list">' + cfg.checklist.map(function (c, i) {
+        return '<button class="row ckrow' + (ck[i] ? ' on' : '') + '" data-act="shck" data-id="' + up.id + '" data-i="' + i + '" aria-pressed="' + !!ck[i] + '"><span class="ck' + (ck[i] ? ' on' : '') + '"><span></span></span><span class="grow">' + esc(c) + '</span></button>';
+      }).join('') + '</div>') + '</section>';
+  }
+  if (done) {
+    var dj = shiftJob(done.job), st = shiftStartAt(done).getTime(), en = shiftEndAt(done).getTime();
+    var cap = Store.all('inbox').filter(function (x) { return x.created >= st && x.created <= en; }).length, e = entryFor(today()) || {};
+    h += '<section class="shcard post" style="--c:' + esc(dj.color) + '"><div class="sechead" style="margin:0"><h2>Shift done ' + esc(dj.ic) + '</h2><button class="link" data-act="shwound" data-id="' + done.id + '">Done</button></div>'
+      + '<p class="note">' + fmtAmt(shiftHours(done)) + ' h logged · <button class="link" data-act="open" data-v="shift" data-id="' + done.id + '">Ran long?</button></p>'
+      + '<div class="lbl">How was it?</div><div class="chips">' + Object.keys(MOODS).map(function (k) {
+        return '<button class="chip' + (e.mood === k ? ' on' : '') + '" data-act="shmood" data-m="' + k + '">' + MOODS[k][0] + ' ' + MOODS[k][1] + '</button>';
+      }).join('') + '</div>'
+      + '<form class="addstep" data-form="shjournal"><label class="sr" for="shj">One line about the shift</label><input id="shj" class="input" placeholder="One line about the shift" autocomplete="off"><button class="btn soft" type="submit">Save</button></form>'
+      + '<div class="btnrow">' + (cap ? '<button class="btn sm soft" data-act="tab" data-v="inbox">Sort ' + cap + ' captured on shift</button>' : '') + '<button class="btn sm soft" data-act="tab" data-v="plan">Plan tomorrow →</button></div></section>';
+  }
+  return h;
+}
+ACTS.shck = function (d) { var s = Store.get('shifts', d.id), c = (s.checks || []).slice(); c[+d.i] = !c[+d.i]; Store.patch('shifts', d.id, { checks: c }); };
+ACTS.shwound = function (d) { Store.patch('shifts', d.id, { wound: true }); };
+ACTS.shmood = function (d) { var e = entryFor(today()) || {}; saveEntry(today(), { mood: e.mood === d.m ? null : d.m }); };
+ACTS.form_shjournal = function (d, f) {
+  var inp = $('input', f), v = inp.value.trim(); if (!v) return; inp.value = '';
+  var e = entryFor(today()); saveEntry(today(), { text: (e && e.text ? e.text + '\n' : '') + v }); render(false, true); toast('Added to today\'s journal');
+};
+
+/* ── protect off days ────────────────────────────────────────────── */
+/* After a big task lands on a shift day, offer the next off day. */
+function shiftHint(t, msg) {
+  if (!t || !t.due || !isShiftDay(t.due) || !isBigTask(t)) return false;
+  var off = nextOffDay(t.due);
+  toast((msg ? msg + ' · ' : '') + 'That\'s a shift day', function () { moveTask(t.id, off); toast('Moved to ' + esc(dayShortName(off)) + ' ' + esc(shortDate(off))); }, 'Move to ' + dayShortName(off));
+  return true;
+}
+/* "Big jobs → off day" for a day's tasks. */
+ACTS.shmovebig = function (d) {
+  var off = nextOffDay(d.d), ts = tasksOn(d.d).filter(function (t) { return !t.done && isBigTask(t) && !t.time; }), undo = ts.map(function (t) { return snapshot(t.id); });
+  ts.forEach(function (t) { moveTask(t.id, off); });
+  toast(ts.length + ' moved to ' + esc(dayShortName(off)), function () { undo.forEach(function (u) { u(); }); });
+};
+/* "60 min" or "2h" in what you type becomes the estimate. */
+function estFromText(text) {
+  var m = /\s*\b(\d{1,3})\s*(min|mins|minutes|h|hr|hrs|hours)\b/i.exec(text || ''); if (!m) return null;
+  return { est: /^h/i.test(m[2]) ? m[1] + ' h' : m[1] + ' min', rest: (text.slice(0, m.index) + text.slice(m.index + m[0].length)).replace(/\s{2,}/g, ' ').trim() };
 }
 
 /* ── 99-boot.js ── */
