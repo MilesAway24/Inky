@@ -141,6 +141,18 @@ VIEWS.task = function (id) {
       : '<button class="btn accent" data-act="startthis" data-id="' + t.id + '">Start this</button><button class="btn soft" data-act="toggle" data-id="' + t.id + '">Done</button>')
     + '</div>';
 
+  // When: date, time and reminders, right here (no sheet).
+  if (!t.done) h += whenInline('<div class="props whenrep">' + ''
+    + '<div class="prop"><span class="k">Repeat</span><span class="v">' + [['', 'None'], ['day', 'Daily'], ['weekday', 'Weekdays'], ['week', 'Weekly'], ['month', 'Monthly']].map(function (r) {
+      var on = (rep ? rep.every : '') === r[0];
+      return '<button class="chip' + (on ? ' on' : '') + '" data-act="taskrep" data-id="' + t.id + '" data-r="' + r[0] + '" aria-pressed="' + on + '">' + r[1] + '</button>';
+    }).join('') + '</span></div>'
+    + (rep && rep.every === 'week' ? '<div class="prop"><span class="k">On</span><span class="v">' + ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(function (n, i) {
+      return '<button class="chip' + (rep.days && rep.days[i] ? ' on' : '') + '" data-act="taskrepday" data-id="' + t.id + '" data-i="' + i + '">' + n + '</button>';
+    }).join('') + '</span></div>' : '')
+    + (rep && rep.every === 'month' ? '<div class="prop"><span class="k">Day</span><span class="v"><label class="sr" for="tdom">Day of the month</label><input id="tdom" class="input" type="number" min="1" max="31" style="max-width:90px;min-height:40px" value="' + (rep.dom || 1) + '" data-act-change="taskdom" data-id="' + t.id + '"><span class="faint small">of each month</span></span></div>' : '')
+    + '</div>');
+
   // Notes before steps.
   h += '<section><div class="sechead"><h2>Notes</h2></div><label class="sr" for="tnote">Notes</label>'
     + '<textarea id="tnote" class="input" data-field="note" placeholder="What you know so far, where you left off…">' + esc(t.note || '') + '</textarea></section>';
@@ -156,19 +168,9 @@ VIEWS.task = function (id) {
     + icon('sparkle', 'sm') + 'Break it down with Claude</button></section>';
 
   h += '<section><div class="sechead"><h2>Details</h2></div><div class="props">'
-    + '<div class="prop"><span class="k">When</span><span class="v"><button class="whenbtn" data-act="taskwhen" data-id="' + t.id + '">'
-      + '<b>' + esc(t.due ? shortDate(t.due) : t.drifted ? 'Drifted' : 'Someday') + (t.time ? ' · ' + esc(fmtTime(t.time)) : '') + '</b>'
-      + ((t.remind || []).length ? '<span class="faint small">🔔 ' + t.remind.map(remindLabel).join(', ') + ' before</span>' : '') + '<span class="link">Change</span></button></span></div>'
+
     + (t.due && t.time && !t.done ? '<div class="prop"><span class="k">Calendar</span><span class="v">' + calBtn(taskCal(t)) + '<span class="faint small calnote">Opens ics.agical.io, which makes the calendar file; the title and time pass through it.'
       + (t.repeat ? ' Adds the next date only; set Repeat in Calendar.' : '') + '</span></span></div>' : '')
-    + '<div class="prop"><span class="k">Repeat</span><span class="v">' + [['', 'None'], ['day', 'Daily'], ['weekday', 'Weekdays'], ['week', 'Weekly'], ['month', 'Monthly']].map(function (r) {
-      var on = (rep ? rep.every : '') === r[0];
-      return '<button class="chip' + (on ? ' on' : '') + '" data-act="taskrep" data-id="' + t.id + '" data-r="' + r[0] + '" aria-pressed="' + on + '">' + r[1] + '</button>';
-    }).join('') + '</span></div>'
-    + (rep && rep.every === 'week' ? '<div class="prop"><span class="k">On</span><span class="v">' + ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(function (n, i) {
-      return '<button class="chip' + (rep.days && rep.days[i] ? ' on' : '') + '" data-act="taskrepday" data-id="' + t.id + '" data-i="' + i + '">' + n + '</button>';
-    }).join('') + '</span></div>' : '')
-    + (rep && rep.every === 'month' ? '<div class="prop"><span class="k">Day</span><span class="v"><label class="sr" for="tdom">Day of the month</label><input id="tdom" class="input" type="number" min="1" max="31" style="max-width:90px;min-height:40px" value="' + (rep.dom || 1) + '" data-act-change="taskdom" data-id="' + t.id + '"><span class="faint small">of each month</span></span></div>' : '')
     + (projectsAll('active').length || t.project ? '<div class="prop"><span class="k">Project</span><span class="v">' + projectsAll('active').concat(t.project && Store.get('projects', t.project) && Store.get('projects', t.project).status !== 'active' ? [Store.get('projects', t.project)] : []).map(function (p) {
       return '<button class="chip' + (t.project === p.id ? ' on' : '') + '" data-act="taskproj" data-id="' + t.id + '" data-p="' + p.id + '">' + esc(p.ic || '📁') + ' ' + esc(p.t) + '</button>';
     }).join('') + '</span></div>' : '')
@@ -180,6 +182,7 @@ VIEWS.task = function (id) {
   return h;
 };
 VIEWS.task.after = function (id) {
+  var tk = Store.get('tasks', id); if (tk && !tk.done && $('#whenbox')) whenInlineWire(tk);
   $$('[data-field]', $('#view')).forEach(function (el) {
     el.addEventListener('input', function () { var f = {}; f[el.dataset.field] = el.value; Store.patch('tasks', id, f); });
   });
@@ -209,7 +212,13 @@ ACTS.taskproj = function (d) { var t = Store.get('tasks', d.id), p = Store.get('
 ACTS.taskarea = function (d) { var t = Store.get('tasks', d.id); Store.patch('tasks', d.id, { area: t.area === d.a ? null : d.a }); };
 ACTS.tasktime = function (d, el) { Store.patch('tasks', d.id, { time: el.value || null }); };
 ACTS.tasktimeclear = function (d) { Store.patch('tasks', d.id, { time: null }); };
+/* "Pick a day" from elsewhere opens the task page, where When lives. */
 ACTS.taskwhen = function (d) {
+  var c = current();
+  if (c.view === 'task' && c.arg === d.id) { var b = $('#whenbox'); if (b) b.scrollIntoView({ block: 'start', behavior: 'smooth' }); return; }
+  push('task', d.id);
+};
+ACTS.taskwhensheet = function (d) {
   var t = Store.get('tasks', d.id);
   pickWhen({ due: t.due, time: t.time, remind: t.remind, id: t.id, title: 'When' }, function (r) {
     var undo = snapshot(d.id);

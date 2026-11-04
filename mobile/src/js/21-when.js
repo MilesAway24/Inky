@@ -41,8 +41,8 @@ function pickWhen(o, onDone) {
 function whenPaint() {
   var w = when, t = today(), box = $('#whenbox'); if (!box || !w) return;
   var tm = w.time ? fmtTime(w.time) : null;
-  var h = '<div class="shead"><h2>' + esc(w.title) + '</h2><button class="iconbtn" data-act="close" aria-label="Cancel">' + icon('x') + '</button></div>'
-    + '<div class="readout" aria-live="polite"><div class="big2" id="wbig">' + bigTime(w.time) + '</div>'
+  var h = (w.live ? '' : '<div class="shead"><h2>' + esc(w.title) + '</h2><button class="iconbtn" data-act="close" aria-label="Cancel">' + icon('x') + '</button></div>')
+    + '<div class="readout' + (w.live ? ' inl' : '') + '" aria-live="polite"><div class="big2" id="wbig">' + bigTime(w.time) + '</div>'
     + '<div class="muted">' + (w.due ? esc(longDate(w.due)) + (w.due === t ? ' · <b class="todaytag">today</b>' : '') : 'No date · Someday') + '</div></div>';
   // dates
   h += '<div class="wlab"><span>Date</span><button type="button" class="link" data-act="wfull">' + (w.full ? 'Hide month' : 'Full month') + '</button></div>'
@@ -72,7 +72,8 @@ function whenPaint() {
       return '<div class="remrow">🔔 ' + esc(remindLabel(m)) + ' before <button type="button" class="iconbtn" data-act="wremind" data-m="' + m + '" aria-label="Remove">' + icon('x', 'sm') + '</button></div>';
     }).join('')
     + '<p class="note small">Shown in Heads up on Today. Your phone won\'t ping: the Claude app can\'t send notifications.</p>';
-  h += '<div class="btnrow"><button type="button" class="btn ghost" data-act="close">Cancel</button><button type="button" class="btn accent" data-act="wdone">Done</button></div>';
+  if (!w.live) h += '<div class="btnrow"><button type="button" class="btn ghost" data-act="close">Cancel</button><button type="button" class="btn accent" data-act="wdone">Done</button></div>';
+  else h += '<p class="note small">Changes save as you tap.</p>';
   box.innerHTML = h;
   wireRuler();
 }
@@ -130,16 +131,35 @@ function bigTime(t) { if (!t) return 'All day'; var tm = fmtTime(t); return esc(
 function wireRuler() {
   makeRuler({ ruler: $('#ruler'), strip: $('#ruler .rstrip'), start: when.time ? mins(when.time) : 540,
     onMove: function (m) { when.time = hm(m); $('#wbig').innerHTML = bigTime(when.time); },
-    onSet: function () { $$('[data-act=wpreset]').forEach(function (b) { b.classList.toggle('on', b.dataset.t === when.time); }); } });
+    onSet: function () { if (when.live) { whenCommit(); return; } $$('[data-act=wpreset]').forEach(function (b) { b.classList.toggle('on', b.dataset.t === when.time); }); } });
+}
+/* Inline on the task page: the same date strip, time ruler and reminders,
+   saving as you tap (no sheet, no Done). */
+function whenInline(extra) { return '<section class="card whencard"><div class="sechead" style="margin:0 0 6px"><h2>When</h2></div><div id="whenbox"></div>' + (extra || '') + '</section>'; }
+function whenInlineWire(t) {
+  var keep = when && when.live === t.id ? when : null;
+  when = { live: t.id, due: t.due || null, time: t.time || null, remind: (t.remind || []).slice(), id: t.id,
+    full: keep ? keep.full : false, month: keep ? keep.month : (t.due || today()).slice(0, 8) + '01', title: 'When' };
+  whenPaint();
+}
+function whenChanged() { if (when && when.live) whenCommit(); else whenPaint(); }
+function whenCommit() {
+  var w = when, t = w && Store.get('tasks', w.live); if (!t) return;
+  var undo = snapshot(t.id), moved = (w.due || null) !== (t.due || null), onRuler = document.activeElement && document.activeElement.id === 'ruler';
+  if (moved) moveTask(t.id, w.due || 'whenever');
+  Store.patch('tasks', t.id, { time: w.time, remind: w.due ? w.remind : [] });
+  if (onRuler) { var r = $('#ruler'); if (r) r.focus({ preventScroll: true }); }
+  if (moved && typeof shiftHint === 'function' && shiftHint(Store.get('tasks', t.id))) return;
+  toast(esc([w.due ? shortDate(w.due) : 'Someday', w.time ? fmtTime(w.time) : 'all day'].join(' · ')) + (w.remind.length && w.due ? ' · 🔔 ' + w.remind.length : ''), undo);
 }
 ACTS.wfull = function () { when.full = !when.full; whenPaint(); };
-ACTS.wday = function (d) { when.due = d.d || null; if (d.d) when.month = d.d.slice(0, 8) + '01'; whenPaint(); };
+ACTS.wday = function (d) { when.due = d.d || null; if (d.d) when.month = d.d.slice(0, 8) + '01'; whenChanged(); };
 ACTS.wmonth = function (d) { var f = parseYmd(when.month); f.setMonth(f.getMonth() + (+d.n)); when.month = ymd(f); whenPaint(); };
-ACTS.wpreset = function (d) { when.time = d.t || null; whenPaint(); };
-ACTS.wremind = function (d) { var m = +d.m, i = when.remind.indexOf(m); if (i > -1) when.remind.splice(i, 1); else when.remind.push(m); when.remind.sort(function (a, b) { return b - a; }); whenPaint(); };
+ACTS.wpreset = function (d) { when.time = d.t || null; whenChanged(); };
+ACTS.wremind = function (d) { var m = +d.m, i = when.remind.indexOf(m); if (i > -1) when.remind.splice(i, 1); else when.remind.push(m); when.remind.sort(function (a, b) { return b - a; }); whenChanged(); };
 ACTS.form_wremindadd = function (d, f) {
   var n = parseInt($('[name=n]', f).value, 10), u = +$('[name=u]', f).value; if (!n || n < 1) return;
-  var m = n * u; if (when.remind.indexOf(m) < 0) when.remind.push(m); when.remind.sort(function (a, b) { return b - a; }); whenPaint();
+  var m = n * u; if (when.remind.indexOf(m) < 0) when.remind.push(m); when.remind.sort(function (a, b) { return b - a; }); whenChanged();
 };
 ACTS.wdone = function () {
   var w = when; when = null; closeSheet();
