@@ -9,14 +9,23 @@ function habitRemindersNow() {
   var n = new Date(), now = n.getHours() * 60 + n.getMinutes(), t = today();
   return habitsDueToday().filter(function (h) { return h.remindAt && mins(h.remindAt) <= now && !habitDone(h, t); });
 }
+/* The big header: "Today", the date and part of day, calendar and search. */
+HEADS.today = function () {
+  var d = new Date();
+  return '<div class="bighead"><h1>Today</h1><div class="sub">' + DOW[d.getDay()] + ', ' + MON[d.getMonth()] + ' ' + d.getDate() + ' · ' + partOfDay(d.getHours()).replace(/^\w/, function (c) { return c.toUpperCase(); }) + '</div></div>'
+    + '<div class="headbtns"><button class="roundbtn" data-act="tab" data-v="calendar" aria-label="Calendar">' + icon('calendar', 'sm') + '</button>'
+    + '<button class="roundbtn" data-act="tab" data-v="search" aria-label="Search">' + icon('search', 'sm') + '</button></div>';
+};
 VIEWS.today = function () {
   var d = new Date(), t = today();
-  var inbox = Store.all('inbox').sort(function (a, b) { return a.created - b.created; }), sl = slipped();
+  var inbox = Store.all('inbox'), sl = slipped();
   var todays = tasksIn('today'), open = todays.filter(function (x) { return !x.done; }), done = todays.filter(function (x) { return x.done; });
-  var h = '<div class="overview"><div class="dateline">' + DOW[d.getDay()] + ', ' + MON[d.getMonth()] + ' ' + d.getDate() + ' · ' + partOfDay(d.getHours()) + '</div>'
-    + '<div class="ovcount">' + open.length + ' task' + (open.length === 1 ? '' : 's') + ' today' + esc(shiftOverview()) + (sl.length ? ' · <span class="bad">' + sl.length + ' overdue</span>' : '') + '</div>'
-    + (d.getHours() >= 17 ? '<button class="link planlink" data-act="tab" data-v="plan">Plan tomorrow →</button>' : '') + '</div>';
-  h += jumpTiles(['habits', 'goals', 'notes', 'projects', 'tools', 'calendar']);
+  // Status pill
+  var sh = shiftOverview().replace(/^ · /, '');
+  var h = '<div class="statpill"><button data-act="tab" data-v="tasks"><span class="sico ok">' + icon('check', 'sm') + '</span>' + open.length + ' task' + (open.length === 1 ? '' : 's') + ' today</button>'
+    + '<i></i><button data-act="' + (sl.length ? 'reschedule' : 'tab') + '" data-v="tasks" class="' + (sl.length ? 'bad' : 'muted') + '"><span class="sico ' + (sl.length ? 'warn' : 'none') + '">!</span>' + sl.length + ' overdue</button></div>';
+  if (sh || d.getHours() >= 17) h += '<div class="subline">' + (sh ? '<span>' + icon('shift', 'sm') + ' ' + esc(sh.replace(/^\w/, function (c) { return c.toUpperCase(); })) + '</span>' : '')
+    + (d.getHours() >= 17 ? '<button class="link" data-act="tab" data-v="plan">Plan tomorrow →</button>' : '') + '</div>';
 
   if (hasExamples()) h += '<div class="card flat"><p class="note">You\'re looking at example data so you can see how MossOS works. '
     + 'Items marked <span class="pill ex">example</span> go when you clear them.</p>'
@@ -24,63 +33,36 @@ VIEWS.today = function () {
 
   h += shiftCards();
 
-  // Heads up
+  // Heads up: only when something needs you
   var rem = remindersNow(), hrem = habitRemindersNow();
   var finRows = typeof finHeadsUp === 'function' ? finHeadsUp() : [];
-  if ((sl.length || rem.length || hrem.length || inbox.length || finRows.length) && !headsUpDismissed()) {
-    h += '<section class="headsup"><div class="sechead" style="margin:0"><h2>Heads up</h2><button class="iconbtn" data-act="hudismiss" aria-label="Hide for today">' + icon('x', 'sm') + '</button></div>';
-    if (sl.length) h += '<div class="hurow"><span>🔥</span><span class="grow"><b>' + sl.length + ' task' + (sl.length === 1 ? '' : 's') + ' overdue</b></span><button class="btn sm soft" data-act="reschedule">Sweep</button></div>';
+  if ((rem.length || hrem.length || inbox.length || finRows.length) && !headsUpDismissed()) {
+    h += '<section class="headsup card"><div class="sechead" style="margin:0"><h2>Heads up</h2><button class="iconbtn" data-act="hudismiss" aria-label="Hide for today">' + icon('x', 'sm') + '</button></div>';
     rem.forEach(function (x) { h += '<div class="hurow"><span>🔔</span><button class="grow" style="text-align:left" data-act="open" data-v="task" data-id="' + x.id + '"><b>' + esc(x.t) + '</b> <span class="muted">' + esc(untilText(x)) + '</span></button></div>'; });
     hrem.forEach(function (x) { h += '<div class="hurow"><span>' + esc(x.ic) + '</span><span class="grow"><b>' + esc(x.n) + '</b> <span class="muted">reminder · ' + esc(fmtTime(x.remindAt)) + '</span></span><button class="btn sm soft" data-act="habtoggle" data-id="' + x.id + '">' + (x.target ? 'Log' : 'Done') + '</button></div>'; });
     h += finRows.join('');
-    if (inbox.length) h += '<div class="hurow"><span>📥</span><span class="grow"><b>' + inbox.length + ' to sort</b></span><button class="btn sm soft" data-act="tab" data-v="inbox">Sort</button></div>';
+    if (inbox.length) h += '<div class="hurow"><span>📥</span><span class="grow"><b>' + inbox.length + ' to sort</b> <span class="muted">from quick captures</span></span><button class="btn sm soft" data-act="tab" data-v="inbox">Sort</button></div>';
     h += '</section>';
   }
 
-  if (typeof billsSection === 'function') h += billsSection();
+  // Quick access
+  h += '<nav class="jump dtiles" aria-label="Quick access">' + ['journal', 'goals', 'notes', 'books'].map(function (k) {
+    return '<button class="jt2" data-act="tab" data-v="' + k + '">' + icon(SECTIONS[k][1]) + '<b>' + SECTIONS[k][0] + '</b><span>' + esc(sectionCount(k)) + '</span></button>';
+  }).join('') + '</nav>';
 
-  // Inbox, each with its own sort
-  if (inbox.length) h += '<section><div class="sechead"><h2>Inbox</h2><span class="pill accent">' + inbox.length + ' to sort</span></div><div class="list">'
-    + inbox.slice(0, 4).map(function (it) {
-      return '<div class="row"><span class="grow"><div class="t">' + esc(it.text || '(photo)') + '</div><div class="s">unsorted · ' + esc(timeAgo(it.created)) + ' ' + exPill(it) + '</div></span>'
-        + '<button class="btn sm soft" data-act="sortone" data-id="' + it.id + '">sort ›</button></div>';
-    }).join('') + (inbox.length > 4 ? '<button class="row link" data-act="tab" data-v="inbox">All ' + inbox.length + ' in the inbox ›</button>' : '') + '</div></section>';
-
-  // Play
-  var q = playQueue();
-  h += '<section><div class="sechead"><h2>Play</h2><span class="meta">one at a time · ' + q.length + ' left</span></div>';
-  if (q.length) {
-    var x = q[0];
-    h += '<div class="play"><div class="k"><span>' + areaDot(x.area) + ' ' + esc(areaName(x.area) || 'No area')
-      + (x.tag ? ' · ' + esc(x.tag) : '') + '</span><span>' + esc([x.time ? fmtTime(x.time) : '', x.est ? '~' + x.est : ''].filter(Boolean).join(' · ')) + '</span></div>'
-      + '<div class="t"><span>' + esc(x.ic || '•') + '</span><span>' + esc(x.t) + '</span></div>'
-      + '<div class="w">' + esc(x.why) + '</div>'
-      + '<div class="acts"><button class="btn accent" data-act="playdo" data-k="' + x.kind + '" data-id="' + x.id + '">' + (x.kind === 'habit' ? 'Mark done' : 'Do it') + '</button>'
-      + '<button class="btn soft" data-act="playskip" data-k="' + x.kind + '" data-id="' + x.id + '">Skip ›</button></div>'
-      + '<button class="link" style="justify-self:start" data-act="open" data-v="' + x.kind + '" data-id="' + x.id + '">Open the ' + x.kind + '</button></div>';
-  } else {
-    h += '<div class="empty">Nothing waiting. Capture something, or enjoy the gap.</div>';
-  }
-  h += '</section>';
-
-  // Today's tasks
-  h += '<section><div class="sechead"><h2>Today</h2><button class="link" data-act="tab" data-v="tasks">All tasks</button></div>'
-    + (open.length ? '<div class="tlist">' + open.map(taskRow).join('') + '</div>' : '<p class="note">Nothing else due today.</p>') + '</section>';
-
-  // Overdue
-  if (sl.length) h += '<section><div class="sechead"><h2 class="bad">Overdue</h2><button class="link" data-act="reschedule">Sweep →</button></div>'
-    + '<div class="tlist">' + sl.slice(0, 5).map(taskRow).join('') + '</div></section>';
-
-  // Habits due today
+  // Habits today
   var hd = habitsDueToday();
   if (hd.length) {
     var hdone = hd.filter(function (x) { return habitDone(x, t); }).length;
-    h += '<section><div class="sechead"><h2>Habits today</h2><span class="meta">' + hdone + '/' + hd.length + esc(challengeTag()) + '</span></div><div class="hchips">'
+    h += '<section class="card"><button class="cardhead" data-act="tab" data-v="habits"><h2>Habits today</h2><span class="meta">' + hdone + '/' + hd.length + esc(challengeTag()) + ' ' + icon('chev', 'sm') + '</span></button><div class="hchips">'
       + hd.map(habitChip).join('') + '</div></section>';
   }
 
-  // Areas
-  h += '<section><div class="sechead"><h2>Life areas</h2><button class="link" data-act="tab" data-v="areas">All</button></div><div class="areas">'
+  // Money
+  if (typeof billsSection === 'function') h += billsSection();
+
+  // Life areas
+  h += '<section><button class="cardhead plain" data-act="tab" data-v="areas"><h2>Life areas</h2><span class="link">All ' + icon('chev', 'sm') + '</span></button><div class="areas">'
     + areasSorted().map(function (a) {
       return '<button class="acard" style="--c:' + esc(a.color) + '" data-act="open" data-v="area" data-id="' + a.id + '">'
         + '<span class="n"><span class="dot" style="background:' + esc(a.color) + '"></span><span>' + esc(a.short) + '</span></span>'
@@ -88,23 +70,35 @@ VIEWS.today = function () {
         + '<span class="f">' + esc(a.focus || '') + '</span></button>';
     }).join('') + '</div></section>';
 
-  // Rescheduled
-  var rs2 = rescheduled().slice(0, 4);
-  if (rs2.length) h += '<section><div class="sechead"><h2>Slipped, rescheduled</h2></div><div style="display:grid;gap:6px">'
-    + rs2.map(slipRow).join('') + '</div></section>';
+  // Play
+  var q = playQueue();
+  h += '<section><div class="cardhead plain"><h2>Play</h2><span class="meta">One at a time · ' + q.length + ' left</span></div>';
+  if (q.length) {
+    var x = q[0];
+    h += '<div class="play2"><span class="pic">' + esc(x.ic || (x.kind === 'habit' ? '🔁' : x.kind === 'goal' ? '🎯' : '✅')) + '</span>'
+      + '<button class="grow pbody" data-act="open" data-v="' + x.kind + '" data-id="' + x.id + '"><span class="pk">' + esc(x.kind === 'habit' ? 'Habit' : x.kind === 'goal' ? 'Goal' : (areaName(x.area) || 'Task'))
+      + (x.time ? ' · ' + esc(fmtTime(x.time)) : '') + (x.est ? ' · ~' + esc(x.est) : '') + '</span><b>' + esc(x.t) + '</b><span class="pw">' + esc(x.why) + '</span></button>'
+      + '<div class="pacts"><button class="pillbtn" data-act="playdo" data-k="' + x.kind + '" data-id="' + x.id + '">' + icon('check', 'sm') + (x.kind === 'habit' ? 'Mark done' : 'Do it') + '</button>'
+      + '<button class="pillbtn ghost" data-act="playskip" data-k="' + x.kind + '" data-id="' + x.id + '">Skip</button></div></div>';
+  } else h += '<div class="empty">Nothing waiting. Capture something, or enjoy the gap.</div>';
+  h += '</section>';
 
-  // Log
-  var log = Store.all('log').filter(function (l) { return l.day === t; }).sort(function (a, b) { return b.at - a.at; });
-  h += '<section><div class="sechead"><h2>Today\'s log</h2><span class="meta">writes itself</span></div>'
-    + (log.length ? '<div class="log">' + log.slice(0, 12).map(function (l) {
-      return '<div class="logrow"><time>' + clock(l.at) + '</time>' + areaDot(l.area) + '<span>' + esc(l.text) + '</span></div>';
-    }).join('') + '</div>' : '<div class="empty">Nothing yet. Finishing a task, marking a habit or capturing something adds a line here.</div>')
-    + '</section>';
-
-  // Completed
+  // Today's tasks, overdue, completed
+  h += '<section><div class="cardhead plain"><h2>Today</h2><button class="link" data-act="tab" data-v="tasks">All tasks</button></div>'
+    + (open.length ? '<div class="tlist">' + open.map(taskRow).join('') + '</div>' : '<p class="note">Nothing else due today.</p>') + '</section>';
+  if (sl.length) h += '<section><div class="cardhead plain"><h2 class="bad">Overdue</h2><button class="link" data-act="reschedule">Sweep →</button></div>'
+    + '<div class="tlist">' + sl.slice(0, 5).map(taskRow).join('') + '</div></section>';
   if (done.length) h += '<details class="donegrp"><summary>✓ Completed · ' + done.length + '</summary><div class="tlist">' + done.map(taskRow).join('') + '</div></details>';
   return h;
 };
+/* Today's log now lives on the Journal page. */
+function todaysLogHtml() {
+  var t = today(), log = Store.all('log').filter(function (l) { return l.day === t; }).sort(function (a, b) { return b.at - a.at; });
+  return '<section><div class="sechead"><h2>Today\'s log</h2><span class="meta">writes itself</span></div>'
+    + (log.length ? '<div class="log">' + log.slice(0, 20).map(function (l) {
+      return '<div class="logrow"><time>' + clock(l.at) + '</time>' + areaDot(l.area) + '<span>' + esc(l.text) + '</span></div>';
+    }).join('') + '</div>' : '<div class="empty">Nothing yet. Finishing a task, marking a habit or capturing something adds a line here.</div>') + '</section>';
+}
 VIEWS.today.after = function () { wireSwipes(); };
 ACTS.hudismiss = function () { try { localStorage.setItem('mossos.headsup', today()); } catch (e) {} render(); };
 /* "sort ›" on one inbox item: smart-sort just that one, in the capture sheet. */

@@ -26,7 +26,7 @@ VIEWS.journal = function () {
     return '<button class="row" data-act="open" data-v="entry" data-id="' + j.id + '" style="align-items:flex-start"><span class="jd"><b>' + esc(shortDate(j.day)) + '</b></span>'
       + '<span class="grow"><div class="t jt">' + esc(j.text || '(no words)') + '</div><div class="s">' + (j.mood ? MOODS[j.mood][0] + ' ' + MOODS[j.mood][1] : '') + ' ' + exPill(j) + '</div></span></button>';
   }).join('') + '</div></section>' : '';
-  return h;
+  return h + todaysLogHtml();
 };
 VIEWS.journal.after = function () {
   var ta = $('#jtext'); if (!ta) return;

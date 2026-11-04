@@ -39,18 +39,21 @@ const ok = (cond, msg) => { console.log((cond ? 'ok   ' : 'FAIL ') + msg); if (!
   let ctx = await b.newContext({ ...devices['iPhone 13'] });
   await ctx.addInitScript(mock);
   let p = await ctx.newPage(); watch(p, 'phone');
+  // Open any section the way a tap on its tile would (tiles moved between
+  // Dashboard and Tools; the tests shouldn't care where).
+  const goTo = (v) => p.evaluate((v) => { const b = document.createElement('button'); b.dataset.act = 'tab'; b.dataset.v = v; b.hidden = true; document.getElementById('view').appendChild(b); b.click(); }, v).then(() => p.waitForTimeout(150));
   await p.goto(URL); await p.waitForTimeout(600);
   ok(!(await p.isVisible('text=Priorities')) && !(await p.$('[data-act=pickprio]')), 'Today has no Priorities section');
-  ok(await p.isVisible('.play'), 'example data fills the Play card');
-  ok(await p.isVisible('.sync.on'), 'sync badge shows Synced');
+  ok(await p.isVisible('.play2'), 'example data fills the Play card');
+  await goTo('settings'); ok(await p.isVisible('.sync.on'), 'sync badge in Settings shows Synced'); await p.click('.tabs [data-v=today]'); await p.waitForTimeout(150);
   const paths = await p.evaluate(() => Object.keys(window.__mock.docs));
-  ok(paths.length > 10 && paths.every((k) => k.startsWith('data/users/u_test/m/')), 'writes go to the private per-user subtree (' + paths.length + ' docs)');
+  ok(paths.length > 10 && paths.every((k) => k.startsWith('data/users/u_test/')), 'writes go to the private per-user subtree (' + paths.length + ' docs)');
   await p.screenshot({ path: shots + '/phone-today.png', fullPage: true });
 
   // Play: do it
-  const first = await p.textContent('.play .t span:last-child');
-  await p.click('.play [data-act=playdo]'); await p.waitForTimeout(200);
-  ok(!(await p.textContent('.play .t span:last-child')).includes(first) , 'Play "Do it" moves to the next card');
+  const first = await p.textContent('.play2 .pbody b');
+  await p.click('.play2 [data-act=playdo]'); await p.waitForTimeout(200);
+  ok(!(await p.textContent('.play2 .pbody b')).includes(first) , 'Play "Do it" moves to the next card');
   ok(await p.isVisible('#toast >> text=Undo'), 'done shows an Undo toast');
 
   // ── Tasks: three groups, add in words, swipe, rename, repeat ─────
@@ -166,7 +169,8 @@ const ok = (cond, msg) => { console.log((cond ? 'ok   ' : 'FAIL ') + msg); if (!
   await p.click('[data-act=rsgo]'); await p.waitForTimeout(600);
   const moved = [await tk2('Order the replacement cable'), await tk2('Reply to the important emails')];
   ok(moved.every((x) => x.due > tday && x.time === '19:00' && x.slip && x.slip.remark === 'Long shift, no energy'), 'Reschedule moves them with the time and the remark');
-  ok(await p.isVisible('text=Slipped, rescheduled'), 'Today lists slipped, rescheduled tasks');
+  await p.click('.tabs [data-v=tasks]'); await p.waitForTimeout(150);
+  ok(await p.isVisible('text=Slipped, rescheduled'), 'Tasks lists slipped, rescheduled tasks');
 
   // Capture two lines → inbox → sort with Claude
   await p.click('.tabs .cap'); await p.waitForTimeout(150);
@@ -174,6 +178,7 @@ const ok = (cond, msg) => { console.log((cond ? 'ok   ' : 'FAIL ') + msg); if (!
   await p.fill('#captext', 'Call the HCPD office about the packet\nIdea: a shift-day meal plan');
   await p.click('[data-act=capsave]'); await p.waitForTimeout(200);
   ok(await p.isVisible('text=2 items in your inbox'), 'a two-line capture makes two inbox items');
+  await p.click('.tabs [data-v=today]'); await p.waitForTimeout(150);
   await p.click('.headsup [data-v=inbox]'); await p.waitForTimeout(150);
   await p.screenshot({ path: shots + '/phone-inbox.png', fullPage: true });
   await p.click('[data-act=sortai]'); await p.waitForTimeout(400);
@@ -204,7 +209,7 @@ const ok = (cond, msg) => { console.log((cond ? 'ok   ' : 'FAIL ') + msg); if (!
   await p.click('.hchip >> nth=0'); await p.waitForTimeout(150);
   ok(await p.isVisible('.hchip.on'), 'tapping a habit on Today marks it done');
   ok(/in a row/.test(await p.textContent('#toast')), 'marking shows the streak');
-  await p.click('.tabs [data-v=more]'); await p.click('#view [data-act=tab][data-v=habits]'); await p.waitForTimeout(150);
+  await goTo('habits'); await p.waitForTimeout(150);
   ok((await p.$$('.hcard')).length === 6, 'Habits lists 6 habit cards');
   const stat = await p.textContent('.stats4 > div:first-child b');
   ok(/^1\/6/.test(stat.replace(/\s/g, '')), 'Done today reads 1/6 (' + stat + ')');
@@ -239,7 +244,7 @@ const ok = (cond, msg) => { console.log((cond ? 'ok   ' : 'FAIL ') + msg); if (!
   await p.click('.back'); await p.waitForTimeout(100);
 
   // ── Goals, rebuilt from the demo ────────────────────────────────
-  await p.click('.tabs [data-v=more]'); await p.click('#view [data-act=tab][data-v=goals]'); await p.waitForTimeout(150);
+  await goTo('goals'); await p.waitForTimeout(150);
   ok((await p.$$('.goal2')).length === 4, 'Goals lists 4 live goals');
   ok(!/%/.test(await p.textContent('#view')), 'no percentage anywhere on Goals');
   ok((await p.$$eval('.stats3 span', (x) => x.map((e) => e.textContent))).join('|') === 'Live|Next actions ready|Touched this week', 'tiles: Live · Next actions ready · Touched this week');
@@ -265,14 +270,14 @@ const ok = (cond, msg) => { console.log((cond ? 'ok   ' : 'FAIL ') + msg); if (!
   await p.click('[data-act=goaltask]'); await p.waitForTimeout(150);
   await p.click('.back'); await p.click('.tabs [data-v=tasks]'); await p.waitForTimeout(150);
   await p.click('.trow:has-text("Book the PAT practice slot") .ck'); await p.waitForTimeout(150);
-  await p.click('.tabs [data-v=more]'); await p.click('#view [data-act=tab][data-v=goals]'); await p.waitForTimeout(150);
+  await goTo('goals'); await p.waitForTimeout(150);
   ok(await p.isVisible('.goal2:has-text("HCPD") >> text=Nothing set yet'), 'ticking a goal task from Tasks clears the goal\'s next action');
   await p.click('.tabs [data-v=today]'); await p.waitForTimeout(150);
-  const kinds = await p.evaluate(() => document.querySelector('.play [data-act=playdo]').dataset.k);
+  const kinds = await p.evaluate(() => document.querySelector('.play2 [data-act=playdo]').dataset.k);
   ok(['task', 'habit', 'goal'].includes(kinds), 'Play serves tasks, habits and goals (now: ' + kinds + ')');
 
   // ── Phase 3: projects ────────────────────────────────────────────
-  await p.click('.tabs [data-v=more]'); await p.click('#view [data-act=tab][data-v=projects]'); await p.waitForTimeout(150);
+  await goTo('projects'); await p.waitForTimeout(150);
   ok((await p.$$('.pcard')).length === 4, 'Projects lists 3 active + 1 parked');
   await p.screenshot({ path: shots + '/phone-projects.png', fullPage: true });
   await p.click('.pcard:has-text("Inky")'); await p.waitForTimeout(150);
@@ -298,7 +303,7 @@ const ok = (cond, msg) => { console.log((cond ? 'ok   ' : 'FAIL ') + msg); if (!
   await p.click('.back'); await p.waitForTimeout(100);
 
   // ── Phase 3: journal ─────────────────────────────────────────────
-  await p.click('.tabs [data-v=more]'); await p.click('#view [data-act=tab][data-v=journal]'); await p.waitForTimeout(150);
+  await goTo('journal'); await p.waitForTimeout(150);
   ok((await p.getAttribute('#jtext', 'placeholder')).startsWith('Today you:'), 'the journal prompt is built from today\'s log');
   await p.click('[data-act=mood][data-m=good]'); await p.fill('#jtext', 'Shipped the timeout fix.'); await p.waitForTimeout(500);
   ok((await p.$$('.list .row')).length === 3, 'earlier entries are listed');
@@ -325,7 +330,7 @@ const ok = (cond, msg) => { console.log((cond ? 'ok   ' : 'FAIL ') + msg); if (!
   ok(billHref && new NodeURL(billHref).searchParams.get('reminder') === '1440', 'each bill on Today can go to Calendar, alerting the day before');
 
   // ── Tomorrow: one planning page ─────────────────────────────────
-  await p.click('.tabs [data-v=more]'); await p.click('#view [data-act=tab][data-v=plan]'); await p.waitForTimeout(200);
+  await goTo('plan'); await p.waitForTimeout(200);
   ok((await p.textContent('#top h1')) === 'Tomorrow', 'More opens the Tomorrow planning page');
   const leftTitle = await p.$eval('.planrow .t', (e) => e.childNodes[1] ? e.textContent.trim() : '').catch(() => '');
   const leftId = await p.$eval('.planrow [data-act=planmove][data-to=tomorrow]', (e) => e.dataset.id).catch(() => null);
@@ -343,7 +348,7 @@ const ok = (cond, msg) => { console.log((cond ? 'ok   ' : 'FAIL ') + msg); if (!
   await p.screenshot({ path: shots + '/phone-tomorrow.png', fullPage: true });
 
   // ── Phase 3: calendar ────────────────────────────────────────────
-  await p.click('.tabs [data-v=more]'); await p.click('#view [data-act=tab][data-v=calendar]'); await p.waitForTimeout(150);
+  await goTo('calendar'); await p.waitForTimeout(150);
   ok(await p.isVisible('.cal .day.today'), 'the month grid marks today');
   const tomorrowBtn = await p.$('.cal .day.today + .day');
   if (tomorrowBtn) { await tomorrowBtn.click(); await p.waitForTimeout(100); }
@@ -354,7 +359,7 @@ const ok = (cond, msg) => { console.log((cond ? 'ok   ' : 'FAIL ') + msg); if (!
   await p.screenshot({ path: shots + '/phone-week.png', fullPage: true });
 
   // ── Phase 3: notes ───────────────────────────────────────────────
-  await p.click('.tabs [data-v=more]'); await p.click('#view [data-act=tab][data-v=notes]'); await p.waitForTimeout(150);
+  await goTo('notes'); await p.waitForTimeout(150);
   await p.fill('#nq', 'onboarding'); await p.waitForTimeout(100);
   ok((await p.$$('#notelist .row')).length === 1, 'note search filters as you type');
   await p.fill('#nq', ''); await p.click('[data-act=notef][data-f=idea]'); await p.waitForTimeout(100);
@@ -362,7 +367,21 @@ const ok = (cond, msg) => { console.log((cond ? 'ok   ' : 'FAIL ') + msg); if (!
 
   // ── Smart capture with Claude: five kinds in one go ──────────────
   await p.click('.tabs [data-v=today]'); await p.waitForTimeout(100);
-  ok((await p.$$('.jump .jt2')).length === 6, 'Today has one-tap tiles to Habits, Goals, Notes, Projects, Tools, Calendar');
+  const dt = await p.$$eval('.dtiles .jt2 b', (x) => x.map((e) => e.textContent));
+  ok(dt.join(',') === 'Journal,Goals,Notes,E-reader', 'the Dashboard has quick tiles for Journal, Goals, Notes and E-reader (' + dt.join(',') + ')');
+  const bar = await p.$$eval('.tabs button', (x) => x.map((e) => e.textContent.trim() || 'Capture'));
+  ok(bar.join(',') === 'Dashboard,Tasks,Capture,Habits,Tools', 'the bottom bar is Dashboard, Tasks, +, Habits, Tools (' + bar.join(',') + ')');
+  ok(await p.isVisible('.statpill') && await p.isVisible('.money.card') && await p.isVisible('.bighead h1:text("Today")'), 'the Dashboard has the big header, the status pill and the Money card');
+  ok(await p.evaluate(() => document.documentElement.dataset.theme === 'dark'), 'the app is always dark');
+  await p.click('.tabs [data-v=more]'); await p.waitForTimeout(150);
+  const tools = await p.$$eval('.tooltile b', (x) => x.map((e) => e.textContent));
+  ok(['Money', 'Tomorrow', 'Calendar', 'Shifts', 'Projects', 'Life areas', 'Inbox', 'Rank', 'Flashcards', 'Settings'].every((t) => tools.includes(t)), 'Tools holds Money and everything else (' + tools.join(', ') + ')');
+  await p.click('.tooltile[data-v=search]'); await p.waitForTimeout(200);
+  await p.fill('#sq', 'uniform'); await p.waitForTimeout(150);
+  ok(await p.isVisible('#sres h2:text("Tasks")'), 'Search finds tasks');
+  await p.fill('#sq', 'meal plan'); await p.waitForTimeout(150);
+  ok(await p.isVisible('#sres h2:text("Notes")'), 'Search finds notes');
+  await p.click('.tabs [data-v=today]'); await p.waitForTimeout(150);
   await p.click('.jump [data-v=goals]'); await p.waitForTimeout(100);
   ok((await p.textContent('#top h1')) === 'Goals', 'a tile opens its section in one tap');
   await p.click('.tabs .cap'); await p.waitForTimeout(100);
@@ -387,8 +406,7 @@ const ok = (cond, msg) => { console.log((cond ? 'ok   ' : 'FAIL ') + msg); if (!
   ok(st.stretch && st.task && st.idea, 'the new habit, the task and the idea were all filed');
 
   // ── Rank ─────────────────────────────────────────────────────────
-  await p.click('.tabs [data-v=today]'); await p.waitForTimeout(100);
-  await p.click('.jump [data-v=tools]'); await p.waitForTimeout(100);
+  await goTo('tools');
   await p.click('.tool:has-text("Rank")'); await p.click('.row:has-text("Movies")'); await p.waitForTimeout(150);
   const ranked = await p.$$eval('.ranked .rrow .t', (x) => x.map((e) => e.textContent));
   ok(ranked.length === 7 && /Fall Guy|Inception/.test(ranked[0]) && /Fall Guy|Inception/.test(ranked[1]), 'both new movies won every comparison, so they top the list (' + ranked.slice(0, 3).join(', ') + ')');
@@ -424,7 +442,7 @@ const ok = (cond, msg) => { console.log((cond ? 'ok   ' : 'FAIL ') + msg); if (!
   await p.click('[data-act=tgo]'); await p.click('[data-act=treset]');
 
   // ── Bottom bar is yours ─────────────────────────────────────────
-  await p.click('.tabs [data-v=more]'); await p.click('#view [data-act=tab][data-v=settings]'); await p.waitForTimeout(100);
+  await goTo('settings'); await p.waitForTimeout(100);
   await p.selectOption('#tab1', 'notes'); await p.waitForTimeout(150);
   ok(await p.isVisible('.tabs [data-v=notes]') && !(await p.isVisible('.tabs [data-v=tasks]')), 'Settings can put Notes in the bottom bar');
   await p.selectOption('#tab1', 'tasks'); await p.waitForTimeout(150);
@@ -432,10 +450,10 @@ const ok = (cond, msg) => { console.log((cond ? 'ok   ' : 'FAIL ') + msg); if (!
   // ── Today overview ──────────────────────────────────────────────
   await p.click('.tabs [data-v=today]'); await p.waitForTimeout(200);
   const openN = await p.$$eval('#view section:has(h2:text-is("Today")) .trow', (x) => x.length);
-  ok(new RegExp('^' + openN + ' tasks? today').test(await p.textContent('.ovcount')), 'the overview count matches today\'s open tasks (' + (await p.textContent('.ovcount')) + ')');
+  ok(new RegExp('^' + openN + ' tasks? today').test((await p.textContent('.statpill button')).trim()), 'the status pill count matches today\'s open tasks (' + (await p.textContent('.statpill button')) + ')');
   ok(await p.isVisible('details.donegrp >> text=Completed'), 'a collapsed Completed list holds what\'s done today');
   await p.click('.tabs .cap'); await p.click('[data-act=capkind][data-k=inbox]'); await p.fill('#captext', 'watched Arrival again 10/10'); await p.click('[data-act=capsave]'); await p.waitForTimeout(300);
-  await p.click('#view [data-act=sortone] >> nth=0'); await p.waitForTimeout(400);
+  await goTo('inbox'); await p.click('#view [data-act=sortone] >> nth=0'); await p.waitForTimeout(400);
   ok(/Movie/.test(await p.textContent('#sheet')), 'inbox "sort ›" sorts that one item on the spot');
   await p.click('#sheet [data-act=close]'); await p.waitForTimeout(150);
   // an in-app reminder: due in ~90 minutes, remind 2 hours before
@@ -509,7 +527,7 @@ const ok = (cond, msg) => { console.log((cond ? 'ok   ' : 'FAIL ') + msg); if (!
   ok(w.amounts[td] === 3 && w.marks[td] === 1, 'logging another 1.5 reaches the target and marks it done (' + w.amounts[td] + ')');
 
   // ── Watchlist in Rank ───────────────────────────────────────────
-  await p.click('.tabs [data-v=today]'); await p.click('.jump [data-v=tools]'); await p.click('.tool:has-text("Rank")'); await p.click('.row:has-text("Movies")'); await p.waitForTimeout(150);
+  await goTo('tools'); await p.click('.tool:has-text("Rank")'); await p.click('.row:has-text("Movies")'); await p.waitForTimeout(150);
   const ranked0 = (await p.$$('.ranked .rrow')).length;
   await p.fill('#radd', 'Dune: Part Two (2024)'); await p.selectOption('#rstat', 'want'); await p.press('#radd', 'Enter'); await p.waitForTimeout(300);
   ok(!(await p.isVisible('text=Which was better?')) && (await p.$$('.ranked .rrow')).length === ranked0, 'a Want-to-watch movie isn\'t ranked');
@@ -560,7 +578,7 @@ const ok = (cond, msg) => { console.log((cond ? 'ok   ' : 'FAIL ') + msg); if (!
   const payDoc = await p.evaluate(() => window.__mock.docs['data/users/u_test/state']);
   ok(payDoc && payDoc.pay === 1234, 'the imported plan syncs to this artifact\'s database');
   // Calendar: paydays and bills
-  await p.click('.tabs [data-v=more]'); await p.click('#view [data-act=tab][data-v=calendar]'); await p.waitForTimeout(200);
+  await goTo('calendar'); await p.waitForTimeout(200);
   await p.click('[data-act=calmode][data-v=month]'); await p.waitForTimeout(150);
   ok((await p.$$('.cal .dots i.fin.pay')).length >= 4 && (await p.$$('.cal .dots i.fin.bill')).length >= 1, 'the calendar shows payday and bill marks');
   ok(await p.evaluate(() => document.getElementById('fin').hidden), 'the frame hides when you leave Money');
@@ -581,7 +599,7 @@ const ok = (cond, msg) => { console.log((cond ? 'ok   ' : 'FAIL ') + msg); if (!
   if (await p.isVisible('#sheetbg')) await p.keyboard.press('Escape');
   const gx = await fin().evaluate(() => state.grocExtra.map((x) => x[1]));
   ok(gx.includes('Eggs') && gx.includes('Milk'), 'both items land on Payday\'s grocery list (' + gx.join(', ') + ')');
-  await p.click('.tabs [data-v=more]'); await p.click('#view [data-act=tab][data-v=money]'); await p.waitForTimeout(300);
+  await goTo('money'); await p.waitForTimeout(300);
   await p.click('[data-fv=food]'); await p.waitForTimeout(300);
   ok(await fin().evaluate(() => current) === 'food' && await p.isVisible('[data-act=fingroctask]'), 'Groceries opens Payday\'s grocery screen with a send-to-Tasks bar');
   const nG = await fin().evaluate(() => __finGroceries().length);
@@ -608,7 +626,7 @@ const ok = (cond, msg) => { console.log((cond ? 'ok   ' : 'FAIL ') + msg); if (!
   ok(await p.isVisible('.finline'), 'Today\'s Money section shows the next card to go');
 
   // ── Books ───────────────────────────────────────────────────────
-  await p.click('.tabs [data-v=more]'); await p.click('#view [data-act=tab][data-v=books]'); await p.waitForTimeout(200);
+  await goTo('books'); await p.waitForTimeout(200);
   ok(await p.isVisible('#bkt'), 'Books starts with a way to add the book you\'re reading');
   await p.fill('#bkt', 'Atomic Habits'); await p.fill('#bka', 'James Clear'); await p.fill('#bkp', '320');
   await p.click('form[data-form=addbook] [type=submit]'); await p.waitForTimeout(300);
@@ -628,7 +646,7 @@ const ok = (cond, msg) => { console.log((cond ? 'ok   ' : 'FAIL ') + msg); if (!
   ok(await p.isVisible('#sheet .aitext'), 'the recap shows in a sheet');
   await p.click('[data-act=booksaveai]'); await p.waitForTimeout(400);
   ok(await p.evaluate(() => Object.values(window.__mock.docs).some((d) => d.kind === 'thought' && /Claude on Atomic Habits/.test(d.title || ''))), 'a companion answer can be saved as a note');
-  await p.click('.tabs [data-v=more]'); await p.click('#view [data-act=tab][data-v=notes]'); await p.waitForTimeout(200);
+  await goTo('notes'); await p.waitForTimeout(200);
   await p.fill('#nq', 'level of your systems'); await p.waitForTimeout(200);
   ok(await p.isVisible('#notelist .row:has-text("Atomic Habits p. 27")'), 'the quote shows up in Notes search, tagged with the book and page');
   await p.fill('#nq', ''); await p.evaluate(() => document.activeElement && document.activeElement.blur()); await p.waitForTimeout(300);
@@ -638,7 +656,7 @@ const ok = (cond, msg) => { console.log((cond ? 'ok   ' : 'FAIL ') + msg); if (!
   await p.click('#sheet [data-act=suggone]'); await p.waitForTimeout(500);
   if (await p.isVisible('#sheetbg')) await p.keyboard.press('Escape');
   ok(await p.evaluate(() => Object.values(window.__mock.docs).filter((d) => d.title === 'Atomic Habits')[0].page) === 80, 'filing it moves the book to page 80');
-  await p.click('.tabs [data-v=more]'); await p.click('#view [data-act=tab][data-v=books]'); await p.waitForTimeout(200);
+  await goTo('books'); await p.waitForTimeout(200);
   await p.screenshot({ path: shots + '/phone-books.png', fullPage: true });
   await p.click('.bookcard'); await p.waitForTimeout(200);
   await p.screenshot({ path: shots + '/phone-book.png', fullPage: true });
@@ -646,7 +664,7 @@ const ok = (cond, msg) => { console.log((cond ? 'ok   ' : 'FAIL ') + msg); if (!
   // ── Shifts ──────────────────────────────────────────────────────
   const ymdIn = (n) => p.evaluate((n) => { const d = new Date(); d.setDate(d.getDate() + n); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }, n);
   const shiftDocs = () => p.evaluate(() => Object.keys(window.__mock.docs).filter((k) => k.indexOf('/m/shifts/') > -1).map((k) => window.__mock.docs[k]));
-  await p.click('.tabs [data-v=more]'); await p.click('#view [data-act=tab][data-v=shifts]'); await p.waitForTimeout(200);
+  await goTo('shifts'); await p.waitForTimeout(200);
   ok((await p.textContent('#top h1')) === 'Shifts' && (await p.$$('.shday')).length === 7, 'Shifts shows a 7-day week grid');
   const tdy = await ymdIn(0);
   await p.click('.shday.today .shd'); await p.waitForTimeout(150);
@@ -674,7 +692,7 @@ const ok = (cond, msg) => { console.log((cond ? 'ok   ' : 'FAIL ') + msg); if (!
     [[fri, 'sw1'], [sat, 'sw2']].forEach((x) => { window.__mock.docs[base + x[1]] = { id: x[1], date: ymd(x[0]), job: 'safeway', start: '01:00', end: '08:00', worked: null, note: '', created: 1, updated: 1 }; });
   });
   await reloadKeeping(p, ctx);
-  await p.click('.tabs [data-v=more]'); await p.click('#view [data-act=tab][data-v=shifts]'); await p.waitForTimeout(200);
+  await goTo('shifts'); await p.waitForTimeout(200);
   const hc = await p.textContent('.hourscard');
   ok(/14 h × \$20\.50 = \$287 gross/.test(hc) && /~\$230/.test(hc), 'the pay week shows 14 h, $287 gross and ~$230 take-home at 80% (' + hc.replace(/\s+/g, ' ').slice(0, 120) + ')');
   await p.screenshot({ path: shots + '/phone-shifts.png', fullPage: true });
@@ -717,7 +735,7 @@ const ok = (cond, msg) => { console.log((cond ? 'ok   ' : 'FAIL ') + msg); if (!
   const pat = await p.evaluate(() => Object.values(window.__mock.docs).filter((d) => d.t === 'Study the PAT packet')[0]);
   ok(pat && pat.est === '60 min' && pat.due === offDay, 'Move puts it on the next off day (' + (pat && pat.due) + ' vs ' + offDay + ')');
   // Calendar
-  await p.click('.tabs [data-v=more]'); await p.click('#view [data-act=tab][data-v=calendar]'); await p.waitForTimeout(200);
+  await goTo('calendar'); await p.waitForTimeout(200);
   await p.click('[data-act=calmode][data-v=month]'); await p.waitForTimeout(150);
   ok((await p.$$('.cal .shbar')).length >= 1, 'the month grid marks shift days');
   const tmY = await ymdIn(1);
@@ -738,7 +756,7 @@ const ok = (cond, msg) => { console.log((cond ? 'ok   ' : 'FAIL ') + msg); if (!
     const w = await p.evaluate(() => document.documentElement.scrollWidth - innerWidth);
     if (w > 1) wide.push(v + ' +' + w);
   }
-  await p.click('.tabs [data-v=more]'); await p.click('#view [data-act=tab][data-v=areas]'); await p.click('.abig >> nth=1'); await p.waitForTimeout(150);
+  await goTo('areas'); await p.click('.abig >> nth=1'); await p.waitForTimeout(150);
   const wa = await p.evaluate(() => document.documentElement.scrollWidth - innerWidth); if (wa > 1) wide.push('area +' + wa);
   ok(!wide.length, 'no screen scrolls sideways on a phone ' + (wide.length ? JSON.stringify(wide) : ''));
   await p.click('.tabs [data-v=tasks]'); await p.waitForTimeout(150);
@@ -810,7 +828,7 @@ const ok = (cond, msg) => { console.log((cond ? 'ok   ' : 'FAIL ') + msg); if (!
   ok(await p.isHidden('#sheetbg') && await p.evaluate(() => Object.values(window.__mock.docs).some((d) => d.text === 'ask Dana about the overtime list')), 'Enter saves it to the inbox and closes');
   await p.reload(); await p.waitForTimeout(900);
   ok(await p.isHidden('#sheetbg'), 'reopening within 10 minutes goes straight to Today');
-  await p.click('.tabs [data-v=more]'); await p.click('#view [data-act=tab][data-v=settings]'); await p.waitForTimeout(150);
+  await goTo('settings'); await p.waitForTimeout(150);
   await p.click('[data-act=setopen][data-v=today]'); await p.waitForTimeout(500);
   await p.evaluate(() => localStorage.setItem('mossos.lastSeen', '1'));
   await reloadKeeping(p, ctx); await p.waitForTimeout(400);
@@ -837,8 +855,8 @@ const ok = (cond, msg) => { console.log((cond ? 'ok   ' : 'FAIL ') + msg); if (!
   ok(/Oppenheimer · want to watch/.test(wl[0]) && /Severance · watching/.test(wl[1]), 'rules spot watchlist and watching without Claude (' + wl.join(' | ') + ')');
   await p.click('[data-act=suggall] >> nth=0'); await p.waitForTimeout(300);
   if (await p.isVisible('text=Which was better?')) await p.click('[data-act=rankstop]');
-  ok(await p.isVisible('text=This device'), 'without Claude it runs on this device');
-  ok(await p.isVisible('.play'), 'and still seeds its examples');
+  await goTo('settings'); ok(await p.isVisible('text=This device'), 'without Claude it runs on this device'); await p.click('.tabs [data-v=today]'); await p.waitForTimeout(150);
+  ok(await p.isVisible('.play2'), 'and still seeds its examples');
   ok(await p.isDisabled('[data-act=breakdown]').catch(() => true), 'Claude-only buttons are off when Claude is absent');
   await ctx.close();
 

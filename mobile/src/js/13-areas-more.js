@@ -119,13 +119,33 @@ ACTS.notetotask = function (d) {
 };
 
 /* ═══ MORE ═══════════════════════════════════════════════════════════ */
-TITLES.more = 'More';
+TITLES.more = 'Tools';
 var SOON = {};
+/* Tools: everything that isn't on the Dashboard, grouped. */
+var TOOL_GROUPS = [
+  ['Money', [['money', '💵', 'Money', function () { return FIN.sum ? fmtMoney(FIN.sum.leftToday, true) + ' left today' : 'Payday OS'; }]]],
+  ['Plan', [['plan', '🌙', 'Tomorrow'], ['calendar', '📅', 'Calendar'], ['shifts', '🚑', 'Shifts'], ['projects', '📁', 'Projects']]],
+  ['Life', [['areas', '🧭', 'Life areas'], ['inbox', '📥', 'Inbox'], ['habits', '🔁', 'Habits'], ['search', '🔎', 'Search']]],
+  ['Make', [['ranks', '🏆', 'Rank'], ['decks', '🗂', 'Flashcards'], ['gym', '🏋️', 'Gym'], ['timer', '⏱', 'Focus timer'], ['bored', '🎲', 'Bored']]],
+  ['', [['settings', '⚙️', 'Settings']]]
+];
+function toolCount(k) {
+  if (k === 'ranks') { var r = Store.all('ranks').reduce(function (a, l) { return a + rankPending(l).length; }, 0); return r ? r + ' to rank' : Store.all('ranks').length + ' lists'; }
+  if (k === 'decks') { var c = Store.all('decks').reduce(function (a, dk) { return a + dueCards(dk).length; }, 0); return c ? c + ' cards due' : Store.all('decks').length + ' decks'; }
+  if (k === 'gym') return Store.all('lifts').length + ' lifts';
+  if (k === 'timer') return 'Focus';
+  if (k === 'bored') return 'Pick something';
+  if (k === 'search') return 'Everything';
+  if (k === 'settings') return '';
+  return sectionCount(k);
+}
 VIEWS.more = function () {
-  return jumpTiles(['plan', 'shifts', 'habits', 'goals', 'notes', 'books', 'projects', 'calendar', 'journal', 'tools', 'inbox', 'areas'])
-    + '<div class="menu">' + ['money', 'settings'].map(function (k) {
-      return '<button class="row" data-act="tab" data-v="' + k + '">' + icon(SECTIONS[k][1]) + '<span class="grow t">' + SECTIONS[k][0] + '</span>' + icon('chev', 'sm chev') + '</button>';
-    }).join('') + '</div>';
+  return TOOL_GROUPS.map(function (g) {
+    return '<section>' + (g[0] ? '<h2 class="grouph2">' + g[0] + '</h2>' : '') + '<div class="toolgrid' + (g[1].length === 1 ? ' one' : '') + '">' + g[1].map(function (x) {
+      var n = typeof x[3] === 'function' ? x[3]() : toolCount(x[0]);
+      return '<button class="tooltile" data-act="tab" data-v="' + x[0] + '"><span class="te">' + x[1] + '</span><b>' + x[2] + '</b>' + (n ? '<span>' + esc(n) + '</span>' : '') + '</button>';
+    }).join('') + '</div></section>';
+  }).join('');
 };
 VIEWS.soon = function () {
   var c = current();
@@ -150,19 +170,13 @@ VIEWS.settings = function () {
       return '<div class="field" style="margin-bottom:10px"><label for="tab' + slot + '">' + ['First tab', 'Second tab', 'After Capture'][slot] + '</label><select id="tab' + slot + '" class="input sel" data-act-change="settab" data-slot="' + slot + '">'
         + Object.keys(SECTIONS).filter(function (k) { return k !== 'settings'; }).map(function (k) { return '<option value="' + k + '"' + (k === cur ? ' selected' : '') + '>' + SECTIONS[k][0] + '</option>'; }).join('') + '</select></div>';
     }).join('') + '</section>'
-    + '<section><div class="sechead"><h2>Theme</h2></div><div class="chips">' + [['', 'Match device'], ['dark', 'Dark'], ['light', 'Light']].map(function (o) {
-      return '<button class="chip' + ((document.documentElement.dataset.theme || '') === o[0] ? ' on' : '') + '" data-act="theme" data-t="' + o[0] + '">' + o[1] + '</button>';
-    }).join('') + '</div></section>'
+
     + '<section><div class="sechead"><h2>Data</h2></div><div class="btnrow">'
     + '<button class="btn soft" data-act="finimport">Import from Payday OS</button>'
     + (hasExamples() ? '<button class="btn soft" data-act="clearex">Clear examples</button>' : '')
     + '<button class="btn ghost" data-act="resetall">Erase everything</button></div></section>';
 };
-ACTS.theme = function (d) {
-  if (d.t) document.documentElement.dataset.theme = d.t; else delete document.documentElement.dataset.theme;
-  try { localStorage.setItem('mossos.theme', d.t); } catch (e) {}
-  render();
-};
+
 var resetAsked = 0;
 ACTS.resetall = function () {
   if (Date.now() - resetAsked > 6000) { resetAsked = Date.now(); toast('Tap "Erase everything" again to delete all your MossOS data on every device'); return; }

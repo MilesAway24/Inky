@@ -5,29 +5,16 @@
    centred column on iPad and wider. Dark-first, MossOS tokens, Helvetica Neue,
    light numerals. Area colours are the only accent besides moss green. */
 :root{
-  --bg:#191918;--surface:#212120;--sunk:#2A2A28;--raise:#2F2F2D;
-  --line:rgba(255,255,255,.08);--line2:rgba(255,255,255,.15);
-  --ink:#EDEDEB;--muted:#A3A39E;--faint:#76766F;
-  --accent:#5FCF8E;--accent-ink:#12251A;--accent-tint:rgba(95,207,142,.14);
-  --warn:#E8A33D;--bad:#E2574C;--shadow:rgba(0,0,0,.5);
-  --hn:"Helvetica Neue","HelveticaNeue",Helvetica,"Segoe UI",Arial,sans-serif;
-  --r:16px;
+  /* One dark look (Miles's reference): near-black, soft cards, green accent. */
+  --bg:#0A0A0B;--surface:#161618;--sunk:#1E1E21;--raise:#232327;
+  --line:rgba(255,255,255,.08);--line2:rgba(255,255,255,.16);
+  --ink:#F2F2F2;--muted:#9A9AA0;--faint:#6E6E75;
+  --accent:#34D17A;--accent-ink:#06210F;--accent-tint:rgba(52,209,122,.14);
+  --warn:#F5B544;--bad:#FF5A52;--good:#34D17A;--shadow:rgba(0,0,0,.6);
+  --hn:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",Helvetica,Arial,sans-serif;
+  --r:20px;
   color-scheme:dark;
 }
-@media (prefers-color-scheme:light){:root:not([data-theme="dark"]){
-  --bg:#FFFFFF;--surface:#F7F7F5;--sunk:#EFEFED;--raise:#FFFFFF;
-  --line:rgba(0,0,0,.085);--line2:rgba(0,0,0,.16);
-  --ink:#191918;--muted:#66665F;--faint:#8A8A84;
-  --accent:#23824B;--accent-ink:#FFFFFF;--accent-tint:rgba(35,130,75,.11);
-  --warn:#9A5B00;--bad:#C2372C;--shadow:rgba(0,0,0,.18);
-  color-scheme:light}}
-:root[data-theme="light"]{
-  --bg:#FFFFFF;--surface:#F7F7F5;--sunk:#EFEFED;--raise:#FFFFFF;
-  --line:rgba(0,0,0,.085);--line2:rgba(0,0,0,.16);
-  --ink:#191918;--muted:#66665F;--faint:#8A8A84;
-  --accent:#23824B;--accent-ink:#FFFFFF;--accent-tint:rgba(35,130,75,.11);
-  --warn:#9A5B00;--bad:#C2372C;--shadow:rgba(0,0,0,.18);
-  color-scheme:light}
 
 *{box-sizing:border-box}
 html,body{background:var(--bg)}
@@ -678,6 +665,84 @@ section.card{display:grid;gap:10px}
 .hmonth span.off{opacity:.35}
 .hmonth span.fut{background:none;border:1px dashed var(--line2)}
 .hmonth span.today{box-shadow:0 0 0 2px var(--ink)}
+
+/* ══ The reference look (Nov 2026): big header, status pill, cards ══ */
+h2{font-size:21px;font-weight:700;letter-spacing:-.02em}
+.sechead h2,.cardhead h2{margin:0;font-size:21px;font-weight:700;letter-spacing:-.02em}
+.top h1{font-weight:700}
+.top.big{min-height:84px;align-items:center;padding-top:6px}
+.bighead{flex:1;min-width:0}
+.bighead h1{margin:0;font-size:34px;font-weight:800;letter-spacing:-.03em;line-height:1.05}
+.bighead .sub{font-size:15px;color:var(--muted);margin-top:2px}
+.headbtns{display:flex;gap:10px}
+.roundbtn{display:grid;place-items:center;width:46px;height:46px;border-radius:15px;background:var(--surface);border:1px solid var(--line2);color:var(--ink)}
+.topsearch{margin-left:auto}
+.statpill{display:grid;grid-template-columns:1fr 1px 1fr;align-items:center;min-height:60px;border-radius:22px;background:var(--surface);border:1px solid var(--line)}
+.statpill>i{align-self:stretch;margin:14px 0;background:var(--line2)}
+.statpill button{display:flex;align-items:center;justify-content:center;gap:10px;font-size:16.5px;font-weight:500;color:var(--ink);min-height:58px;padding:0 10px}
+.statpill button.bad{color:var(--bad);font-weight:600}
+.statpill button.muted{color:var(--muted)}
+.sico{display:grid;place-items:center;width:26px;height:26px;border-radius:50%;font-weight:800;font-size:15px;flex:none}
+.sico.ok{background:var(--accent);color:var(--accent-ink)}
+.sico.ok svg.i{width:15px;height:15px;stroke-width:3}
+.sico.warn{background:var(--bad);color:#fff}
+.sico.none{background:var(--sunk);color:var(--faint)}
+.subline{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:-12px;font-size:14px;color:var(--muted)}
+.subline span{display:inline-flex;align-items:center;gap:6px}
+.dtiles{grid-template-columns:repeat(4,minmax(0,1fr))}
+.dtiles .jt2{justify-items:center;text-align:center;min-height:104px;padding:14px 6px;border-radius:20px;gap:4px}
+.dtiles .jt2 svg.i{width:30px;height:30px;color:var(--accent);stroke-width:1.9;margin-bottom:6px}
+.dtiles .jt2 b{font-weight:600;font-size:15px}
+.dtiles .jt2 span{font-size:12.5px;color:var(--muted)}
+.card{border-radius:22px;padding:18px}
+.card>.hchips{margin-top:12px}
+.cardhead{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;text-align:left;color:var(--ink)}
+.cardhead.plain{margin-bottom:12px}
+.cardhead .meta{display:inline-flex;align-items:center;gap:4px;font-size:15px;color:var(--muted)}
+.cardhead .link{display:inline-flex;align-items:center;gap:2px;font-size:16px;font-weight:600}
+.cardhead svg.i{width:16px;height:16px}
+.hchip{background:var(--sunk);border:1px solid var(--line2);min-height:46px;font-size:15.5px}
+.hchip.on{border-color:var(--accent);background:var(--accent-tint)}
+.money.card{display:grid;gap:14px}
+.money .fin3>button{background:var(--sunk);border:1px solid var(--line2);border-radius:16px;padding:14px;gap:6px}
+.money .fin3 b{font-size:30px;font-weight:400;letter-spacing:-.03em}
+.money .fin3 span{font-size:14.5px;color:var(--muted)}
+.finline{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;font-size:14.5px;padding-bottom:12px;border-bottom:1px solid var(--line)}
+.finline b.bad{color:var(--bad)}.finline b.good{color:var(--accent)}
+.finline .muted b{color:var(--ink);font-weight:600}
+.money .list{margin-top:0}
+.money .billrow .brow .t{font-size:16.5px}
+.money .billrow .amt{font-size:16.5px;font-weight:500}
+.money .billrow .pill{background:var(--sunk);font-size:13px;padding:4px 10px}
+.calicon{font-size:22px}
+.acard{flex:0 0 172px;padding:14px;border-radius:18px;background:var(--surface);border:1px solid var(--line);box-shadow:inset 0 3px 0 var(--c)}
+.acard .n{font-size:16.5px;font-weight:600}
+.acard .f{font-size:13.5px}
+.play2{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 14px;align-items:center;padding:16px;border-radius:22px;background:var(--surface);border:1px solid var(--line)}
+.play2 .pic{font-size:40px;line-height:1;grid-row:span 2}
+.play2 .pbody{display:grid;gap:2px;text-align:left;color:var(--ink);min-width:0}
+.play2 .pk{font-size:13px;color:var(--muted)}
+.play2 .pbody b{font-size:21px;font-weight:700;letter-spacing:-.02em;line-height:1.2}
+.play2 .pw{font-size:14.5px;color:var(--muted);line-height:1.35}
+.play2 .pacts{grid-column:2;display:flex;gap:8px;margin-top:10px}
+.pillbtn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:46px;padding:0 20px;border-radius:99px;background:var(--accent);color:var(--accent-ink);font-weight:700;font-size:16px}
+.pillbtn svg.i{width:18px;height:18px;stroke-width:2.6}
+.pillbtn.ghost{background:transparent;border:1px solid var(--line2);color:var(--ink);font-weight:500}
+.grouph2{margin:0 0 10px;font-size:15px;font-weight:600;color:var(--muted);letter-spacing:.01em;text-transform:none}
+.toolgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.toolgrid.one{grid-template-columns:1fr}
+.tooltile{display:grid;gap:4px;justify-items:start;text-align:left;padding:16px;border-radius:20px;background:var(--surface);border:1px solid var(--line);color:var(--ink);min-height:100px;min-width:0}
+.tooltile .te{font-size:26px;line-height:1}
+.tooltile b{font-size:16px;font-weight:600}
+.tooltile span{font-size:13px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+/* bottom bar: filled active icon, big green + */
+.tabs{background:rgba(10,10,11,.92)}
+.tabs button.on{color:var(--accent)}
+.tabs button.on svg.i{fill:var(--accent);stroke:var(--accent);stroke-width:1.6}
+.tabs button.on svg.i path[d^="M9 6h11"],.tabs button.on svg.i path[d^="M4 6l1"]{fill:none}
+.tabs .cap span{width:62px;height:62px;box-shadow:0 8px 24px rgba(52,209,122,.35)}
+.tabs .cap svg.i{width:30px;height:30px;stroke-width:2.6;color:var(--accent-ink)}
+.top .bighead .sub{font-size:15.5px;font-weight:400;color:var(--muted);letter-spacing:0;line-height:1.3;margin-top:4px}
 </style>
 
 <div class="app" id="app">
@@ -733,6 +798,13 @@ function clock(ts) {
 
 /* Icons: stroke SVGs, one viewBox. */
 var ICONS = {
+  home: '<path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/>',
+  book: '<path d="M4 5a2 2 0 0 1 2-2h5v17H6a2 2 0 0 0-2 2z"/><path d="M20 5a2 2 0 0 0-2-2h-5v17h5a2 2 0 0 1 2 2z"/>',
+  search: '<circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/>',
+  shift: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>',
+  bolt: '<path d="M13 3L5 13h6l-1 8 8-10h-6z"/>',
+  grid: '<rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/>',
+  check: '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
   today: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
   tasks: '<path d="M9 6h11M9 12h11M9 18h11"/><path d="M4 6l1 1 2-2M4 12l1 1 2-2M4 18l1 1 2-2"/>',
   plus: '<path d="M12 5v14M5 12h14"/>',
@@ -1269,21 +1341,22 @@ function playQueue() {
    Views return HTML strings; clicks are handled by one delegated
    listener that dispatches on data-act. */
 var nav = { tab: 'today', stack: [] };
-var VIEWS = {}, ACTS = {}, TITLES = {};
+var VIEWS = {}, ACTS = {}, TITLES = {}, HEADS = {};
 /* Every section. The bottom bar shows three of them (your choice, in
    Settings) around Capture, then More. */
 var SECTIONS = {
-  today: ['Today', 'today'], tasks: ['Tasks', 'tasks'], habits: ['Habits', 'habits'], goals: ['Goals', 'goals'],
+  today: ['Dashboard', 'home'], tasks: ['Tasks', 'tasks'], habits: ['Habits', 'habits'], goals: ['Goals', 'goals'],
   notes: ['Notes', 'notes'], projects: ['Projects', 'projects'], calendar: ['Calendar', 'calendar'], journal: ['Journal', 'journal'],
-  tools: ['Tools', 'tools'], books: ['Books', 'journal'], shifts: ['Shifts', 'calendar'], plan: ['Tomorrow', 'calendar'], money: ['Money', 'money'], inbox: ['Inbox', 'inbox'], areas: ['Life areas', 'areas'], settings: ['Settings', 'settings']
+  tools: ['Rank & cards', 'tools'], books: ['E-reader', 'book'], search: ['Search', 'search'], shifts: ['Shifts', 'shift'], plan: ['Tomorrow', 'calendar'], money: ['Money', 'money'], inbox: ['Inbox', 'inbox'], areas: ['Life areas', 'areas'], settings: ['Settings', 'settings']
 };
 var TAB_DEFAULT = ['today', 'tasks', 'habits'];
 function tabPrefs() { var p = Store.get('meta', 'prefs'); var t = p && p.tabs; return t && t.length === 3 && t.every(function (x) { return SECTIONS[x]; }) ? t : TAB_DEFAULT; }
 function tabsNow() {
   var t = tabPrefs();
-  return [[t[0]].concat(SECTIONS[t[0]]), [t[1]].concat(SECTIONS[t[1]]), ['capture', 'Capture', 'plus'], [t[2]].concat(SECTIONS[t[2]]), ['more', 'More', 'more']];
+  return [[t[0]].concat(SECTIONS[t[0]]), [t[1]].concat(SECTIONS[t[1]]), ['capture', 'Capture', 'plus'], [t[2]].concat(SECTIONS[t[2]]), ['more', 'Tools', 'grid']];
 }
-var SIDE_MORE = ['plan', 'shifts', 'habits', 'goals', 'notes', 'books', 'projects', 'calendar', 'journal', 'tools', 'inbox', 'areas', 'settings'].map(function (k) { return [k, SECTIONS[k][0], SECTIONS[k][1]]; });
+var SIDE_TOP = ['today', 'tasks', 'habits', 'journal', 'goals', 'notes', 'books'];
+var SIDE_MORE = ['money', 'plan', 'calendar', 'shifts', 'projects', 'areas', 'inbox', 'tools', 'search', 'settings'].map(function (k) { return [k, SECTIONS[k][0], SECTIONS[k][1]]; });
 
 function leaving() { if (current().view === 'project' && typeof maybeAskLeftOff === 'function') setTimeout(maybeAskLeftOff, 0); }
 function go(tab) { leaving(); nav.tab = tab; nav.stack = []; render(true); }
@@ -1303,9 +1376,9 @@ function render(scrollTop, force) {
   var c = current(), v = VIEWS[c.view] || VIEWS.soon;
   var sub = nav.stack.length > 0;
   var title = typeof TITLES[c.view] === 'function' ? TITLES[c.view](c.arg) : (TITLES[c.view] || '');
-  $('#top').className = 'top' + (sub ? ' sub' : '');
-  $('#top').innerHTML = (sub ? '<button class="back" data-act="back" aria-label="Back">' + icon('back') + '</button>' : '')
-    + '<h1>' + esc(title) + '</h1>' + (sub ? '' : syncBadge());
+  $('#top').className = 'top' + (sub ? ' sub' : '') + (!sub && HEADS[c.view] ? ' big' : '');
+  $('#top').innerHTML = !sub && HEADS[c.view] ? HEADS[c.view]() : (sub ? '<button class="back" data-act="back" aria-label="Back">' + icon('back') + '</button>' : '')
+    + '<h1>' + esc(title) + '</h1>' + (sub || c.view === 'search' ? '' : '<button class="iconbtn topsearch" data-act="tab" data-v="search" aria-label="Search">' + icon('search', 'sm') + '</button>');
   // Keep focus and caret if the user is typing in this view.
   var ae = document.activeElement, keep = ae && ae.id && $('#view').contains(ae) ? { id: ae.id, s: ae.selectionStart, e: ae.selectionEnd } : null;
   if (keep && (ae.isContentEditable || ae.tagName === 'TEXTAREA' || ae.tagName === 'INPUT') && !scrollTop && !force) {
@@ -1323,17 +1396,19 @@ function render(scrollTop, force) {
 }
 function paintChrome() {
   var c = current(), active = nav.stack.length ? nav.tab : c.view;
+  // Anything not on the bar lives under Tools.
+  var onBar = tabsNow().some(function (t) { return t[0] === active; }), barActive = onBar ? active : 'more';
   $('#tabs').innerHTML = tabsNow().map(function (t) {
     if (t[0] === 'capture') return '<button class="cap" data-act="capture" aria-label="Capture">' + '<span>' + icon('plus') + '</span></button>';
-    return '<button class="' + (active === t[0] ? 'on' : '') + '" data-act="tab" data-v="' + t[0] + '" aria-current="' + (active === t[0] ? 'page' : 'false') + '">' + icon(t[2]) + '<span>' + t[1] + '</span></button>';
+    return '<button class="' + (barActive === t[0] ? 'on' : '') + '" data-act="tab" data-v="' + t[0] + '" aria-current="' + (barActive === t[0] ? 'page' : 'false') + '">' + icon(t[2]) + '<span>' + t[1] + '</span></button>';
   }).join('');
   var inboxN = Store.all('inbox').length;
   $('#side').innerHTML = '<div class="brand">' + icon('moss') + 'MossOS</div>'
     + '<button class="capbtn" data-act="capture">' + icon('plus', 'sm') + 'Capture</button>'
-    + [['today', 'Today', 'today'], ['tasks', 'Tasks', 'tasks'], ['money', 'Money', 'money']].map(function (t) {
+    + SIDE_TOP.map(function (k) { return [k, SECTIONS[k][0], SECTIONS[k][1]]; }).map(function (t) {
       return '<button class="' + (active === t[0] ? 'on' : '') + '" data-act="tab" data-v="' + t[0] + '">' + icon(t[2]) + t[1] + '</button>';
     }).join('')
-    + '<div class="grp">More</div>'
+    + '<div class="grp">Tools</div>'
     + SIDE_MORE.map(function (t) {
       return '<button class="' + (active === t[0] ? 'on' : '') + '" data-act="tab" data-v="' + t[0] + '">' + icon(t[2]) + t[1]
         + (t[0] === 'inbox' && inboxN ? '<span class="pill" style="margin-left:auto">' + inboxN + '</span>' : '') + '</button>';
@@ -1440,14 +1515,23 @@ function habitRemindersNow() {
   var n = new Date(), now = n.getHours() * 60 + n.getMinutes(), t = today();
   return habitsDueToday().filter(function (h) { return h.remindAt && mins(h.remindAt) <= now && !habitDone(h, t); });
 }
+/* The big header: "Today", the date and part of day, calendar and search. */
+HEADS.today = function () {
+  var d = new Date();
+  return '<div class="bighead"><h1>Today</h1><div class="sub">' + DOW[d.getDay()] + ', ' + MON[d.getMonth()] + ' ' + d.getDate() + ' · ' + partOfDay(d.getHours()).replace(/^\w/, function (c) { return c.toUpperCase(); }) + '</div></div>'
+    + '<div class="headbtns"><button class="roundbtn" data-act="tab" data-v="calendar" aria-label="Calendar">' + icon('calendar', 'sm') + '</button>'
+    + '<button class="roundbtn" data-act="tab" data-v="search" aria-label="Search">' + icon('search', 'sm') + '</button></div>';
+};
 VIEWS.today = function () {
   var d = new Date(), t = today();
-  var inbox = Store.all('inbox').sort(function (a, b) { return a.created - b.created; }), sl = slipped();
+  var inbox = Store.all('inbox'), sl = slipped();
   var todays = tasksIn('today'), open = todays.filter(function (x) { return !x.done; }), done = todays.filter(function (x) { return x.done; });
-  var h = '<div class="overview"><div class="dateline">' + DOW[d.getDay()] + ', ' + MON[d.getMonth()] + ' ' + d.getDate() + ' · ' + partOfDay(d.getHours()) + '</div>'
-    + '<div class="ovcount">' + open.length + ' task' + (open.length === 1 ? '' : 's') + ' today' + esc(shiftOverview()) + (sl.length ? ' · <span class="bad">' + sl.length + ' overdue</span>' : '') + '</div>'
-    + (d.getHours() >= 17 ? '<button class="link planlink" data-act="tab" data-v="plan">Plan tomorrow →</button>' : '') + '</div>';
-  h += jumpTiles(['habits', 'goals', 'notes', 'projects', 'tools', 'calendar']);
+  // Status pill
+  var sh = shiftOverview().replace(/^ · /, '');
+  var h = '<div class="statpill"><button data-act="tab" data-v="tasks"><span class="sico ok">' + icon('check', 'sm') + '</span>' + open.length + ' task' + (open.length === 1 ? '' : 's') + ' today</button>'
+    + '<i></i><button data-act="' + (sl.length ? 'reschedule' : 'tab') + '" data-v="tasks" class="' + (sl.length ? 'bad' : 'muted') + '"><span class="sico ' + (sl.length ? 'warn' : 'none') + '">!</span>' + sl.length + ' overdue</button></div>';
+  if (sh || d.getHours() >= 17) h += '<div class="subline">' + (sh ? '<span>' + icon('shift', 'sm') + ' ' + esc(sh.replace(/^\w/, function (c) { return c.toUpperCase(); })) + '</span>' : '')
+    + (d.getHours() >= 17 ? '<button class="link" data-act="tab" data-v="plan">Plan tomorrow →</button>' : '') + '</div>';
 
   if (hasExamples()) h += '<div class="card flat"><p class="note">You\'re looking at example data so you can see how MossOS works. '
     + 'Items marked <span class="pill ex">example</span> go when you clear them.</p>'
@@ -1455,63 +1539,36 @@ VIEWS.today = function () {
 
   h += shiftCards();
 
-  // Heads up
+  // Heads up: only when something needs you
   var rem = remindersNow(), hrem = habitRemindersNow();
   var finRows = typeof finHeadsUp === 'function' ? finHeadsUp() : [];
-  if ((sl.length || rem.length || hrem.length || inbox.length || finRows.length) && !headsUpDismissed()) {
-    h += '<section class="headsup"><div class="sechead" style="margin:0"><h2>Heads up</h2><button class="iconbtn" data-act="hudismiss" aria-label="Hide for today">' + icon('x', 'sm') + '</button></div>';
-    if (sl.length) h += '<div class="hurow"><span>🔥</span><span class="grow"><b>' + sl.length + ' task' + (sl.length === 1 ? '' : 's') + ' overdue</b></span><button class="btn sm soft" data-act="reschedule">Sweep</button></div>';
+  if ((rem.length || hrem.length || inbox.length || finRows.length) && !headsUpDismissed()) {
+    h += '<section class="headsup card"><div class="sechead" style="margin:0"><h2>Heads up</h2><button class="iconbtn" data-act="hudismiss" aria-label="Hide for today">' + icon('x', 'sm') + '</button></div>';
     rem.forEach(function (x) { h += '<div class="hurow"><span>🔔</span><button class="grow" style="text-align:left" data-act="open" data-v="task" data-id="' + x.id + '"><b>' + esc(x.t) + '</b> <span class="muted">' + esc(untilText(x)) + '</span></button></div>'; });
     hrem.forEach(function (x) { h += '<div class="hurow"><span>' + esc(x.ic) + '</span><span class="grow"><b>' + esc(x.n) + '</b> <span class="muted">reminder · ' + esc(fmtTime(x.remindAt)) + '</span></span><button class="btn sm soft" data-act="habtoggle" data-id="' + x.id + '">' + (x.target ? 'Log' : 'Done') + '</button></div>'; });
     h += finRows.join('');
-    if (inbox.length) h += '<div class="hurow"><span>📥</span><span class="grow"><b>' + inbox.length + ' to sort</b></span><button class="btn sm soft" data-act="tab" data-v="inbox">Sort</button></div>';
+    if (inbox.length) h += '<div class="hurow"><span>📥</span><span class="grow"><b>' + inbox.length + ' to sort</b> <span class="muted">from quick captures</span></span><button class="btn sm soft" data-act="tab" data-v="inbox">Sort</button></div>';
     h += '</section>';
   }
 
-  if (typeof billsSection === 'function') h += billsSection();
+  // Quick access
+  h += '<nav class="jump dtiles" aria-label="Quick access">' + ['journal', 'goals', 'notes', 'books'].map(function (k) {
+    return '<button class="jt2" data-act="tab" data-v="' + k + '">' + icon(SECTIONS[k][1]) + '<b>' + SECTIONS[k][0] + '</b><span>' + esc(sectionCount(k)) + '</span></button>';
+  }).join('') + '</nav>';
 
-  // Inbox, each with its own sort
-  if (inbox.length) h += '<section><div class="sechead"><h2>Inbox</h2><span class="pill accent">' + inbox.length + ' to sort</span></div><div class="list">'
-    + inbox.slice(0, 4).map(function (it) {
-      return '<div class="row"><span class="grow"><div class="t">' + esc(it.text || '(photo)') + '</div><div class="s">unsorted · ' + esc(timeAgo(it.created)) + ' ' + exPill(it) + '</div></span>'
-        + '<button class="btn sm soft" data-act="sortone" data-id="' + it.id + '">sort ›</button></div>';
-    }).join('') + (inbox.length > 4 ? '<button class="row link" data-act="tab" data-v="inbox">All ' + inbox.length + ' in the inbox ›</button>' : '') + '</div></section>';
-
-  // Play
-  var q = playQueue();
-  h += '<section><div class="sechead"><h2>Play</h2><span class="meta">one at a time · ' + q.length + ' left</span></div>';
-  if (q.length) {
-    var x = q[0];
-    h += '<div class="play"><div class="k"><span>' + areaDot(x.area) + ' ' + esc(areaName(x.area) || 'No area')
-      + (x.tag ? ' · ' + esc(x.tag) : '') + '</span><span>' + esc([x.time ? fmtTime(x.time) : '', x.est ? '~' + x.est : ''].filter(Boolean).join(' · ')) + '</span></div>'
-      + '<div class="t"><span>' + esc(x.ic || '•') + '</span><span>' + esc(x.t) + '</span></div>'
-      + '<div class="w">' + esc(x.why) + '</div>'
-      + '<div class="acts"><button class="btn accent" data-act="playdo" data-k="' + x.kind + '" data-id="' + x.id + '">' + (x.kind === 'habit' ? 'Mark done' : 'Do it') + '</button>'
-      + '<button class="btn soft" data-act="playskip" data-k="' + x.kind + '" data-id="' + x.id + '">Skip ›</button></div>'
-      + '<button class="link" style="justify-self:start" data-act="open" data-v="' + x.kind + '" data-id="' + x.id + '">Open the ' + x.kind + '</button></div>';
-  } else {
-    h += '<div class="empty">Nothing waiting. Capture something, or enjoy the gap.</div>';
-  }
-  h += '</section>';
-
-  // Today's tasks
-  h += '<section><div class="sechead"><h2>Today</h2><button class="link" data-act="tab" data-v="tasks">All tasks</button></div>'
-    + (open.length ? '<div class="tlist">' + open.map(taskRow).join('') + '</div>' : '<p class="note">Nothing else due today.</p>') + '</section>';
-
-  // Overdue
-  if (sl.length) h += '<section><div class="sechead"><h2 class="bad">Overdue</h2><button class="link" data-act="reschedule">Sweep →</button></div>'
-    + '<div class="tlist">' + sl.slice(0, 5).map(taskRow).join('') + '</div></section>';
-
-  // Habits due today
+  // Habits today
   var hd = habitsDueToday();
   if (hd.length) {
     var hdone = hd.filter(function (x) { return habitDone(x, t); }).length;
-    h += '<section><div class="sechead"><h2>Habits today</h2><span class="meta">' + hdone + '/' + hd.length + esc(challengeTag()) + '</span></div><div class="hchips">'
+    h += '<section class="card"><button class="cardhead" data-act="tab" data-v="habits"><h2>Habits today</h2><span class="meta">' + hdone + '/' + hd.length + esc(challengeTag()) + ' ' + icon('chev', 'sm') + '</span></button><div class="hchips">'
       + hd.map(habitChip).join('') + '</div></section>';
   }
 
-  // Areas
-  h += '<section><div class="sechead"><h2>Life areas</h2><button class="link" data-act="tab" data-v="areas">All</button></div><div class="areas">'
+  // Money
+  if (typeof billsSection === 'function') h += billsSection();
+
+  // Life areas
+  h += '<section><button class="cardhead plain" data-act="tab" data-v="areas"><h2>Life areas</h2><span class="link">All ' + icon('chev', 'sm') + '</span></button><div class="areas">'
     + areasSorted().map(function (a) {
       return '<button class="acard" style="--c:' + esc(a.color) + '" data-act="open" data-v="area" data-id="' + a.id + '">'
         + '<span class="n"><span class="dot" style="background:' + esc(a.color) + '"></span><span>' + esc(a.short) + '</span></span>'
@@ -1519,23 +1576,35 @@ VIEWS.today = function () {
         + '<span class="f">' + esc(a.focus || '') + '</span></button>';
     }).join('') + '</div></section>';
 
-  // Rescheduled
-  var rs2 = rescheduled().slice(0, 4);
-  if (rs2.length) h += '<section><div class="sechead"><h2>Slipped, rescheduled</h2></div><div style="display:grid;gap:6px">'
-    + rs2.map(slipRow).join('') + '</div></section>';
+  // Play
+  var q = playQueue();
+  h += '<section><div class="cardhead plain"><h2>Play</h2><span class="meta">One at a time · ' + q.length + ' left</span></div>';
+  if (q.length) {
+    var x = q[0];
+    h += '<div class="play2"><span class="pic">' + esc(x.ic || (x.kind === 'habit' ? '🔁' : x.kind === 'goal' ? '🎯' : '✅')) + '</span>'
+      + '<button class="grow pbody" data-act="open" data-v="' + x.kind + '" data-id="' + x.id + '"><span class="pk">' + esc(x.kind === 'habit' ? 'Habit' : x.kind === 'goal' ? 'Goal' : (areaName(x.area) || 'Task'))
+      + (x.time ? ' · ' + esc(fmtTime(x.time)) : '') + (x.est ? ' · ~' + esc(x.est) : '') + '</span><b>' + esc(x.t) + '</b><span class="pw">' + esc(x.why) + '</span></button>'
+      + '<div class="pacts"><button class="pillbtn" data-act="playdo" data-k="' + x.kind + '" data-id="' + x.id + '">' + icon('check', 'sm') + (x.kind === 'habit' ? 'Mark done' : 'Do it') + '</button>'
+      + '<button class="pillbtn ghost" data-act="playskip" data-k="' + x.kind + '" data-id="' + x.id + '">Skip</button></div></div>';
+  } else h += '<div class="empty">Nothing waiting. Capture something, or enjoy the gap.</div>';
+  h += '</section>';
 
-  // Log
-  var log = Store.all('log').filter(function (l) { return l.day === t; }).sort(function (a, b) { return b.at - a.at; });
-  h += '<section><div class="sechead"><h2>Today\'s log</h2><span class="meta">writes itself</span></div>'
-    + (log.length ? '<div class="log">' + log.slice(0, 12).map(function (l) {
-      return '<div class="logrow"><time>' + clock(l.at) + '</time>' + areaDot(l.area) + '<span>' + esc(l.text) + '</span></div>';
-    }).join('') + '</div>' : '<div class="empty">Nothing yet. Finishing a task, marking a habit or capturing something adds a line here.</div>')
-    + '</section>';
-
-  // Completed
+  // Today's tasks, overdue, completed
+  h += '<section><div class="cardhead plain"><h2>Today</h2><button class="link" data-act="tab" data-v="tasks">All tasks</button></div>'
+    + (open.length ? '<div class="tlist">' + open.map(taskRow).join('') + '</div>' : '<p class="note">Nothing else due today.</p>') + '</section>';
+  if (sl.length) h += '<section><div class="cardhead plain"><h2 class="bad">Overdue</h2><button class="link" data-act="reschedule">Sweep →</button></div>'
+    + '<div class="tlist">' + sl.slice(0, 5).map(taskRow).join('') + '</div></section>';
   if (done.length) h += '<details class="donegrp"><summary>✓ Completed · ' + done.length + '</summary><div class="tlist">' + done.map(taskRow).join('') + '</div></details>';
   return h;
 };
+/* Today's log now lives on the Journal page. */
+function todaysLogHtml() {
+  var t = today(), log = Store.all('log').filter(function (l) { return l.day === t; }).sort(function (a, b) { return b.at - a.at; });
+  return '<section><div class="sechead"><h2>Today\'s log</h2><span class="meta">writes itself</span></div>'
+    + (log.length ? '<div class="log">' + log.slice(0, 20).map(function (l) {
+      return '<div class="logrow"><time>' + clock(l.at) + '</time>' + areaDot(l.area) + '<span>' + esc(l.text) + '</span></div>';
+    }).join('') + '</div>' : '<div class="empty">Nothing yet. Finishing a task, marking a habit or capturing something adds a line here.</div>') + '</section>';
+}
 VIEWS.today.after = function () { wireSwipes(); };
 ACTS.hudismiss = function () { try { localStorage.setItem('mossos.headsup', today()); } catch (e) {} render(); };
 /* "sort ›" on one inbox item: smart-sort just that one, in the capture sheet. */
@@ -1625,6 +1694,8 @@ VIEWS.tasks = function () {
     .sort(function (a, b) { return b.doneAt - a.doneAt; });
   if (older.length) h += '<details class="donegrp"><summary>Done this week · ' + older.length + '</summary><div class="tlist">' + older.map(taskRow).join('') + '</div></details>';
   h += '<p class="note small">Swipe a task right to finish it, left to move it to tomorrow. Tap a name to rename it.</p>';
+  var rs2 = rescheduled().slice(0, 5);
+  if (rs2.length) h += '<section><div class="sechead"><h2>Slipped, rescheduled</h2></div><div style="display:grid;gap:6px">' + rs2.map(slipRow).join('') + '</div></section>';
   return h;
 };
 VIEWS.tasks.after = function () { wireSwipes(); };
@@ -2240,6 +2311,7 @@ VIEWS.inbox = function () {
       return '<div class="row" style="align-items:flex-start"><span class="grow"><div class="t">' + esc(it.text || '(photo)') + '</div>'
         + (it.photo ? '<img src="/_blob/' + esc(it.photo) + '" alt="" style="width:80px;height:80px;object-fit:cover;border-radius:10px;margin-top:8px">' : '')
         + '<div class="s">' + esc(timeAgo(it.created)) + ' ' + exPill(it) + '</div></span>'
+        + '<button class="btn sm soft" data-act="sortone" data-id="' + it.id + '">sort ›</button>'
         + '<button class="iconbtn" data-act="inboxdel" data-id="' + it.id + '" aria-label="Delete">' + icon('x', 'sm') + '</button></div>';
     }).join('') + '</div>';
 };
@@ -2379,13 +2451,33 @@ ACTS.notetotask = function (d) {
 };
 
 /* ═══ MORE ═══════════════════════════════════════════════════════════ */
-TITLES.more = 'More';
+TITLES.more = 'Tools';
 var SOON = {};
+/* Tools: everything that isn't on the Dashboard, grouped. */
+var TOOL_GROUPS = [
+  ['Money', [['money', '💵', 'Money', function () { return FIN.sum ? fmtMoney(FIN.sum.leftToday, true) + ' left today' : 'Payday OS'; }]]],
+  ['Plan', [['plan', '🌙', 'Tomorrow'], ['calendar', '📅', 'Calendar'], ['shifts', '🚑', 'Shifts'], ['projects', '📁', 'Projects']]],
+  ['Life', [['areas', '🧭', 'Life areas'], ['inbox', '📥', 'Inbox'], ['habits', '🔁', 'Habits'], ['search', '🔎', 'Search']]],
+  ['Make', [['ranks', '🏆', 'Rank'], ['decks', '🗂', 'Flashcards'], ['gym', '🏋️', 'Gym'], ['timer', '⏱', 'Focus timer'], ['bored', '🎲', 'Bored']]],
+  ['', [['settings', '⚙️', 'Settings']]]
+];
+function toolCount(k) {
+  if (k === 'ranks') { var r = Store.all('ranks').reduce(function (a, l) { return a + rankPending(l).length; }, 0); return r ? r + ' to rank' : Store.all('ranks').length + ' lists'; }
+  if (k === 'decks') { var c = Store.all('decks').reduce(function (a, dk) { return a + dueCards(dk).length; }, 0); return c ? c + ' cards due' : Store.all('decks').length + ' decks'; }
+  if (k === 'gym') return Store.all('lifts').length + ' lifts';
+  if (k === 'timer') return 'Focus';
+  if (k === 'bored') return 'Pick something';
+  if (k === 'search') return 'Everything';
+  if (k === 'settings') return '';
+  return sectionCount(k);
+}
 VIEWS.more = function () {
-  return jumpTiles(['plan', 'shifts', 'habits', 'goals', 'notes', 'books', 'projects', 'calendar', 'journal', 'tools', 'inbox', 'areas'])
-    + '<div class="menu">' + ['money', 'settings'].map(function (k) {
-      return '<button class="row" data-act="tab" data-v="' + k + '">' + icon(SECTIONS[k][1]) + '<span class="grow t">' + SECTIONS[k][0] + '</span>' + icon('chev', 'sm chev') + '</button>';
-    }).join('') + '</div>';
+  return TOOL_GROUPS.map(function (g) {
+    return '<section>' + (g[0] ? '<h2 class="grouph2">' + g[0] + '</h2>' : '') + '<div class="toolgrid' + (g[1].length === 1 ? ' one' : '') + '">' + g[1].map(function (x) {
+      var n = typeof x[3] === 'function' ? x[3]() : toolCount(x[0]);
+      return '<button class="tooltile" data-act="tab" data-v="' + x[0] + '"><span class="te">' + x[1] + '</span><b>' + x[2] + '</b>' + (n ? '<span>' + esc(n) + '</span>' : '') + '</button>';
+    }).join('') + '</div></section>';
+  }).join('');
 };
 VIEWS.soon = function () {
   var c = current();
@@ -2410,19 +2502,13 @@ VIEWS.settings = function () {
       return '<div class="field" style="margin-bottom:10px"><label for="tab' + slot + '">' + ['First tab', 'Second tab', 'After Capture'][slot] + '</label><select id="tab' + slot + '" class="input sel" data-act-change="settab" data-slot="' + slot + '">'
         + Object.keys(SECTIONS).filter(function (k) { return k !== 'settings'; }).map(function (k) { return '<option value="' + k + '"' + (k === cur ? ' selected' : '') + '>' + SECTIONS[k][0] + '</option>'; }).join('') + '</select></div>';
     }).join('') + '</section>'
-    + '<section><div class="sechead"><h2>Theme</h2></div><div class="chips">' + [['', 'Match device'], ['dark', 'Dark'], ['light', 'Light']].map(function (o) {
-      return '<button class="chip' + ((document.documentElement.dataset.theme || '') === o[0] ? ' on' : '') + '" data-act="theme" data-t="' + o[0] + '">' + o[1] + '</button>';
-    }).join('') + '</div></section>'
+
     + '<section><div class="sechead"><h2>Data</h2></div><div class="btnrow">'
     + '<button class="btn soft" data-act="finimport">Import from Payday OS</button>'
     + (hasExamples() ? '<button class="btn soft" data-act="clearex">Clear examples</button>' : '')
     + '<button class="btn ghost" data-act="resetall">Erase everything</button></div></section>';
 };
-ACTS.theme = function (d) {
-  if (d.t) document.documentElement.dataset.theme = d.t; else delete document.documentElement.dataset.theme;
-  try { localStorage.setItem('mossos.theme', d.t); } catch (e) {}
-  render();
-};
+
 var resetAsked = 0;
 ACTS.resetall = function () {
   if (Date.now() - resetAsked > 6000) { resetAsked = Date.now(); toast('Tap "Erase everything" again to delete all your MossOS data on every device'); return; }
@@ -3163,7 +3249,7 @@ VIEWS.journal = function () {
     return '<button class="row" data-act="open" data-v="entry" data-id="' + j.id + '" style="align-items:flex-start"><span class="jd"><b>' + esc(shortDate(j.day)) + '</b></span>'
       + '<span class="grow"><div class="t jt">' + esc(j.text || '(no words)') + '</div><div class="s">' + (j.mood ? MOODS[j.mood][0] + ' ' + MOODS[j.mood][1] : '') + ' ' + exPill(j) + '</div></span></button>';
   }).join('') + '</div></section>' : '';
-  return h;
+  return h + todaysLogHtml();
 };
 VIEWS.journal.after = function () {
   var ta = $('#jtext'); if (!ta) return;
@@ -3809,7 +3895,7 @@ function billsSection() {
     return '<div class="row billrow"><button class="grow brow" data-act="tab" data-v="money"><span class="grow"><div class="t">' + esc(b.name) + '</div><div class="s">' + esc(shortDate(b.date)) + (b.est ? ' · projected' : '') + '</div></span>'
       + '<span class="amt">' + esc(fmtMoney(b.amt)) + '</span><span class="pill">' + (n <= 0 ? 'today' : 'in ' + n + 'd') + '</span></button>' + calIcon(billCal(b.name, b.amt, b.date, 'bill')) + '</div>';
   }).join('');
-  return '<section class="money"><div class="sechead"><h2>Money</h2><button class="link" data-act="tab" data-v="money">Open</button></div>'
+  return '<section class="money card"><button class="cardhead" data-act="tab" data-v="money"><h2>Money</h2><span class="link">Open ' + icon('chev', 'sm') + '</span></button>'
     + '<div class="stats3 fin3"><button data-act="tab" data-v="money"><b class="' + (s.leftToday < 0 ? 'bad' : '') + '">' + esc(fmtMoney(s.leftToday, true)) + '</b><span>left today</span></button>'
     + '<button data-act="tab" data-v="money"><b>' + esc(fmtMoney(s.weekLeft, true)) + '</b><span>until Friday</span></button>'
     + (s.isFriday ? '<button data-act="tab" data-v="money"><b>' + s.friday.done + '/' + s.friday.total + '</b><span>Friday checklist</span></button>'
@@ -3820,9 +3906,9 @@ function billsSection() {
 function finExtraLine() {
   var x = FIN.extra; if (!x) return '';
   var bits = [];
-  if (x.week) bits.push('<span class="' + (x.week.spent > x.week.plan ? 'bad' : '') + '">' + fmtMoney(x.week.spent, true) + ' of ' + fmtMoney(x.week.plan, true) + ' plan this week</span>');
-  if (x.nextKill) bits.push('next card gone: <b>' + esc(x.nextKill.name) + '</b> · ' + esc(x.nextKill.when));
-  return bits.length ? '<p class="note small finline">' + bits.join(' · ') + '</p>' : '';
+  if (x.week) bits.push('<b class="' + (x.week.spent > x.week.plan ? 'bad' : 'good') + '">' + fmtMoney(x.week.spent, true) + ' of ' + fmtMoney(x.week.plan, true) + ' plan this week</b>');
+  if (x.nextKill) bits.push('<span class="muted">Next card: <b>' + esc(x.nextKill.name) + '</b> · ' + esc(x.nextKill.when) + '</span>');
+  return bits.length ? '<div class="finline">' + bits.join('') + '</div>' : '';
 }
 /* Rows for Today's Heads up card. */
 function finHeadsUp() {
@@ -4891,9 +4977,66 @@ function estFromText(text) {
   return { est: /^h/i.test(m[2]) ? m[1] + ' h' : m[1] + ' min', rest: (text.slice(0, m.index) + text.slice(m.index + m[0].length)).replace(/\s{2,}/g, ' ').trim() };
 }
 
+/* ── 27-search.js ── */
+/* ═══ SEARCH ════════════════════════════════════════════════════════
+   One box over everything: tasks, notes, journal, books and quotes,
+   goals, projects, habits, life areas and shifts. */
+var searchQ = '';
+TITLES.search = 'Search';
+function searchRecent() { try { return JSON.parse(localStorage.getItem('mossos.searches') || '[]'); } catch (e) { return []; } }
+function searchRemember(q) { try { var r = searchRecent().filter(function (x) { return x !== q; }); r.unshift(q); localStorage.setItem('mossos.searches', JSON.stringify(r.slice(0, 8))); } catch (e) {} }
+function searchHits(q) {
+  q = q.trim().toLowerCase(); if (q.length < 2) return [];
+  var has = function (s) { return String(s || '').toLowerCase().indexOf(q) > -1; };
+  var snip = function (s) { s = String(s || '').replace(/\s+/g, ' '); var i = s.toLowerCase().indexOf(q); return i < 0 ? s.slice(0, 80) : (i > 30 ? '…' : '') + s.slice(Math.max(0, i - 30), i + 60); };
+  var groups = [];
+  var add = function (name, list) { if (list.length) groups.push([name, list.slice(0, 8), list.length]); };
+  add('Tasks', Store.all('tasks').filter(function (t) { return has(t.t) || has(t.note); }).sort(function (a, b) { return !!a.done - !!b.done; })
+    .map(function (t) { return { v: 'task', id: t.id, t: (t.done ? '✓ ' : '') + t.t, s: t.due ? shortDate(t.due) : 'Someday' }; }));
+  add('Notes', Store.all('notes').filter(function (n) { return !n.book && (has(n.title) || has(n.body) || has((n.tags || []).join(' '))); })
+    .map(function (n) { return { v: 'note', id: n.id, t: n.title || 'Untitled', s: snip(n.body) }; }));
+  add('Journal', Store.all('journal').filter(function (j) { return has(j.text); }).sort(function (a, b) { return b.day.localeCompare(a.day); })
+    .map(function (j) { return { v: 'entry', id: j.id, t: shortDate(j.day), s: snip(j.text) }; }));
+  add('Books & quotes', Store.all('books').filter(function (b) { return has(b.title) || has(b.author); }).map(function (b) { return { v: 'book', id: b.id, t: '📖 ' + b.title, s: b.author || '' }; })
+    .concat(Store.all('notes').filter(function (n) { return n.book && (has(n.body) || has(n.title)); }).map(function (n) { var b = Store.get('books', n.book); return { v: 'note', id: n.id, t: '❝ ' + snip(n.body), s: (b ? b.title : '') + (n.page ? ' p. ' + n.page : '') }; })));
+  add('Goals', Store.all('goals').filter(function (g) { return has(g.n) || has(g.next) || has(g.why); }).map(function (g) { return { v: 'goal', id: g.id, t: g.n, s: g.next ? 'Next: ' + g.next : '' }; }));
+  add('Projects', Store.all('projects').filter(function (x) { return has(x.t) || has(x.next); }).map(function (x) { return { v: 'project', id: x.id, t: x.t, s: x.next || '' }; }));
+  add('Habits', habitsSorted().filter(function (h) { return has(h.n) || has(h.cue); }).map(function (h) { return { v: 'habit', id: h.id, t: h.ic + ' ' + h.n, s: h.cue || '' }; }));
+  add('Life areas', areasSorted().filter(function (a) { return has(a.name) || has(a.focus); }).map(function (a) { return { v: 'area', id: a.id, t: a.name, s: a.focus || '' }; }));
+  add('Shifts', Store.all('shifts').filter(function (s2) { return has(shiftJob(s2.job).name) || has(s2.note) || has(s2.date); }).sort(function (a, b) { return b.date.localeCompare(a.date); })
+    .map(function (s2) { return { v: 'shift', id: s2.id, t: shiftJob(s2.job).ic + ' ' + shiftJob(s2.job).name, s: shortDate(s2.date) + ' · ' + shiftLabel(s2) }; }));
+  return groups;
+}
+function searchResultsHtml() {
+  var q = searchQ.trim();
+  if (q.length < 2) {
+    var r = searchRecent();
+    return r.length ? '<section><div class="sechead"><h2>Recent</h2></div><div class="chips">' + r.map(function (x) { return '<button class="chip" data-act="searchset" data-q="' + esc(x) + '">' + esc(x) + '</button>'; }).join('') + '</div></section>'
+      : '<p class="note">Search tasks, notes, journal, books and quotes, goals, projects, habits, life areas and shifts.</p>';
+  }
+  var g = searchHits(q);
+  if (!g.length) return '<div class="empty">Nothing matches "' + esc(q) + '".</div>';
+  return g.map(function (x) {
+    return '<section><div class="sechead"><h2>' + x[0] + '</h2><span class="meta">' + x[2] + '</span></div><div class="list">' + x[1].map(function (r) {
+      return '<button class="row" data-act="searchopen" data-v="' + r.v + '" data-id="' + r.id + '"><span class="grow"><div class="t">' + esc(r.t) + '</div>' + (r.s ? '<div class="s">' + esc(r.s) + '</div>' : '') + '</span>' + icon('chev', 'sm chev') + '</button>';
+    }).join('') + '</div></section>';
+  }).join('');
+}
+VIEWS.search = function () {
+  return '<div class="search"><label class="sr" for="sq">Search everything</label><input id="sq" class="input" type="search" placeholder="Search everything" value="' + esc(searchQ) + '" autocomplete="off" enterkeyhint="search"></div>'
+    + '<div id="sres">' + searchResultsHtml() + '</div>';
+};
+VIEWS.search.after = function () {
+  var q = $('#sq'); if (!q) return;
+  if (!searchQ) setTimeout(function () { try { q.focus(); } catch (e) {} }, 60);
+  q.addEventListener('input', function () { searchQ = q.value; $('#sres').innerHTML = searchResultsHtml(); });
+};
+ACTS.searchset = function (d) { searchQ = d.q; render(false, true); };
+ACTS.searchopen = function (d) { if (searchQ.trim().length > 1) searchRemember(searchQ.trim()); push(d.v, d.id); };
+
 /* ── 99-boot.js ── */
 /* ═══ BOOT ══════════════════════════════════════════════════════════ */
-try { var th = localStorage.getItem('mossos.theme'); if (th) document.documentElement.dataset.theme = th; } catch (e) {}
+document.documentElement.dataset.theme = 'dark'; // dark only
 var hadCache = Store.init();
 Store.on(function () { render(); });
 

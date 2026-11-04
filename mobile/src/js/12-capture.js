@@ -378,6 +378,7 @@ VIEWS.inbox = function () {
       return '<div class="row" style="align-items:flex-start"><span class="grow"><div class="t">' + esc(it.text || '(photo)') + '</div>'
         + (it.photo ? '<img src="/_blob/' + esc(it.photo) + '" alt="" style="width:80px;height:80px;object-fit:cover;border-radius:10px;margin-top:8px">' : '')
         + '<div class="s">' + esc(timeAgo(it.created)) + ' ' + exPill(it) + '</div></span>'
+        + '<button class="btn sm soft" data-act="sortone" data-id="' + it.id + '">sort ›</button>'
         + '<button class="iconbtn" data-act="inboxdel" data-id="' + it.id + '" aria-label="Delete">' + icon('x', 'sm') + '</button></div>';
     }).join('') + '</div>';
 };

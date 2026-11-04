@@ -164,7 +164,7 @@ function billsSection() {
     return '<div class="row billrow"><button class="grow brow" data-act="tab" data-v="money"><span class="grow"><div class="t">' + esc(b.name) + '</div><div class="s">' + esc(shortDate(b.date)) + (b.est ? ' · projected' : '') + '</div></span>'
       + '<span class="amt">' + esc(fmtMoney(b.amt)) + '</span><span class="pill">' + (n <= 0 ? 'today' : 'in ' + n + 'd') + '</span></button>' + calIcon(billCal(b.name, b.amt, b.date, 'bill')) + '</div>';
   }).join('');
-  return '<section class="money"><div class="sechead"><h2>Money</h2><button class="link" data-act="tab" data-v="money">Open</button></div>'
+  return '<section class="money card"><button class="cardhead" data-act="tab" data-v="money"><h2>Money</h2><span class="link">Open ' + icon('chev', 'sm') + '</span></button>'
     + '<div class="stats3 fin3"><button data-act="tab" data-v="money"><b class="' + (s.leftToday < 0 ? 'bad' : '') + '">' + esc(fmtMoney(s.leftToday, true)) + '</b><span>left today</span></button>'
     + '<button data-act="tab" data-v="money"><b>' + esc(fmtMoney(s.weekLeft, true)) + '</b><span>until Friday</span></button>'
     + (s.isFriday ? '<button data-act="tab" data-v="money"><b>' + s.friday.done + '/' + s.friday.total + '</b><span>Friday checklist</span></button>'
@@ -175,9 +175,9 @@ function billsSection() {
 function finExtraLine() {
   var x = FIN.extra; if (!x) return '';
   var bits = [];
-  if (x.week) bits.push('<span class="' + (x.week.spent > x.week.plan ? 'bad' : '') + '">' + fmtMoney(x.week.spent, true) + ' of ' + fmtMoney(x.week.plan, true) + ' plan this week</span>');
-  if (x.nextKill) bits.push('next card gone: <b>' + esc(x.nextKill.name) + '</b> · ' + esc(x.nextKill.when));
-  return bits.length ? '<p class="note small finline">' + bits.join(' · ') + '</p>' : '';
+  if (x.week) bits.push('<b class="' + (x.week.spent > x.week.plan ? 'bad' : 'good') + '">' + fmtMoney(x.week.spent, true) + ' of ' + fmtMoney(x.week.plan, true) + ' plan this week</b>');
+  if (x.nextKill) bits.push('<span class="muted">Next card: <b>' + esc(x.nextKill.name) + '</b> · ' + esc(x.nextKill.when) + '</span>');
+  return bits.length ? '<div class="finline">' + bits.join('') + '</div>' : '';
 }
 /* Rows for Today's Heads up card. */
 function finHeadsUp() {

@@ -1,5 +1,5 @@
 /* ═══ BOOT ══════════════════════════════════════════════════════════ */
-try { var th = localStorage.getItem('mossos.theme'); if (th) document.documentElement.dataset.theme = th; } catch (e) {}
+document.documentElement.dataset.theme = 'dark'; // dark only
 var hadCache = Store.init();
 Store.on(function () { render(); });
 

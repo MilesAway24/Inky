@@ -29,6 +29,8 @@ VIEWS.tasks = function () {
     .sort(function (a, b) { return b.doneAt - a.doneAt; });
   if (older.length) h += '<details class="donegrp"><summary>Done this week · ' + older.length + '</summary><div class="tlist">' + older.map(taskRow).join('') + '</div></details>';
   h += '<p class="note small">Swipe a task right to finish it, left to move it to tomorrow. Tap a name to rename it.</p>';
+  var rs2 = rescheduled().slice(0, 5);
+  if (rs2.length) h += '<section><div class="sechead"><h2>Slipped, rescheduled</h2></div><div style="display:grid;gap:6px">' + rs2.map(slipRow).join('') + '</div></section>';
   return h;
 };
 VIEWS.tasks.after = function () { wireSwipes(); };

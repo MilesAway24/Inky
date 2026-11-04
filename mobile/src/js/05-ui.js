@@ -3,21 +3,22 @@
    Views return HTML strings; clicks are handled by one delegated
    listener that dispatches on data-act. */
 var nav = { tab: 'today', stack: [] };
-var VIEWS = {}, ACTS = {}, TITLES = {};
+var VIEWS = {}, ACTS = {}, TITLES = {}, HEADS = {};
 /* Every section. The bottom bar shows three of them (your choice, in
    Settings) around Capture, then More. */
 var SECTIONS = {
-  today: ['Today', 'today'], tasks: ['Tasks', 'tasks'], habits: ['Habits', 'habits'], goals: ['Goals', 'goals'],
+  today: ['Dashboard', 'home'], tasks: ['Tasks', 'tasks'], habits: ['Habits', 'habits'], goals: ['Goals', 'goals'],
   notes: ['Notes', 'notes'], projects: ['Projects', 'projects'], calendar: ['Calendar', 'calendar'], journal: ['Journal', 'journal'],
-  tools: ['Tools', 'tools'], books: ['Books', 'journal'], shifts: ['Shifts', 'calendar'], plan: ['Tomorrow', 'calendar'], money: ['Money', 'money'], inbox: ['Inbox', 'inbox'], areas: ['Life areas', 'areas'], settings: ['Settings', 'settings']
+  tools: ['Rank & cards', 'tools'], books: ['E-reader', 'book'], search: ['Search', 'search'], shifts: ['Shifts', 'shift'], plan: ['Tomorrow', 'calendar'], money: ['Money', 'money'], inbox: ['Inbox', 'inbox'], areas: ['Life areas', 'areas'], settings: ['Settings', 'settings']
 };
 var TAB_DEFAULT = ['today', 'tasks', 'habits'];
 function tabPrefs() { var p = Store.get('meta', 'prefs'); var t = p && p.tabs; return t && t.length === 3 && t.every(function (x) { return SECTIONS[x]; }) ? t : TAB_DEFAULT; }
 function tabsNow() {
   var t = tabPrefs();
-  return [[t[0]].concat(SECTIONS[t[0]]), [t[1]].concat(SECTIONS[t[1]]), ['capture', 'Capture', 'plus'], [t[2]].concat(SECTIONS[t[2]]), ['more', 'More', 'more']];
+  return [[t[0]].concat(SECTIONS[t[0]]), [t[1]].concat(SECTIONS[t[1]]), ['capture', 'Capture', 'plus'], [t[2]].concat(SECTIONS[t[2]]), ['more', 'Tools', 'grid']];
 }
-var SIDE_MORE = ['plan', 'shifts', 'habits', 'goals', 'notes', 'books', 'projects', 'calendar', 'journal', 'tools', 'inbox', 'areas', 'settings'].map(function (k) { return [k, SECTIONS[k][0], SECTIONS[k][1]]; });
+var SIDE_TOP = ['today', 'tasks', 'habits', 'journal', 'goals', 'notes', 'books'];
+var SIDE_MORE = ['money', 'plan', 'calendar', 'shifts', 'projects', 'areas', 'inbox', 'tools', 'search', 'settings'].map(function (k) { return [k, SECTIONS[k][0], SECTIONS[k][1]]; });
 
 function leaving() { if (current().view === 'project' && typeof maybeAskLeftOff === 'function') setTimeout(maybeAskLeftOff, 0); }
 function go(tab) { leaving(); nav.tab = tab; nav.stack = []; render(true); }
@@ -37,9 +38,9 @@ function render(scrollTop, force) {
   var c = current(), v = VIEWS[c.view] || VIEWS.soon;
   var sub = nav.stack.length > 0;
   var title = typeof TITLES[c.view] === 'function' ? TITLES[c.view](c.arg) : (TITLES[c.view] || '');
-  $('#top').className = 'top' + (sub ? ' sub' : '');
-  $('#top').innerHTML = (sub ? '<button class="back" data-act="back" aria-label="Back">' + icon('back') + '</button>' : '')
-    + '<h1>' + esc(title) + '</h1>' + (sub ? '' : syncBadge());
+  $('#top').className = 'top' + (sub ? ' sub' : '') + (!sub && HEADS[c.view] ? ' big' : '');
+  $('#top').innerHTML = !sub && HEADS[c.view] ? HEADS[c.view]() : (sub ? '<button class="back" data-act="back" aria-label="Back">' + icon('back') + '</button>' : '')
+    + '<h1>' + esc(title) + '</h1>' + (sub || c.view === 'search' ? '' : '<button class="iconbtn topsearch" data-act="tab" data-v="search" aria-label="Search">' + icon('search', 'sm') + '</button>');
   // Keep focus and caret if the user is typing in this view.
   var ae = document.activeElement, keep = ae && ae.id && $('#view').contains(ae) ? { id: ae.id, s: ae.selectionStart, e: ae.selectionEnd } : null;
   if (keep && (ae.isContentEditable || ae.tagName === 'TEXTAREA' || ae.tagName === 'INPUT') && !scrollTop && !force) {
@@ -57,17 +58,19 @@ function render(scrollTop, force) {
 }
 function paintChrome() {
   var c = current(), active = nav.stack.length ? nav.tab : c.view;
+  // Anything not on the bar lives under Tools.
+  var onBar = tabsNow().some(function (t) { return t[0] === active; }), barActive = onBar ? active : 'more';
   $('#tabs').innerHTML = tabsNow().map(function (t) {
     if (t[0] === 'capture') return '<button class="cap" data-act="capture" aria-label="Capture">' + '<span>' + icon('plus') + '</span></button>';
-    return '<button class="' + (active === t[0] ? 'on' : '') + '" data-act="tab" data-v="' + t[0] + '" aria-current="' + (active === t[0] ? 'page' : 'false') + '">' + icon(t[2]) + '<span>' + t[1] + '</span></button>';
+    return '<button class="' + (barActive === t[0] ? 'on' : '') + '" data-act="tab" data-v="' + t[0] + '" aria-current="' + (barActive === t[0] ? 'page' : 'false') + '">' + icon(t[2]) + '<span>' + t[1] + '</span></button>';
   }).join('');
   var inboxN = Store.all('inbox').length;
   $('#side').innerHTML = '<div class="brand">' + icon('moss') + 'MossOS</div>'
     + '<button class="capbtn" data-act="capture">' + icon('plus', 'sm') + 'Capture</button>'
-    + [['today', 'Today', 'today'], ['tasks', 'Tasks', 'tasks'], ['money', 'Money', 'money']].map(function (t) {
+    + SIDE_TOP.map(function (k) { return [k, SECTIONS[k][0], SECTIONS[k][1]]; }).map(function (t) {
       return '<button class="' + (active === t[0] ? 'on' : '') + '" data-act="tab" data-v="' + t[0] + '">' + icon(t[2]) + t[1] + '</button>';
     }).join('')
-    + '<div class="grp">More</div>'
+    + '<div class="grp">Tools</div>'
     + SIDE_MORE.map(function (t) {
       return '<button class="' + (active === t[0] ? 'on' : '') + '" data-act="tab" data-v="' + t[0] + '">' + icon(t[2]) + t[1]
         + (t[0] === 'inbox' && inboxN ? '<span class="pill" style="margin-left:auto">' + inboxN + '</span>' : '') + '</button>';
