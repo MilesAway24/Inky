@@ -663,3 +663,15 @@ section.card{display:grid;gap:10px}
 .shline{margin-top:6px;display:flex;gap:6px;flex-wrap:wrap}
 .cal .day .shbar{display:block;height:3px;width:60%;margin:1px auto 0;border-radius:2px}
 .blk.shiftblk{font-weight:600}
+/* habits: monthly calendar */
+.hmonth{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;text-align:center}
+.hmonth .hmname{grid-column:1/-1;text-align:left;font-size:13px;color:var(--muted);font-weight:500}
+.hmonth em{font-style:normal;font-size:11px;color:var(--faint)}
+.hmonth span{display:grid;place-items:center;aspect-ratio:1;border-radius:8px;font-size:12px;color:var(--faint);background:var(--sunk)}
+.hmonth span:empty{background:none}
+.hmonth span.hit{background:var(--c);color:#111;font-weight:600}
+.hmonth span.part{background:color-mix(in srgb,var(--c) 40%,var(--sunk));color:var(--ink)}
+.hmonth span.skip{background:repeating-linear-gradient(45deg,var(--sunk),var(--sunk) 3px,transparent 3px,transparent 6px)}
+.hmonth span.off{opacity:.35}
+.hmonth span.fut{background:none;border:1px dashed var(--line2)}
+.hmonth span.today{box-shadow:0 0 0 2px var(--ink)}

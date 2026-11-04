@@ -125,7 +125,14 @@ ACTS.undo = function () { var f = toast.undo; $('#toast').hidden = true; toast.u
 document.addEventListener('click', function (e) {
   var el = e.target.closest('[data-act]'); if (!el) return;
   var f = ACTS[el.dataset.act]; if (!f) return;
+  // iOS keeps a text field focused when you tap a button, and the page holds
+  // its repaint while you're typing, so the tap seemed to do nothing (habit
+  // "Mark done" next to the edit fields). Let go of the field first.
+  var ae = document.activeElement, view = $('#view');
+  if (ae && ae !== el && !el.contains(ae) && view.contains(ae) && view.contains(el) && el.dataset.act !== 'rename'
+    && (ae.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName))) ae.blur();
   e.preventDefault(); f(el.dataset, el, e);
+  if (render.stale && !(document.activeElement && view.contains(document.activeElement) && /^(INPUT|TEXTAREA)$/.test(document.activeElement.tagName))) render();
 });
 ACTS.tab = function (d) { go(d.v); };
 ACTS.back = function () { pop(); };

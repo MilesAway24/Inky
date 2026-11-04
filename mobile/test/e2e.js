@@ -208,8 +208,21 @@ const ok = (cond, msg) => { console.log((cond ? 'ok   ' : 'FAIL ') + msg); if (!
   ok((await p.$$('.hcard')).length === 6, 'Habits lists 6 habit cards');
   const stat = await p.textContent('.stats4 > div:first-child b');
   ok(/^1\/6/.test(stat.replace(/\s/g, '')), 'Done today reads 1/6 (' + stat + ')');
-  for (const v of ['month', 'daily', 'week']) { await p.click('[data-act=habview][data-v=' + v + ']'); await p.waitForTimeout(80); }
-  ok(await p.isVisible('.hweek'), 'Week / 30 days / Daily views switch');
+  const hv = await p.$$eval('[data-act=habview]', (x) => x.map((e) => e.textContent.trim()));
+  ok(hv.join(',') === 'Daily,Weekly,Monthly', 'habit views read Daily, Weekly, Monthly in that order (' + hv.join(',') + ')');
+  await p.click('[data-act=habview][data-v=month]'); await p.waitForTimeout(100);
+  ok(await p.isVisible('.hmonth span.today'), 'Monthly shows this calendar month with today marked');
+  await p.click('[data-act=habview][data-v=week]'); await p.waitForTimeout(100);
+  ok(await p.isVisible('.hweek'), 'Weekly shows the week strip');
+  // iPhone keeps a text field focused when you tap a button. Mark done on the
+  // habit page (next to its edit fields) must still repaint.
+  await p.click('.hcard:has(.hmark:text("Mark done")) .hhead >> nth=0'); await p.waitForTimeout(150);
+  const hName = await p.textContent('#top h1');
+  await p.focus('#hcue');
+  await p.evaluate(() => document.querySelector('#view .hmark').click()); await p.waitForTimeout(300);
+  ok(/^Done/.test((await p.textContent('#view .hmark')).trim()), 'Mark done on the habit page works while an edit field is focused (' + hName + ')');
+  await p.evaluate(() => document.querySelector('#view .hmark').click()); await p.waitForTimeout(300);
+  await p.click('[data-act=back]'); await p.waitForTimeout(150);
   await p.screenshot({ path: shots + '/phone-habits.png', fullPage: true });
   await p.click('.hcard >> nth=1 >> .hhead'); await p.waitForTimeout(150);
   const s0 = await p.textContent('.stats4 > div:first-child b');

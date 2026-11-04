@@ -14,7 +14,7 @@ var HAB_TPL = [
   ['🏃', 'Run', '#F08A4B', 'Shoes on is the habit. The run follows.'],
   ['📚', 'Study 25 minutes', '#3CC4B4', 'One timer. Stop when it rings.']
 ];
-var habView = 'week';
+var habView = 'daily';
 function wd(s) { return (parseYmd(s).getDay() + 6) % 7; } // Mon=0
 function dueOn(h, s) { return !h.days || !!h.days[wd(s)]; }
 function mark(h, s) { return (h.marks || {})[s] || 0; }
@@ -146,7 +146,7 @@ VIEWS.habits = function () {
   var best = hs.reduce(function (m, h) { return Math.max(m, bestRun(h)); }, 0);
   var h = '<div class="chlist">' + challengeCards() + '</div><div class="stats4">' + [['Done today', doneN + '<small>/' + due.length + '</small>'], ['This month', monthN], ['Longest run', best], ['Habits', hs.length]]
     .map(function (x) { return '<div><span>' + x[0] + '</span><b>' + x[1] + '</b></div>'; }).join('') + '</div>';
-  h += '<div class="seg" role="tablist">' + [['week', 'Week'], ['month', '30 days'], ['daily', 'Daily']].map(function (v) {
+  h += '<div class="seg" role="tablist">' + [['daily', 'Daily'], ['week', 'Weekly'], ['month', 'Monthly']].map(function (v) {
     return '<button role="tab" aria-selected="' + (habView === v[0]) + '" class="' + (habView === v[0] ? 'on' : '') + '" data-act="habview" data-v="' + v[0] + '">' + v[1] + '</button>';
   }).join('') + '</div>';
   h += '<div class="habs">' + hs.map(function (x) { return habitCard(x); }).join('') + '</div>';
@@ -170,11 +170,15 @@ function habitCard(h) {
       return '<span class="' + cls + '"><i></i><em>' + 'MTWTFSS'.charAt(i) + '</em></span>';
     }).join('') + '</div>';
   } else if (habView === 'month') {
-    body = '<div class="hgrid">' + range(30).map(function (i) {
-      var d = addDays(t, i - 29), m = mark(h, d);
-      var cls = m === 1 ? 'hit' : m === 2 ? 'skip' : amountOn(h, d) > 0 ? 'part' : !dueOn(h, d) || d < habitStart(h) ? 'off' : d === t ? 'now' : 'miss';
-      return '<i class="' + cls + '" title="' + esc(shortDate(d)) + '"></i>';
-    }).join('') + '</div>';
+    // This calendar month, Mon–Sun columns.
+    var first = t.slice(0, 8) + '01', fd = parseYmd(first), nd = new Date(fd.getFullYear(), fd.getMonth() + 1, 0).getDate();
+    body = '<div class="hmonth"><b class="hmname">' + MON[fd.getMonth()] + '</b>' + 'MTWTFSS'.split('').map(function (x) { return '<em>' + x + '</em>'; }).join('')
+      + range(wd(first)).map(function () { return '<span></span>'; }).join('')
+      + range(nd).map(function (i) {
+        var d = addDays(first, i), m = mark(h, d), fut = d > t;
+        var cls = m === 1 ? 'hit' : m === 2 ? 'skip' : amountOn(h, d) > 0 ? 'part' : !dueOn(h, d) || d < habitStart(h) ? 'off' : fut ? 'fut' : d === t ? 'now' : 'miss';
+        return '<span class="' + cls + (d === t ? ' today' : '') + '" title="' + esc(shortDate(d)) + '">' + (i + 1) + '</span>';
+      }).join('') + '</div>';
   } else {
     body = '<div class="hspark">' + range(14).map(function (i) {
       var d = addDays(t, i - 13), m = mark(h, d);
