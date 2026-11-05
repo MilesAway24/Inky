@@ -189,11 +189,11 @@ VIEWS.task.after = function (id) {
 };
 document.addEventListener('change', function (e) {
   var el = e.target.closest('[data-act-change]'); if (!el) return;
-  var f = ACTS[el.dataset.actChange]; if (f) f(el.dataset, el);
+  var f = ACTS[el.dataset.actChange]; if (f) runAct(f, el.dataset, el);
 });
 document.addEventListener('submit', function (e) {
   var f = e.target.closest('[data-form]'); if (!f) return;
-  e.preventDefault(); var a = ACTS['form_' + f.dataset.form]; if (a) a(f.dataset, f);
+  e.preventDefault(); var a = ACTS['form_' + f.dataset.form]; if (a) runAct(a, f.dataset, f);
 });
 ACTS.form_addstep = function (d, f) {
   var inp = $('input', f), v = inp.value.trim(); if (!v) return;

@@ -886,6 +886,33 @@ const ok = (cond, msg) => { console.log((cond ? 'ok   ' : 'FAIL ') + msg); if (!
   while (!obOk && obTries < 3) { obTries++; obOk = await outboxAttempt(obTries); }
   ok(obOk, 'an edit the server never received is kept and re-sent on the next launch' + (obTries > 1 ? ' (attempt ' + obTries + ' of 3; headless Chromium storage timing)' : ''));
 
+  // ── Synced data handed out read-only (frozen) must still be editable ──
+  ctx = await b.newContext({ ...devices['iPhone 13'] });
+  await ctx.addInitScript("sessionStorage.setItem('__mockFreeze','1');" + mock);
+  p = await ctx.newPage(); watch(p, 'frozen');
+  await p.goto(URL); await p.waitForTimeout(1500);
+  await p.reload(); await p.waitForTimeout(1500); // now everything comes from the read-only server copy
+  await p.click('.tabs [data-v=habits]'); await p.waitForTimeout(300);
+  const fzId = await p.$eval('.hcard .hmark:not(.on)', (e) => e.dataset.id);
+  await p.click('.hmark[data-id="' + fzId + '"]'); await p.waitForTimeout(600);
+  ok(await p.evaluate((id) => document.querySelector('.hmark[data-id="' + id + '"]').classList.contains('on'), fzId), 'Mark done works on habits that arrived read-only from sync');
+  await p.click('.tabs [data-v=tasks]'); await p.waitForTimeout(300);
+  const fzT = await p.$eval('.trow [data-act=toggle]', (e) => e.dataset.id);
+  await p.click('.trow [data-act=toggle][data-id="' + fzT + '"]'); await p.waitForTimeout(600);
+  ok(await p.evaluate((id) => Object.values(window.__mock.docs).some((d) => d.id === id && d.done), fzT), 'ticking a read-only synced task works');
+  // iPhone tap backup: a touch with no click still runs the button once
+  await p.click('.tabs [data-v=habits]'); await p.waitForTimeout(300);
+  const tbId = await p.$eval('.hcard .hmark:not(.on)', (e) => e.dataset.id);
+  await p.evaluate((id) => { const b2 = document.querySelector('.hmark[data-id="' + id + '"]'), r = b2.getBoundingClientRect(), o = { pointerType: 'touch', bubbles: true, clientX: r.x + 10, clientY: r.y + 10, pointerId: 7 };
+    b2.dispatchEvent(new PointerEvent('pointerdown', o)); b2.dispatchEvent(new PointerEvent('pointerup', o)); }, tbId);
+  await p.waitForTimeout(900);
+  ok(await p.evaluate((id) => document.querySelector('.hmark[data-id="' + id + '"]').classList.contains('on'), tbId), 'a touch whose click never arrives still marks the habit done');
+  await p.tap('.hmark[data-id="' + tbId + '"]'); await p.waitForTimeout(900);
+  ok(await p.evaluate((id) => !document.querySelector('.hmark[data-id="' + id + '"]').classList.contains('on'), tbId), 'a normal tap still runs once (no double toggle)');
+  await p.evaluate(() => window.dispatchEvent(new ErrorEvent('error', { message: 'test boom' }))); await p.waitForTimeout(150);
+  ok(/That didn't work: test boom/.test(await p.textContent('#toast')), 'an error shows on screen instead of failing silently');
+  await ctx.close();
+
   // ── Opening after a while lands in Quick capture ─────────────────
   ctx = await b.newContext({ ...devices['iPhone 13'] });
   await ctx.addInitScript(mockRaw);

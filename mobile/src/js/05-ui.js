@@ -134,7 +134,7 @@ document.addEventListener('click', function (e) {
   var ae = document.activeElement, view = $('#view');
   if (ae && ae !== el && !el.contains(ae) && view.contains(ae) && view.contains(el) && el.dataset.act !== 'rename'
     && (ae.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName))) ae.blur();
-  e.preventDefault(); f(el.dataset, el, e);
+  e.preventDefault(); if (tapLate(el)) return; tapDone(el); runAct(f, el.dataset, el, e);
   if (render.stale && !(document.activeElement && view.contains(document.activeElement) && /^(INPUT|TEXTAREA)$/.test(document.activeElement.tagName))) render();
 });
 ACTS.tab = function (d) { go(d.v); };
@@ -187,3 +187,49 @@ function exPill(o) { return o && o.example ? '<span class="pill ex">example</spa
   });
   if (window.visualViewport) { visualViewport.addEventListener('resize', kbFit); visualViewport.addEventListener('scroll', kbFit); }
 })();
+
+/* ── actions never fail silently ─────────────────────────────────────
+   If an action throws, say so on screen (so it can be reported) instead
+   of the tap doing nothing. */
+var errSeen = {};
+function showErr(msg) {
+  msg = String(msg || 'Unknown error').slice(0, 140);
+  if (errSeen[msg]) return; errSeen[msg] = 1; setTimeout(function () { delete errSeen[msg]; }, 8000);
+  try { toast('That didn\'t work: ' + esc(msg) + '. Send this to Claude.'); } catch (e) {}
+}
+function runAct(f, data, el, ev) {
+  try { return f(data, el, ev); } catch (err) { console.error(err); showErr(err && err.message); }
+}
+addEventListener('error', function (e) { if (e && e.message) showErr(e.message); });
+addEventListener('unhandledrejection', function (e) { var r = e && e.reason; if (r && r.message && !r.code) showErr(r.message); });
+
+/* ── tap backup for iPhone ───────────────────────────────────────────
+   iOS sometimes drops the click after a touch (for example when the page
+   repaints under the finger). If a short, still tap on a button ends and
+   no click follows, run the button's action once ourselves. */
+var tapT = null, tapLast = null, tapStart = null, downSeq = 0;
+function tapKey(el) { return el ? (el.dataset.act || '') + '|' + (el.dataset.id || '') + '|' + (el.dataset.v || '') + '|' + (el.dataset.k || '') + '|' + (el.dataset.d || '') : ''; }
+function tapDone(el) { clearTimeout(tapT); tapLast = { key: tapKey(el), at: Date.now() }; }
+/* The backup already ran this tap and the real click turned up late: skip it. */
+function tapLate(el) { return !!(tapLast && tapLast.fb && tapLast.seq === downSeq && tapLast.key === tapKey(el) && Date.now() - tapLast.at < 1500 && (tapLast.fb = false, true)); }
+document.addEventListener('pointerdown', function (e) {
+  tapStart = null; downSeq++;
+  if (e.pointerType !== 'touch') return;
+  var el = e.target.closest && e.target.closest('[data-act]');
+  if (!el || el.closest('.ruler,.trin,input,textarea,select,[contenteditable]') || el.tagName === 'INPUT' || el.tagName === 'SELECT') return;
+  tapStart = { key: tapKey(el), x: e.clientX, y: e.clientY, t: Date.now() };
+}, true);
+document.addEventListener('pointerup', function (e) {
+  var st = tapStart; tapStart = null;
+  if (!st || e.pointerType !== 'touch') return;
+  if (Math.abs(e.clientX - st.x) > 10 || Math.abs(e.clientY - st.y) > 10 || Date.now() - st.t > 700) return;
+  clearTimeout(tapT);
+  tapT = setTimeout(function () {
+    if (tapLast && tapLast.key === st.key && Date.now() - tapLast.at < 1500) return; // the click came
+    var parts = st.key.split('|'), sel = '[data-act="' + parts[0] + '"]' + (parts[1] ? '[data-id="' + parts[1] + '"]' : '') + (parts[2] ? '[data-v="' + parts[2] + '"]' : '');
+    var el = document.querySelector(sel), f = ACTS[parts[0]];
+    if (!el || !f) return;
+    tapLast = { key: st.key, at: Date.now(), fb: true, seq: downSeq };
+    runAct(f, el.dataset, el);
+  }, 350);
+}, true);

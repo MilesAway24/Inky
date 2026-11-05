@@ -78,9 +78,8 @@ var Store = (function () {
       return obj;
     },
     patch: function (col, id, fields) {
-      var o = S[col][id]; if (!o) return null;
-      Object.keys(fields).forEach(function (k) { o[k] = fields[k]; });
-      return this.put(col, o);
+      var cur = S[col][id]; if (!cur) return null;
+      return this.put(col, Object.assign({}, cur, fields)); // copy, never edit in place
     },
     del: function (col, id) { delete S[col][id]; cacheSave(); remoteWrite(col, id); emit(); },
     loaded: function (col) { return !!loaded[col]; },
@@ -106,7 +105,9 @@ var Store = (function () {
               // Newest edit wins: a snapshot that is older than what this
               // phone already has (a late echo after a save) doesn't undo it.
               snap.docs.forEach(function (doc) {
-                var v = doc.data(); if (!v) return;
+                // Keep our own editable copy: the host may hand out read-only
+                // objects, and editing one in place threw, so taps did nothing.
+                var v = doc.data(); if (!v) return; v = JSON.parse(JSON.stringify(v));
                 var mine = S[col][doc.id];
                 if (mine && (mine.updated || 0) > (v.updated || 0)) { fresh[doc.id] = mine; resend.push(doc.id); }
                 else fresh[doc.id] = v;

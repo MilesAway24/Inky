@@ -6,12 +6,14 @@
   var docs = JSON.parse(sessionStorage.getItem(KEY) || '{}');
   var listeners = [];
   var save = function () { try { sessionStorage.setItem(KEY, JSON.stringify(docs)); } catch (e) { console.error('mock db save failed: ' + e.message); } };
+  // __mockFreeze: hand out read-only data, as a strict host might.
+  function deepFreeze(o) { if (o && typeof o === 'object') { Object.keys(o).forEach(function (k) { deepFreeze(o[k]); }); Object.freeze(o); } return o; }
   function snap(col) {
     var prefix = col + '/', out = [];
     Object.keys(docs).forEach(function (p) {
       if (p.indexOf(prefix) === 0 && p.slice(prefix.length).indexOf('/') < 0) {
         var d = docs[p];
-        out.push({ id: p.slice(prefix.length), exists: true, data: function () { return JSON.parse(JSON.stringify(d)); }, metadata: { fromCache: false, hasPendingWrites: false } });
+        out.push({ id: p.slice(prefix.length), exists: true, data: function () { var c = JSON.parse(JSON.stringify(d)); return sessionStorage.getItem('__mockFreeze') ? deepFreeze(c) : c; }, metadata: { fromCache: false, hasPendingWrites: false } });
       }
     });
     return { docs: out, size: out.length, empty: !out.length, metadata: { fromCache: false, hasPendingWrites: false }, docChanges: function () { return []; } };
