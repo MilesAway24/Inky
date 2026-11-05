@@ -13,28 +13,6 @@ VIEWS.areas = function () {
   }).join('') + '</div>';
 };
 TITLES.area = function (id) { var a = area(id); return a ? a.name : 'Area'; };
-VIEWS.area = function (id) {
-  var a = area(id); if (!a) return '<div class="empty">This area was removed.</div>';
-  var open = Store.all('tasks').filter(function (t) { return t.area === id && !t.done; })
-    .sort(function (x, y) { return (x.due || '9').localeCompare(y.due || '9'); });
-  return '<section><div class="lbl" style="margin-bottom:8px">State</div><div class="chips">' + AREA_STATES.map(function (s) {
-    return '<button class="chip' + (a.state === s ? ' on' : '') + '" data-act="areastate" data-id="' + id + '" data-s="' + s + '">' + s + '</button>';
-  }).join('') + '</div></section>'
-    + '<div class="field"><label for="afocus">Current focus</label><input id="afocus" class="input" data-afield="focus" value="' + esc(a.focus || '') + '"></div>'
-    + '<div class="field"><label for="aopen">Open items or follow-ups</label><input id="aopen" class="input" data-afield="open" value="' + esc(a.open || '') + '"></div>'
-    + '<section><div class="sechead"><h2>Open tasks</h2><span class="meta">' + open.length + '</span></div>'
-    + (open.length ? '<div class="list">' + open.map(taskRow).join('') + '</div>' : '<div class="empty">Nothing open in ' + esc(a.short) + '.</div>') + '</section>'
-    + '<details class="card"><summary class="muted" style="cursor:pointer">Name and colour</summary><div style="display:grid;gap:12px;margin-top:12px">'
-    + '<div class="field"><label for="aname">Name</label><input id="aname" class="input" data-afield="name" value="' + esc(a.name) + '"></div>'
-    + '<div class="field"><label for="ashort">Short name</label><input id="ashort" class="input" data-afield="short" value="' + esc(a.short) + '" maxlength="12"></div>'
-    + '<div class="field"><label for="acolor">Colour</label><input id="acolor" type="color" class="input" style="max-width:90px;padding:4px" data-afield="color" value="' + esc(a.color) + '"></div>'
-    + '</div></details>';
-};
-VIEWS.area.after = function (id) {
-  $$('[data-afield]').forEach(function (el) {
-    el.addEventListener('input', function () { var f = {}; f[el.dataset.afield] = el.value; Store.patch('areas', id, f); });
-  });
-};
 ACTS.areastate = function (d) { Store.patch('areas', d.id, { state: d.s }); logEvent(areaName(d.id) + ' is ' + d.s.toLowerCase(), d.id); };
 
 /* ═══ NOTES ═══════════════════════════════════════════════════════════
@@ -87,6 +65,7 @@ VIEWS.note = function (id) {
   var n = Store.get('notes', id); if (!n) return '<div class="empty">This note was deleted.</div>';
   var nbk = n.book ? Store.get('books', n.book) : null;
   return (nbk ? '<button class="link" data-act="open" data-v="book" data-id="' + nbk.id + '" style="justify-self:start">📖 ' + esc(nbk.title) + (n.page ? ' · p. ' + n.page : '') + '</button>' : '')
+    + spotChip('note', id)
     + '<label class="sr" for="ntitle">Title</label><input id="ntitle" class="input" style="font-size:19px;font-weight:500" data-nfield="title" value="' + esc(n.title || '') + '" placeholder="Title">'
     + (n.photo ? '<img src="/_blob/' + esc(n.photo) + '" alt="Attached photo" style="max-width:100%;border-radius:14px">' : '')
     + '<label class="sr" for="nbody">Note</label><textarea id="nbody" class="input" style="min-height:45vh;font-size:16.5px;line-height:1.55" data-nfield="body" placeholder="Write…">' + esc(n.body || '') + '</textarea>'

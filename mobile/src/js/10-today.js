@@ -35,7 +35,7 @@ VIEWS.today = function () {
 
   // Heads up: only when something needs you
   var rem = remindersNow(), hrem = habitRemindersNow();
-  var finRows = typeof finHeadsUp === 'function' ? finHeadsUp() : [];
+  var finRows = (typeof finHeadsUp === 'function' ? finHeadsUp() : []).concat(typeof areaHeadsUp === 'function' ? areaHeadsUp() : []);
   if ((rem.length || hrem.length || inbox.length || finRows.length) && !headsUpDismissed()) {
     h += '<section class="headsup card"><div class="sechead" style="margin:0"><h2>Heads up</h2><button class="iconbtn" data-act="hudismiss" aria-label="Hide for today">' + icon('x', 'sm') + '</button></div>';
     rem.forEach(function (x) { h += '<div class="hurow"><span>🔔</span><button class="grow" style="text-align:left" data-act="open" data-v="task" data-id="' + x.id + '"><b>' + esc(x.t) + '</b> <span class="muted">' + esc(untilText(x)) + '</span></button></div>'; });

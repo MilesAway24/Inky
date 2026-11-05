@@ -20,6 +20,7 @@ VIEWS.journal = function () {
     + '<div class="chips" role="group" aria-label="Mood">' + Object.keys(MOODS).map(function (k) {
       return '<button class="chip' + (e.mood === k ? ' on' : '') + '" data-act="mood" data-m="' + k + '" aria-pressed="' + (e.mood === k) + '">' + MOODS[k][0] + ' ' + MOODS[k][1] + '</button>';
     }).join('') + '</div>'
+    + areaChipsFor('entry', 'j' + t, e.id ? journalAreas(e) : []) + spotChip('entry', 'j' + t)
     + '<label class="sr" for="jtext">Entry</label><textarea id="jtext" class="input" style="min-height:160px;font-size:16.5px;line-height:1.55" placeholder="' + esc(prompt) + '">' + esc(e.text || '') + '</textarea>'
     + '<p class="note small">Recorded, not scored. Saved as you type.</p></section>';
   h += past.length ? '<section><div class="sechead"><h2>Earlier</h2><span class="meta">' + past.length + '</span></div><div class="list">' + past.slice(0, 60).map(function (j) {
@@ -48,6 +49,7 @@ VIEWS.entry = function (id) {
   return '<div class="chips">' + Object.keys(MOODS).map(function (k) {
     return '<button class="chip' + (j.mood === k ? ' on' : '') + '" data-act="entrymood" data-id="' + id + '" data-m="' + k + '">' + MOODS[k][0] + ' ' + MOODS[k][1] + '</button>';
   }).join('') + '</div>'
+    + areaChipsFor('entry', id, journalAreas(j)) + spotChip('entry', id)
     + '<label class="sr" for="etext">Entry</label><textarea id="etext" class="input" style="min-height:50vh;font-size:16.5px;line-height:1.55">' + esc(j.text || '') + '</textarea>'
     + '<button class="btn ghost" style="color:var(--bad);justify-self:start" data-act="delentry" data-id="' + id + '">Delete entry</button>';
 };

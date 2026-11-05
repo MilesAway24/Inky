@@ -64,6 +64,11 @@
     }
     if (/Suggest three possible next actions/.test(prompt)) return Promise.resolve({ options: ['Book the PAT practice slot', 'Run the 1.5 mile test once', 'Print the packet checklist'] });
     if (/You are a reading companion/.test(prompt)) return Promise.resolve({ text: 'So far the book argues that small habits compound.\nIt has not reached the later chapters yet.', known: true });
+    if (/life areas is this/.test(prompt)) {
+      var am = /Life areas \(JSON\): (\[.*?\])\n/.exec(prompt), tx = (/\nText: (.*)\n/.exec(prompt) || [])[1] || '';
+      var areas = am ? JSON.parse(am[1]) : [], hit = areas.filter(function (a) { return tx.toLowerCase().indexOf(a.name.toLowerCase().split(' ')[0]) > -1 || /packet|academy|polygraph/i.test(tx) && a.id === 'hcpd'; })[0];
+      return Promise.resolve(hit ? { area: hit.id, confidence: 0.85 } : { area: null, confidence: 0.2 });
+    }
     if (/Break this task/.test(prompt)) return Promise.resolve({ steps: ['Open the file', 'Find the timeout', 'Write the fix'] });
     return Promise.resolve({});
   };

@@ -765,6 +765,35 @@ const ok = (cond, msg) => { console.log((cond ? 'ok   ' : 'FAIL ') + msg); if (!
   ok((await p.$$('.blk.shiftblk')).length >= 1, 'the week view shows shift blocks');
   await p.click('[data-act=calmode][data-v=month]'); await p.waitForTimeout(100);
 
+  // ── Life area hubs ──────────────────────────────────────────────
+  const openArea = (id) => p.evaluate((id) => { const b = document.createElement('button'); b.dataset.act = 'open'; b.dataset.v = 'area'; b.dataset.id = id; b.hidden = true; document.getElementById('view').appendChild(b); b.click(); }, id).then(() => p.waitForTimeout(200));
+  await p.click('.tabs [data-v=today]'); await p.waitForTimeout(200);
+  ok(await p.isVisible('.headsup >> text=Weekly area check-in'), 'Heads up offers the weekly area check-in');
+  await p.click('.headsup [data-act=checkin]'); await p.waitForTimeout(200);
+  await p.click('#sheet .cirow:has-text("HCPD") [data-act=cistate][data-s="Needs you"]'); await p.waitForTimeout(100);
+  await p.fill('#ci-hcpd', 'Waiting on the polygraph date'); await p.click('#sheet [data-act=cisave]'); await p.waitForTimeout(600);
+  const hcA = await p.evaluate(() => window.__mock.docs['data/users/u_test/m/areas/hcpd']);
+  ok(hcA.state === 'Needs you' && hcA.checkins && hcA.checkins.slice(-1)[0].line === 'Waiting on the polygraph date', 'the check-in saves each area\'s state and line');
+  ok(!(await p.isVisible('.headsup >> text=Weekly area check-in')), 'the check-in leaves Heads up once done');
+  await goTo('journal');
+  await p.fill('#jtext', 'Long day. Finally finished the @HCPD packet draft tonight.'); await p.waitForTimeout(700);
+  await p.evaluate(() => document.activeElement && document.activeElement.blur()); await p.waitForTimeout(300);
+  await goTo('notes'); await p.click('[data-act=newnote]'); await p.waitForTimeout(200);
+  await p.fill('#ntitle', 'Polygraph prep list'); await p.fill('#nbody', 'Sleep well, bring ID, answer plainly.'); await p.waitForTimeout(200);
+  await p.click('[data-act=notearea][data-a=hcpd]'); await p.waitForTimeout(500);
+  await openArea('hcpd');
+  const hub = await p.textContent('#view');
+  ok(/Waiting on the polygraph date/.test(hub) && /Polygraph prep list/.test(hub) && /packet draft/.test(hub), 'the HCPD hub shows its check-in, its note and the @HCPD journal entry');
+  await p.fill('#aadd', 'Call the recruiter Friday'); await p.press('#aadd', 'Enter'); await p.waitForTimeout(500);
+  ok(await p.evaluate(() => Object.values(window.__mock.docs).some((d) => d.t === 'Call the recruiter' && d.area === 'hcpd')), 'adding a task from the hub tags it with the area');
+  await p.screenshot({ path: shots + '/phone-areahub.png', fullPage: true });
+  // Claude suggests an area for an untagged note
+  await goTo('notes'); await p.click('[data-act=newnote]'); await p.waitForTimeout(200);
+  await p.fill('#ntitle', 'Academy fitness test'); await p.type('#nbody', 'Mile and a half, push-ups, sit-ups. Need the packet forms too.'); await p.waitForTimeout(3500);
+  ok(await p.isVisible('.spotchip >> text=HCPD'), 'Claude suggests the HCPD area for an untagged note');
+  await p.click('.spotchip [data-act=arealink]'); await p.waitForTimeout(500);
+  ok(await p.evaluate(() => Object.values(window.__mock.docs).some((d) => d.title === 'Academy fitness test' && d.area === 'hcpd')), 'tapping Link files the note under HCPD');
+
   // Every screen: no sideways scrolling
   const views = ['plan', 'shifts', 'books', 'notes', 'tools', 'ranks', 'decks', 'bored', 'gym', 'timer','today', 'tasks', 'more', 'areas', 'inbox', 'notes', 'settings', 'money', 'habits', 'goals', 'projects', 'journal', 'calendar'];
   let wide = [];
