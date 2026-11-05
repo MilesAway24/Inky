@@ -591,6 +591,24 @@ const ok = (cond, msg) => { console.log((cond ? 'ok   ' : 'FAIL ') + msg); if (!
   const ql = await fin().evaluate(() => state.quickLog.slice(-1)[0]);
   ok(await fin().evaluate(() => state.quickLog.length) === ql0 + 1 && ql.amt === 12 && /Wawa/.test(ql.merchant), 'it lands in Payday\'s purchase log (' + JSON.stringify(ql) + ')');
   if (await p.isVisible('#sheetbg')) await p.keyboard.press('Escape');
+  // Restaurant: its own weekly line, separate from the daily allowance
+  ok(await fin().evaluate(() => state.restBudget === 40 && thisWeekPlan(thisCheck().amt).rest === 40), 'the Friday plan sets aside $40 a week for Restaurant');
+  const allowBefore = await fin().evaluate(() => allowance().leftToday);
+  await p.click('.tabs .cap'); await p.waitForTimeout(100);
+  await p.fill('#captext', 'spent $28 at Chipotle'); await p.click('[data-act=capsave]'); await p.waitForTimeout(400);
+  ok(/Restaurant/.test(await p.textContent('#sheet .sugg')), 'capture files "spent $28 at Chipotle" as Restaurant');
+  await p.click('#sheet [data-act=suggone]'); await p.waitForTimeout(400);
+  if (await p.isVisible('#sheetbg')) await p.keyboard.press('Escape');
+  const rq = await fin().evaluate(() => ({ last: state.quickLog.slice(-1)[0], left: allowance().leftToday, rest: (thisWeekPlan(thisCheck().amt).rest || 0) - (allowance().tot.rest || 0) }));
+  ok(rq.last.bucket === 'rest' && rq.last.amt === 28 && rq.left === allowBefore && rq.rest === 12, 'it logs as Restaurant: $12 of $40 left, daily allowance untouched (' + JSON.stringify({ left: rq.left, before: allowBefore, rest: rq.rest }) + ')');
+  await fin().evaluate(() => { openAfford('rest'); setAffAmt(25); });
+  await p.waitForTimeout(150);
+  const rv = await fin().textContent('#affOut');
+  ok(/Restaurant/.test(rv) && /\$12/.test(rv), '"Can I afford this?" checks Restaurant against what\'s left (' + rv.replace(/\s+/g, ' ').slice(0, 80) + ')');
+  await fin().evaluate(() => closeAfford());
+  await p.click('.tabs [data-v=today]'); await p.waitForTimeout(800);
+  ok(/Restaurant\s*\$12/.test(await p.textContent('.money.card')), 'the Dashboard Money card shows Restaurant money left');
+
   // Second pass: groceries, more screens, Heads up
   await p.click('.tabs .cap'); await p.waitForTimeout(100);
   await p.fill('#captext', 'add eggs and milk to the grocery list'); await p.click('[data-act=capsave]'); await p.waitForTimeout(400);

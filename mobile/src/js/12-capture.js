@@ -143,7 +143,7 @@ function smartSort(items) {
     + '- "reading": reading progress on a book in context.books ("read 20 pages of Atomic Habits", "on page 140 of Dune"). Give targetId, and pagesRead (pages just read) or page (the page they are on now).\n'
     + '- "quote": a line from a book in context.books, usually in quotation marks. Give targetId, title (the quote itself, without the book name) and page if stated.\n'
     + '- "grocery": things to add to the grocery list ("add eggs and milk to the grocery list", "groceries: bread, rice"). Give items: an array of short item names.\n'
-    + '- "spent": money already spent ("spent $12 at Wawa", "$8 chipotle"). Give amount (number), title (the store or what it was) and bucket: "allow" (eating out, snacks, drinks), "gas" (fuel), "groc" (grocery shopping), "fun", "cloth" (clothes), "misc" (toiletries, small needs) or "need" (bills, health, other).\n'
+    + '- "spent": money already spent ("spent $12 at Wawa", "$8 chipotle"). Give amount (number), title (the store or what it was) and bucket: "rest" (restaurant meals: sit-down, takeout, delivery, fast-food meals), "allow" (snacks, drinks, gas-station runs), "gas" (fuel), "groc" (grocery shopping), "fun", "cloth" (clothes), "misc" (toiletries, small needs) or "need" (bills, health, other).\n'
     + '- "drop": empty or meaningless.\n'
     + 'Use only ids that appear in the context. area, project, due (YYYY-MM-DD, only if a day is named or clearly implied) may be null. icon: one emoji.\n'
     + 'Items: ' + JSON.stringify(items.map(function (i) { return { id: i.id, text: i.text || '(photo with no text)' }; })) + '\n'

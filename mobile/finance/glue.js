@@ -9,7 +9,7 @@ window.__finSummary=()=>{try{
   return {leftToday:Math.round(A.leftToday),todayAllow:Math.round(A.todayAllow),weekLeft:Math.round(A.weekLeft),
     bills:upcoming(4).map(b=>({name:String(b.title).replace(' minimum',''),amt:b.amount,date:iso(b.date),est:!!b.est})),
     debtFree:av.done?monYr(weekDate(av.done)):null,friday:{done:state.checks.filter(Boolean).length,total:state.checks.length},
-    isFriday:today().getDay()===5,live:liveState==='live'}}catch(e){return null}};
+    isFriday:today().getDay()===5,live:liveState==='live',restPlan:Math.round(A.wp.rest||0),restLeft:Math.round((A.wp.rest||0)-(A.tot.rest||0))}}catch(e){return null}};
 window.__finEvents=(y,m)=>{try{return eventsFor(y,m).filter(e=>e.type==='pay'||e.type==='bill').map(e=>({day:e.day,title:String(e.title),amount:e.amount,type:e.type}))}catch(e){return []}};
 window.__finImport=text=>{let b;try{b=JSON.parse(String(text).trim())}catch(e){return {ok:false,msg:'That isn\'t a Payday OS backup. In Payday OS, open Settings and tap "Copy JSON backup", then paste it here.'}}
   let st=b&&b.state&&typeof b.state==='object'?b.state:b;

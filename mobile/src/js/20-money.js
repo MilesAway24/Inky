@@ -169,6 +169,7 @@ function billsSection() {
     + '<button data-act="tab" data-v="money"><b>' + esc(fmtMoney(s.weekLeft, true)) + '</b><span>until Friday</span></button>'
     + (s.isFriday ? '<button data-act="tab" data-v="money"><b>' + s.friday.done + '/' + s.friday.total + '</b><span>Friday checklist</span></button>'
       : '<button data-act="afford"><b>?</b><span>Can I afford it</span></button>') + '</div>'
+    + (s.restPlan ? '<button class="restline" data-act="afford"><span>🍽 Restaurant</span><b class="' + (s.restLeft < 0 ? 'bad' : '') + '">' + esc(fmtMoney(s.restLeft, true)) + '</b><span class="muted">left of ' + esc(fmtMoney(s.restPlan, true)) + ' this week</span></button>' : '')
     + finExtraLine()
     + (rows ? '<div class="list">' + rows + '</div>' : '') + '</section>';
 }
@@ -209,7 +210,7 @@ function finEventsFor(month) {
 function finNextBill() { var s = FIN.sum, b = s && s.bills && s.bills[0]; return b ? b.name + ' ' + fmtMoney(b.amt) + ' · ' + shortDate(b.date) : ''; }
 
 /* ── Smart capture: "spent $12 at Wawa" ─────────────────────────────── */
-var FIN_BUCKETS = { allow: 'Allowance', gas: 'Gas', groc: 'Groceries', fun: 'Fun', cloth: 'Clothes', misc: 'Misc', need: 'Need / other' };
+var FIN_BUCKETS = { allow: 'Allowance', rest: 'Restaurant', gas: 'Gas', groc: 'Groceries', fun: 'Fun', cloth: 'Clothes', misc: 'Misc', need: 'Need / other' };
 function finQueue() { try { return JSON.parse(localStorage.getItem('mossos.finq') || '[]'); } catch (e) { return []; } }
 function finQueueSet(q) { try { localStorage.setItem('mossos.finq', JSON.stringify(q)); } catch (e) {} }
 function finFlushQueue() {
@@ -225,6 +226,7 @@ function finLog(amount, merchant, bucket, note) {
 }
 function guessBucket(text, amt) {
   var low = text.toLowerCase();
+  if (/\b(chipotle|mcdonald'?s|wendy'?s|taco bell|burger king|chick-?fil-?a|five guys|panera|olive garden|applebee'?s|chili'?s|ihop|denny'?s|pizza|wings|diner|restaurant|takeout|take-out|doordash|uber ?eats|grubhub|sit-?down|dinner out|brunch|sushi|hibachi|steakhouse)\b/.test(low)) return 'rest';
   if (/\b(safeway|walmart|aldi|giant|lidl|grocer(y|ies)|costco|target run|food lion|trader joe)/.test(low)) return 'groc';
   if (/\b(gas|fuel|shell|exxon|bp|sunoco|royal farms|wawa|sheetz|7-?eleven)\b/.test(low) && amt >= 20 && /\b(gas|fuel|fill|tank)\b|exxon|shell|sunoco|\bbp\b/.test(low)) return 'gas';
   if (/\b(shirt|shoes|jeans|hoodie|clothes|jacket|nike|old navy|h&m)\b/.test(low)) return 'cloth';

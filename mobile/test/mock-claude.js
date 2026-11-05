@@ -52,7 +52,7 @@
         var grm = /^add (.+) to the grocery list$/i.exec(t);
         if (grm) return { id: it.id, type: 'grocery', items: grm[1].split(/ and |, /), title: grm[1] };
         var spm = /^spent \$(\d+(?:\.\d+)?) at (.+)$/i.exec(t);
-        if (spm) return { id: it.id, type: 'spent', amount: +spm[1], title: spm[2], bucket: 'allow' };
+        if (spm) return { id: it.id, type: 'spent', amount: +spm[1], title: spm[2], bucket: /chipotle|pizza|wendy|diner|restaurant/i.test(spm[2]) ? 'rest' : 'allow' };
         if (/^want to watch /.test(low)) return { id: it.id, type: 'movie', status: 'want', title: t.replace(/^want to watch /i, '') };
         if (/^watched /.test(low)) { var sc = /(\d+)\/10/.exec(t); return { id: it.id, type: 'movie', title: t.replace(/^watched /i, '').replace(/\s*\d+\/10.*/, ''), score: sc ? +sc[1] : null, icon: '🎬' }; }
         var hb = (ctx.habits || []).filter(function (h) { return low.indexOf(h.name.toLowerCase()) > -1; })[0];
