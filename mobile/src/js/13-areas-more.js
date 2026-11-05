@@ -150,9 +150,11 @@ VIEWS.settings = function () {
         + Object.keys(SECTIONS).filter(function (k) { return k !== 'settings'; }).map(function (k) { return '<option value="' + k + '"' + (k === cur ? ' selected' : '') + '>' + SECTIONS[k][0] + '</option>'; }).join('') + '</select></div>';
     }).join('') + '</section>'
 
-    + '<section><div class="sechead"><h2>Data</h2></div><div class="btnrow">'
-    + '<button class="btn soft" data-act="finimport">Import from Payday OS</button>'
+    + '<section><div class="sechead"><h2>Data</h2></div>'
+    + (hasExamples() ? '<p class="note small" style="margin-bottom:10px"><b>Example data.</b> MossOS started with sample tasks, habits, goals and notes (marked <span class="pill ex">example</span>) so the screens weren\'t empty. Clear examples removes only those; your own items stay.</p>' : '')
+    + '<div class="btnrow">'
     + (hasExamples() ? '<button class="btn soft" data-act="clearex">Clear examples</button>' : '')
+    + '<button class="btn soft" data-act="finimport">Import from Payday OS</button>'
     + '<button class="btn ghost" data-act="resetall">Erase everything</button></div></section>';
 };
 

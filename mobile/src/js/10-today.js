@@ -27,9 +27,6 @@ VIEWS.today = function () {
   if (sh || d.getHours() >= 17) h += '<div class="subline">' + (sh ? '<span>' + icon('shift', 'sm') + ' ' + esc(sh.replace(/^\w/, function (c) { return c.toUpperCase(); })) + '</span>' : '')
     + (d.getHours() >= 17 ? '<button class="link" data-act="tab" data-v="plan">Plan tomorrow →</button>' : '') + '</div>';
 
-  if (hasExamples()) h += '<div class="card flat"><p class="note">You\'re looking at example data so you can see how MossOS works. '
-    + 'Items marked <span class="pill ex">example</span> go when you clear them.</p>'
-    + '<div class="btnrow" style="margin-top:12px"><button class="btn sm soft" data-act="clearex">Clear examples</button></div></div>';
 
   h += shiftCards();
 

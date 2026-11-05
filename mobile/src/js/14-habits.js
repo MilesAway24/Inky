@@ -193,7 +193,12 @@ function habitCard(h) {
 }
 function range(n) { var a = []; for (var i = 0; i < n; i++) a.push(i); return a; }
 ACTS.habview = function (d) { habView = d.v; render(); };
-ACTS.habtoggle = function (d) { toggleToday(d.id); };
+ACTS.habtoggle = function (d, el) {
+  toggleToday(d.id);
+  // Show the tap at once, even if a repaint is held back.
+  var h = Store.get('habits', d.id), on = h && mark(h, today()) === 1;
+  $$('[data-act=habtoggle][data-id="' + d.id + '"]').forEach(function (b) { b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); if (b.classList.contains('hmark') && !h.target) b.textContent = on ? 'Done ✓' : 'Mark done'; });
+};
 
 /* ── detail ─────────────────────────────────────────────────────────── */
 TITLES.habit = function (id) { var h = Store.get('habits', id); return h ? h.n : 'Habit'; };

@@ -228,6 +228,28 @@ const ok = (cond, msg) => { console.log((cond ? 'ok   ' : 'FAIL ') + msg); if (!
   ok(/^Done/.test((await p.textContent('#view .hmark')).trim()), 'Mark done on the habit page works while an edit field is focused (' + hName + ')');
   await p.evaluate(() => document.querySelector('#view .hmark').click()); await p.waitForTimeout(300);
   await p.click('[data-act=back]'); await p.waitForTimeout(150);
+  // A late, older copy from the server must not undo Mark done
+  await p.evaluate(() => sessionStorage.setItem('__mockStale', '1'));
+  const hid = await p.$eval('.hcard .hmark:not(.on)', (e) => e.dataset.id);
+  await p.click('.hmark[data-id="' + hid + '"]'); await p.waitForTimeout(900);
+  const staleOk = await p.evaluate((id) => { const b = document.querySelector('.hmark[data-id="' + id + '"]'); return !!b && b.classList.contains('on'); }, hid);
+  const staleDoc = await p.evaluate((id) => { const d = window.__mock.docs['data/users/u_test/m/habits/' + id]; const t = new Date(); const k = t.getFullYear() + '-' + String(t.getMonth() + 1).padStart(2, '0') + '-' + String(t.getDate()).padStart(2, '0'); return d && d.marks && d.marks[k] === 1; }, hid);
+  await p.evaluate(() => sessionStorage.removeItem('__mockStale'));
+  ok(staleOk && staleDoc, 'Mark done sticks even when the server echoes an older copy afterwards (screen ' + staleOk + ', saved ' + staleDoc + ')');
+  await p.click('.hmark[data-id="' + hid + '"]'); await p.waitForTimeout(400);
+  // A save the server refuses is shown, not silent
+  await p.evaluate(() => sessionStorage.setItem('__mockRefuse', '1'));
+  await p.click('.hmark[data-id="' + hid + '"]'); await p.waitForTimeout(700);
+  ok(/Couldn't save a change \(invalid_argument\)/.test(await p.textContent('#toast')), 'a refused save says so on screen');
+  await p.evaluate(() => sessionStorage.removeItem('__mockRefuse'));
+  await p.click('.hmark[data-id="' + hid + '"]'); await p.waitForTimeout(500);
+  // Capture with the keyboard up: the sheet moves to the top half, Sort it under the text
+  await p.click('.tabs .cap'); await p.waitForTimeout(300);
+  const kb = await p.evaluate(() => { const s = document.getElementById('sheet').getBoundingClientRect(), b = document.querySelector('#sheet [data-act=capsave]').getBoundingClientRect(); return { on: document.body.classList.contains('kbsheet'), top: s.top, btn: b.bottom, h: innerHeight }; });
+  ok(kb.on && kb.top < kb.h * 0.25 && kb.btn < kb.h * 0.5, 'while typing in Capture the sheet sits in the top half with Sort it under the text (' + JSON.stringify(kb) + ')');
+  await p.screenshot({ path: shots + '/phone-capture-typing.png' });
+  await p.keyboard.press('Escape'); await p.waitForTimeout(200);
+  ok(!(await p.evaluate(() => document.body.classList.contains('kbsheet'))), 'closing the sheet puts the layout back');
   await p.screenshot({ path: shots + '/phone-habits.png', fullPage: true });
   await p.click('.hcard >> nth=1 >> .hhead'); await p.waitForTimeout(150);
   const s0 = await p.textContent('.stats4 > div:first-child b');

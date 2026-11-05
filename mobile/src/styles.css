@@ -754,3 +754,14 @@ h2{font-size:21px;font-weight:700;letter-spacing:-.02em}
 .areapick{margin:2px 0}
 .spotchip{display:flex;align-items:center;gap:10px;padding:8px 8px 8px 12px;border-radius:14px;background:var(--accent-tint);border:1px solid var(--line2);font-size:14.5px}
 .spotchip svg.i{color:var(--accent)}
+/* ── sheets while typing: clear of the keyboard ───────────────────── */
+body.kbsheet .sheetbg{align-items:flex-start}
+body.kbsheet .sheet{margin-top:calc(env(safe-area-inset-top,0px) + 44px);max-height:46vh;border-radius:22px;display:flex;flex-direction:column;gap:12px;padding-bottom:16px}
+body.kbsheet.kbvv .sheetbg{align-items:flex-end;padding-bottom:var(--kb)}
+body.kbsheet.kbvv .sheet{margin-top:0;max-height:calc(100vh - var(--kb) - env(safe-area-inset-top,0px) - 56px);border-radius:22px 22px 0 0}
+body.kbsheet .sheet>*{order:3}
+body.kbsheet .sheet>.grab,body.kbsheet .sheet>.shead{order:0}
+body.kbsheet .sheet>.capbox{order:1;min-height:0;height:4.4em;flex:none}
+body.kbsheet .sheet>.capact{order:2}
+body.kbsheet .sheet .capnote,body.kbsheet .sheet .capcam,body.kbsheet .sheet>.grab{display:none}
+body.kbsheet .sheet>.shead{margin-bottom:0}

@@ -106,7 +106,7 @@ function openSheet(html, after, onClose) {
 }
 function closeSheet() {
   if ($('#sheetbg').hidden) return;
-  $('#sheetbg').hidden = true; document.body.style.overflow = '';
+  $('#sheetbg').hidden = true; document.body.style.overflow = ''; document.body.classList.remove('kbsheet');
   var f = sheetOnClose; sheetOnClose = null; if (f) f();
   render();
 }
@@ -164,3 +164,26 @@ function aiError(e) {
 function areaDot(id) { return '<span class="dot" style="background:' + areaColor(id) + '"></span>'; }
 function areaName(id) { var a = area(id); return a ? a.short : ''; }
 function exPill(o) { return o && o.example ? '<span class="pill ex">example</span>' : ''; }
+
+/* ── sheets and the keyboard ─────────────────────────────────────────
+   Inside the Claude app the page is a frame that iOS doesn't shrink for
+   the keyboard, so a bottom sheet ends up under it. While you type in a
+   sheet it moves to the top half of the screen (or, where the browser
+   reports the keyboard, sits right above it). */
+(function () {
+  var sheet = $('#sheet');
+  function isField(el) {
+    return !!el && (el.isContentEditable || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT'
+      || (el.tagName === 'INPUT' && !/^(checkbox|radio|button|submit|range|color|file)$/.test(el.type || '')));
+  }
+  function kbFit() {
+    var vv = window.visualViewport, kb = vv ? Math.max(0, Math.round(innerHeight - vv.height - vv.offsetTop)) : 0;
+    document.documentElement.style.setProperty('--kb', kb + 'px');
+    document.body.classList.toggle('kbvv', kb > 80);
+  }
+  sheet.addEventListener('focusin', function (e) { if (isField(e.target)) { document.body.classList.add('kbsheet'); kbFit(); } });
+  sheet.addEventListener('focusout', function () {
+    setTimeout(function () { var ae = document.activeElement; if (!(isField(ae) && sheet.contains(ae))) document.body.classList.remove('kbsheet'); kbFit(); }, 80);
+  });
+  if (window.visualViewport) { visualViewport.addEventListener('resize', kbFit); visualViewport.addEventListener('scroll', kbFit); }
+})();

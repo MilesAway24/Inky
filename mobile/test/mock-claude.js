@@ -26,7 +26,16 @@
       return {
         path: path,
         // __mockDrop: simulate the app being suspended before a write lands.
-        set: function (v) { if (sessionStorage.getItem('__mockDrop')) return new Promise(function () {}); docs[path] = v; save(); window.__mock.writes++; notify(path); return Promise.resolve(); },
+        set: function (v) { if (sessionStorage.getItem('__mockDrop')) return new Promise(function () {});
+          if (sessionStorage.getItem('__mockRefuse')) return Promise.reject({ code: 'invalid_argument', message: 'refused (test)' });
+          // __mockStale: after this save lands, echo one late snapshot that still has the old version.
+          if (sessionStorage.getItem('__mockStale') && docs[path]) {
+            var prev = JSON.parse(JSON.stringify(docs[path])), col0 = path.slice(0, path.lastIndexOf('/'));
+            setTimeout(function () {
+              var keep = docs[path]; docs[path] = prev; var sn = snap(col0); docs[path] = keep;
+              listeners.forEach(function (l) { if (l.col === col0) l.fn(sn); });
+            }, 60);
+          } docs[path] = v; save(); window.__mock.writes++; notify(path); return Promise.resolve(); },
         delete: function () { delete docs[path]; save(); window.__mock.writes++; notify(path); return Promise.resolve(); },
         get: function () { return Promise.resolve({ exists: !!docs[path], data: function () { return docs[path]; } }); },
         onSnapshot: function (fn) { return function () {}; }

@@ -13,7 +13,7 @@ var Store = (function () {
   // device cache) until db confirms it. While listed, the local copy wins
   // over any snapshot, and a fresh launch sends it again. That way an edit
   // made just before iOS suspends the app is never lost.
-  var S = {}, subs = [], db = null, base = null, timers = {}, out = {}, seq = 0, loaded = {}, status = 'local';
+  var S = {}, subs = [], db = null, base = null, timers = {}, out = {}, seq = 0, loaded = {}, status = 'local', confirmedAt = {}, warned = {};
   COLS.forEach(function (c) { S[c] = {}; });
 
   function cacheLoad() {
@@ -26,6 +26,11 @@ var Store = (function () {
   var cacheT = null;
   function cacheNow() { clearTimeout(cacheT); try { localStorage.setItem(CACHE_KEY, JSON.stringify({ v: 1, d: S, o: out })); } catch (e) {} }
   function cacheSave() { clearTimeout(cacheT); cacheT = setTimeout(cacheNow, 200); }
+  /* A save the server refused: say so once per kind, keep the phone's copy. */
+  function saveWarn(code) {
+    if (warned[code]) return; warned[code] = 1;
+    if (typeof toast === 'function') toast('Couldn\'t save a change (' + esc(code) + '). It\'s kept on this phone.');
+  }
   function emit() { subs.forEach(function (f) { try { f(); } catch (e) { console.error(e); } }); }
 
   function remoteWrite(col, id) {
@@ -39,11 +44,12 @@ var Store = (function () {
       var p = v ? ref.set(JSON.parse(JSON.stringify(v))) : ref.delete();
       p.then(function () {
         if (out[key] === mine) { delete out[key]; cacheSave(); } // a newer edit keeps it listed
+        confirmedAt[key] = Date.now();
       }, function (e) {
         if (e && e.code === 'unavailable') setTimeout(function () { if (out[key] === mine) remoteWrite(col, id); }, 800 + Math.random() * 800);
         else if (e && e.code === 'quota_exceeded') { delete out[key]; toast('Storage is full. Delete some old items to keep saving.'); }
-        else if (e && (e.code === 'invalid_argument')) { delete out[key]; console.warn('save refused', key, e); }
-        else console.warn('save failed', key, e);
+        else if (e && (e.code === 'invalid_argument')) { delete out[key]; console.warn('save refused', key, e); saveWarn(e.code); }
+        else { console.warn('save failed', key, e); saveWarn((e && e.code) || 'error'); }
       });
     };
     timers[key] = { t: setTimeout(run, 350), run: run };
@@ -96,14 +102,27 @@ var Store = (function () {
           var waiting = COLS.length, slow = setTimeout(function () { if (status === 'connecting') { status = 'slow'; emit(); } }, 10000);
           COLS.forEach(function (col) {
             db.collection(base + '/' + col).onSnapshot(function (snap) {
-              var fresh = {};
-              snap.docs.forEach(function (doc) { var v = doc.data(); if (v) fresh[doc.id] = v; });
+              var fresh = {}, resend = [], now = Date.now();
+              // Newest edit wins: a snapshot that is older than what this
+              // phone already has (a late echo after a save) doesn't undo it.
+              snap.docs.forEach(function (doc) {
+                var v = doc.data(); if (!v) return;
+                var mine = S[col][doc.id];
+                if (mine && (mine.updated || 0) > (v.updated || 0)) { fresh[doc.id] = mine; resend.push(doc.id); }
+                else fresh[doc.id] = v;
+              });
+              // Just saved here but missing from a late snapshot: keep it.
+              Object.keys(S[col]).forEach(function (id) {
+                var ck = col + '/' + id;
+                if (!fresh[id] && confirmedAt[ck] && now - confirmedAt[ck] < 20000) fresh[id] = S[col][id];
+              });
               // Local changes db hasn't confirmed yet win over what the snapshot says.
               Object.keys(out).forEach(function (key) {
                 var p = key.split('/'); if (p[0] !== col) return;
                 if (S[col][p[1]]) fresh[p[1]] = S[col][p[1]]; else delete fresh[p[1]];
               });
               S[col] = fresh;
+              resend.forEach(function (id) { if (!out[col + '/' + id]) remoteWrite(col, id); });
               if (!snap.metadata.fromCache && !loaded[col]) {
                 loaded[col] = true;
                 if (--waiting === 0) { clearTimeout(slow); status = 'synced'; if (onFirst) onFirst(); }

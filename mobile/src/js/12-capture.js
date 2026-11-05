@@ -41,21 +41,21 @@ function capHtml(text) {
   if (capState.quick) return '<div class="shead"><h2>Quick capture</h2><button class="iconbtn" data-act="close" aria-label="Close">' + icon('x') + '</button></div>'
     + '<label class="sr" for="captext">What\'s on your mind</label>'
     + '<textarea id="captext" class="capbox quick" placeholder="Dump it here. Enter saves to your inbox.">' + esc(text || '') + '</textarea>'
-    + '<div class="btnrow"><button class="btn accent" data-act="capsave">Save to inbox</button><button class="btn ghost" data-act="capsortnow">' + icon('sparkle', 'sm') + 'Sort now</button></div>'
-    + '<p class="note small">Claude sorts it later from the inbox. Shift+Enter for a new line.</p>';
+    + '<div class="btnrow capact"><button class="btn accent" data-act="capsave">Save to inbox</button><button class="btn ghost" data-act="capsortnow">' + icon('sparkle', 'sm') + 'Sort now</button></div>'
+    + '<p class="note small capnote">Claude sorts it later from the inbox. Shift+Enter for a new line.</p>';
   return '<div class="shead"><h2>Capture</h2><button class="iconbtn" data-act="close" aria-label="Close">' + icon('x') + '</button></div>'
     + '<label class="sr" for="captext">What\'s on your mind</label>'
     + '<textarea id="captext" class="capbox" placeholder="Anything. &quot;Call the recruiter Friday&quot;, &quot;took meds&quot;, &quot;watched Heat 9/10&quot;… Tap the mic on your keyboard to talk.">' + esc(text || '') + '</textarea>'
     + '<div id="capphoto">' + capPhotoHtml() + '</div>'
-    + '<div class="chips" role="group" aria-label="Save as">' + CAP_KINDS.map(function (x) {
+    + '<div class="chips capkinds" role="group" aria-label="Save as">' + CAP_KINDS.map(function (x) {
       return '<button class="chip' + (k === x[0] ? ' on' : '') + '" data-act="capkind" data-k="' + x[0] + '" aria-pressed="' + (k === x[0]) + '">' + (x[0] === 'smart' ? icon('sparkle', 'sm') : '') + x[1] + '</button>';
     }).join('') + '</div>'
     + (k === 'task' || k === 'note' ? '<div class="scrollx" role="group" aria-label="Area">' + areasSorted().map(function (a) {
       return '<button class="chip' + (capState.area === a.id ? ' on' : '') + '" data-act="caparea" data-a="' + a.id + '"><i style="background:' + esc(a.color) + '"></i>' + esc(a.short) + '</button>';
     }).join('') + '</div>'
-      : '<p class="note small">' + (k === 'smart' ? 'Each line is sorted into a task, a habit, a note, a movie and so on' + (AI.ready ? ' by Claude' : '') + '. You check it before anything is filed.' : 'Each line waits in your inbox until you sort it.') + '</p>')
-    + '<div class="btnrow">'
-    + (ASSETS ? '<label class="btn soft" style="flex:0 0 auto" aria-label="Add a photo">' + icon('camera', 'sm') + '<input id="capfile" type="file" accept="image/*" class="sr"></label>' : '')
+      : '<p class="note small capnote">' + (k === 'smart' ? 'Each line is sorted into a task, a habit, a note, a movie and so on' + (AI.ready ? ' by Claude' : '') + '. You check it before anything is filed.' : 'Each line waits in your inbox until you sort it.') + '</p>')
+    + '<div class="btnrow capact">'
+    + (ASSETS ? '<label class="btn soft capcam" style="flex:0 0 auto" aria-label="Add a photo">' + icon('camera', 'sm') + '<input id="capfile" type="file" accept="image/*" class="sr"></label>' : '')
     + '<button class="btn accent" data-act="capsave">' + (k === 'smart' ? 'Sort it' : 'Save') + '</button></div>';
 }
 function capPhotoHtml() {

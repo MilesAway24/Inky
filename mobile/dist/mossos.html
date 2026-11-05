@@ -757,6 +757,17 @@ h2{font-size:21px;font-weight:700;letter-spacing:-.02em}
 .areapick{margin:2px 0}
 .spotchip{display:flex;align-items:center;gap:10px;padding:8px 8px 8px 12px;border-radius:14px;background:var(--accent-tint);border:1px solid var(--line2);font-size:14.5px}
 .spotchip svg.i{color:var(--accent)}
+/* ── sheets while typing: clear of the keyboard ───────────────────── */
+body.kbsheet .sheetbg{align-items:flex-start}
+body.kbsheet .sheet{margin-top:calc(env(safe-area-inset-top,0px) + 44px);max-height:46vh;border-radius:22px;display:flex;flex-direction:column;gap:12px;padding-bottom:16px}
+body.kbsheet.kbvv .sheetbg{align-items:flex-end;padding-bottom:var(--kb)}
+body.kbsheet.kbvv .sheet{margin-top:0;max-height:calc(100vh - var(--kb) - env(safe-area-inset-top,0px) - 56px);border-radius:22px 22px 0 0}
+body.kbsheet .sheet>*{order:3}
+body.kbsheet .sheet>.grab,body.kbsheet .sheet>.shead{order:0}
+body.kbsheet .sheet>.capbox{order:1;min-height:0;height:4.4em;flex:none}
+body.kbsheet .sheet>.capact{order:2}
+body.kbsheet .sheet .capnote,body.kbsheet .sheet .capcam,body.kbsheet .sheet>.grab{display:none}
+body.kbsheet .sheet>.shead{margin-bottom:0}
 </style>
 
 <div class="app" id="app">
@@ -862,7 +873,7 @@ var Store = (function () {
   // device cache) until db confirms it. While listed, the local copy wins
   // over any snapshot, and a fresh launch sends it again. That way an edit
   // made just before iOS suspends the app is never lost.
-  var S = {}, subs = [], db = null, base = null, timers = {}, out = {}, seq = 0, loaded = {}, status = 'local';
+  var S = {}, subs = [], db = null, base = null, timers = {}, out = {}, seq = 0, loaded = {}, status = 'local', confirmedAt = {}, warned = {};
   COLS.forEach(function (c) { S[c] = {}; });
 
   function cacheLoad() {
@@ -875,6 +886,11 @@ var Store = (function () {
   var cacheT = null;
   function cacheNow() { clearTimeout(cacheT); try { localStorage.setItem(CACHE_KEY, JSON.stringify({ v: 1, d: S, o: out })); } catch (e) {} }
   function cacheSave() { clearTimeout(cacheT); cacheT = setTimeout(cacheNow, 200); }
+  /* A save the server refused: say so once per kind, keep the phone's copy. */
+  function saveWarn(code) {
+    if (warned[code]) return; warned[code] = 1;
+    if (typeof toast === 'function') toast('Couldn\'t save a change (' + esc(code) + '). It\'s kept on this phone.');
+  }
   function emit() { subs.forEach(function (f) { try { f(); } catch (e) { console.error(e); } }); }
 
   function remoteWrite(col, id) {
@@ -888,11 +904,12 @@ var Store = (function () {
       var p = v ? ref.set(JSON.parse(JSON.stringify(v))) : ref.delete();
       p.then(function () {
         if (out[key] === mine) { delete out[key]; cacheSave(); } // a newer edit keeps it listed
+        confirmedAt[key] = Date.now();
       }, function (e) {
         if (e && e.code === 'unavailable') setTimeout(function () { if (out[key] === mine) remoteWrite(col, id); }, 800 + Math.random() * 800);
         else if (e && e.code === 'quota_exceeded') { delete out[key]; toast('Storage is full. Delete some old items to keep saving.'); }
-        else if (e && (e.code === 'invalid_argument')) { delete out[key]; console.warn('save refused', key, e); }
-        else console.warn('save failed', key, e);
+        else if (e && (e.code === 'invalid_argument')) { delete out[key]; console.warn('save refused', key, e); saveWarn(e.code); }
+        else { console.warn('save failed', key, e); saveWarn((e && e.code) || 'error'); }
       });
     };
     timers[key] = { t: setTimeout(run, 350), run: run };
@@ -945,14 +962,27 @@ var Store = (function () {
           var waiting = COLS.length, slow = setTimeout(function () { if (status === 'connecting') { status = 'slow'; emit(); } }, 10000);
           COLS.forEach(function (col) {
             db.collection(base + '/' + col).onSnapshot(function (snap) {
-              var fresh = {};
-              snap.docs.forEach(function (doc) { var v = doc.data(); if (v) fresh[doc.id] = v; });
+              var fresh = {}, resend = [], now = Date.now();
+              // Newest edit wins: a snapshot that is older than what this
+              // phone already has (a late echo after a save) doesn't undo it.
+              snap.docs.forEach(function (doc) {
+                var v = doc.data(); if (!v) return;
+                var mine = S[col][doc.id];
+                if (mine && (mine.updated || 0) > (v.updated || 0)) { fresh[doc.id] = mine; resend.push(doc.id); }
+                else fresh[doc.id] = v;
+              });
+              // Just saved here but missing from a late snapshot: keep it.
+              Object.keys(S[col]).forEach(function (id) {
+                var ck = col + '/' + id;
+                if (!fresh[id] && confirmedAt[ck] && now - confirmedAt[ck] < 20000) fresh[id] = S[col][id];
+              });
               // Local changes db hasn't confirmed yet win over what the snapshot says.
               Object.keys(out).forEach(function (key) {
                 var p = key.split('/'); if (p[0] !== col) return;
                 if (S[col][p[1]]) fresh[p[1]] = S[col][p[1]]; else delete fresh[p[1]];
               });
               S[col] = fresh;
+              resend.forEach(function (id) { if (!out[col + '/' + id]) remoteWrite(col, id); });
               if (!snap.metadata.fromCache && !loaded[col]) {
                 loaded[col] = true;
                 if (--waiting === 0) { clearTimeout(slow); status = 'synced'; if (onFirst) onFirst(); }
@@ -1458,7 +1488,7 @@ function openSheet(html, after, onClose) {
 }
 function closeSheet() {
   if ($('#sheetbg').hidden) return;
-  $('#sheetbg').hidden = true; document.body.style.overflow = '';
+  $('#sheetbg').hidden = true; document.body.style.overflow = ''; document.body.classList.remove('kbsheet');
   var f = sheetOnClose; sheetOnClose = null; if (f) f();
   render();
 }
@@ -1517,6 +1547,29 @@ function areaDot(id) { return '<span class="dot" style="background:' + areaColor
 function areaName(id) { var a = area(id); return a ? a.short : ''; }
 function exPill(o) { return o && o.example ? '<span class="pill ex">example</span>' : ''; }
 
+/* ── sheets and the keyboard ─────────────────────────────────────────
+   Inside the Claude app the page is a frame that iOS doesn't shrink for
+   the keyboard, so a bottom sheet ends up under it. While you type in a
+   sheet it moves to the top half of the screen (or, where the browser
+   reports the keyboard, sits right above it). */
+(function () {
+  var sheet = $('#sheet');
+  function isField(el) {
+    return !!el && (el.isContentEditable || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT'
+      || (el.tagName === 'INPUT' && !/^(checkbox|radio|button|submit|range|color|file)$/.test(el.type || '')));
+  }
+  function kbFit() {
+    var vv = window.visualViewport, kb = vv ? Math.max(0, Math.round(innerHeight - vv.height - vv.offsetTop)) : 0;
+    document.documentElement.style.setProperty('--kb', kb + 'px');
+    document.body.classList.toggle('kbvv', kb > 80);
+  }
+  sheet.addEventListener('focusin', function (e) { if (isField(e.target)) { document.body.classList.add('kbsheet'); kbFit(); } });
+  sheet.addEventListener('focusout', function () {
+    setTimeout(function () { var ae = document.activeElement; if (!(isField(ae) && sheet.contains(ae))) document.body.classList.remove('kbsheet'); kbFit(); }, 80);
+  });
+  if (window.visualViewport) { visualViewport.addEventListener('resize', kbFit); visualViewport.addEventListener('scroll', kbFit); }
+})();
+
 /* ── 10-today.js ── */
 /* ═══ TODAY ═════════════════════════════════════════════════════════
    An overview first (from Miles's recording): the count, a Heads up card
@@ -1547,9 +1600,6 @@ VIEWS.today = function () {
   if (sh || d.getHours() >= 17) h += '<div class="subline">' + (sh ? '<span>' + icon('shift', 'sm') + ' ' + esc(sh.replace(/^\w/, function (c) { return c.toUpperCase(); })) + '</span>' : '')
     + (d.getHours() >= 17 ? '<button class="link" data-act="tab" data-v="plan">Plan tomorrow →</button>' : '') + '</div>';
 
-  if (hasExamples()) h += '<div class="card flat"><p class="note">You\'re looking at example data so you can see how MossOS works. '
-    + 'Items marked <span class="pill ex">example</span> go when you clear them.</p>'
-    + '<div class="btnrow" style="margin-top:12px"><button class="btn sm soft" data-act="clearex">Clear examples</button></div></div>';
 
   h += shiftCards();
 
@@ -1997,21 +2047,21 @@ function capHtml(text) {
   if (capState.quick) return '<div class="shead"><h2>Quick capture</h2><button class="iconbtn" data-act="close" aria-label="Close">' + icon('x') + '</button></div>'
     + '<label class="sr" for="captext">What\'s on your mind</label>'
     + '<textarea id="captext" class="capbox quick" placeholder="Dump it here. Enter saves to your inbox.">' + esc(text || '') + '</textarea>'
-    + '<div class="btnrow"><button class="btn accent" data-act="capsave">Save to inbox</button><button class="btn ghost" data-act="capsortnow">' + icon('sparkle', 'sm') + 'Sort now</button></div>'
-    + '<p class="note small">Claude sorts it later from the inbox. Shift+Enter for a new line.</p>';
+    + '<div class="btnrow capact"><button class="btn accent" data-act="capsave">Save to inbox</button><button class="btn ghost" data-act="capsortnow">' + icon('sparkle', 'sm') + 'Sort now</button></div>'
+    + '<p class="note small capnote">Claude sorts it later from the inbox. Shift+Enter for a new line.</p>';
   return '<div class="shead"><h2>Capture</h2><button class="iconbtn" data-act="close" aria-label="Close">' + icon('x') + '</button></div>'
     + '<label class="sr" for="captext">What\'s on your mind</label>'
     + '<textarea id="captext" class="capbox" placeholder="Anything. &quot;Call the recruiter Friday&quot;, &quot;took meds&quot;, &quot;watched Heat 9/10&quot;… Tap the mic on your keyboard to talk.">' + esc(text || '') + '</textarea>'
     + '<div id="capphoto">' + capPhotoHtml() + '</div>'
-    + '<div class="chips" role="group" aria-label="Save as">' + CAP_KINDS.map(function (x) {
+    + '<div class="chips capkinds" role="group" aria-label="Save as">' + CAP_KINDS.map(function (x) {
       return '<button class="chip' + (k === x[0] ? ' on' : '') + '" data-act="capkind" data-k="' + x[0] + '" aria-pressed="' + (k === x[0]) + '">' + (x[0] === 'smart' ? icon('sparkle', 'sm') : '') + x[1] + '</button>';
     }).join('') + '</div>'
     + (k === 'task' || k === 'note' ? '<div class="scrollx" role="group" aria-label="Area">' + areasSorted().map(function (a) {
       return '<button class="chip' + (capState.area === a.id ? ' on' : '') + '" data-act="caparea" data-a="' + a.id + '"><i style="background:' + esc(a.color) + '"></i>' + esc(a.short) + '</button>';
     }).join('') + '</div>'
-      : '<p class="note small">' + (k === 'smart' ? 'Each line is sorted into a task, a habit, a note, a movie and so on' + (AI.ready ? ' by Claude' : '') + '. You check it before anything is filed.' : 'Each line waits in your inbox until you sort it.') + '</p>')
-    + '<div class="btnrow">'
-    + (ASSETS ? '<label class="btn soft" style="flex:0 0 auto" aria-label="Add a photo">' + icon('camera', 'sm') + '<input id="capfile" type="file" accept="image/*" class="sr"></label>' : '')
+      : '<p class="note small capnote">' + (k === 'smart' ? 'Each line is sorted into a task, a habit, a note, a movie and so on' + (AI.ready ? ' by Claude' : '') + '. You check it before anything is filed.' : 'Each line waits in your inbox until you sort it.') + '</p>')
+    + '<div class="btnrow capact">'
+    + (ASSETS ? '<label class="btn soft capcam" style="flex:0 0 auto" aria-label="Add a photo">' + icon('camera', 'sm') + '<input id="capfile" type="file" accept="image/*" class="sr"></label>' : '')
     + '<button class="btn accent" data-act="capsave">' + (k === 'smart' ? 'Sort it' : 'Save') + '</button></div>';
 }
 function capPhotoHtml() {
@@ -2505,9 +2555,11 @@ VIEWS.settings = function () {
         + Object.keys(SECTIONS).filter(function (k) { return k !== 'settings'; }).map(function (k) { return '<option value="' + k + '"' + (k === cur ? ' selected' : '') + '>' + SECTIONS[k][0] + '</option>'; }).join('') + '</select></div>';
     }).join('') + '</section>'
 
-    + '<section><div class="sechead"><h2>Data</h2></div><div class="btnrow">'
-    + '<button class="btn soft" data-act="finimport">Import from Payday OS</button>'
+    + '<section><div class="sechead"><h2>Data</h2></div>'
+    + (hasExamples() ? '<p class="note small" style="margin-bottom:10px"><b>Example data.</b> MossOS started with sample tasks, habits, goals and notes (marked <span class="pill ex">example</span>) so the screens weren\'t empty. Clear examples removes only those; your own items stay.</p>' : '')
+    + '<div class="btnrow">'
     + (hasExamples() ? '<button class="btn soft" data-act="clearex">Clear examples</button>' : '')
+    + '<button class="btn soft" data-act="finimport">Import from Payday OS</button>'
     + '<button class="btn ghost" data-act="resetall">Erase everything</button></div></section>';
 };
 
@@ -2728,7 +2780,12 @@ function habitCard(h) {
 }
 function range(n) { var a = []; for (var i = 0; i < n; i++) a.push(i); return a; }
 ACTS.habview = function (d) { habView = d.v; render(); };
-ACTS.habtoggle = function (d) { toggleToday(d.id); };
+ACTS.habtoggle = function (d, el) {
+  toggleToday(d.id);
+  // Show the tap at once, even if a repaint is held back.
+  var h = Store.get('habits', d.id), on = h && mark(h, today()) === 1;
+  $$('[data-act=habtoggle][data-id="' + d.id + '"]').forEach(function (b) { b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); if (b.classList.contains('hmark') && !h.target) b.textContent = on ? 'Done ✓' : 'Mark done'; });
+};
 
 /* ── detail ─────────────────────────────────────────────────────────── */
 TITLES.habit = function (id) { var h = Store.get('habits', id); return h ? h.n : 'Habit'; };
