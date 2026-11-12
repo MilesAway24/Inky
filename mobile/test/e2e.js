@@ -20,7 +20,8 @@ const mockRaw = fs.readFileSync(path.join(__dirname, 'mock-claude.js'), 'utf8');
 // Most checks start on Today: pretend MossOS was open a moment ago, so it
 // doesn't land in Quick capture (checked on its own below).
 const seenNow = "try{localStorage.setItem('mossos.lastSeen',String(Date.now()))}catch(e){}\n";
-const mock = seenNow + mockRaw;
+// FREEZE=1 runs every check against read-only synced data (as the Claude app hands it out).
+const mock = seenNow + (process.env.FREEZE ? "try{sessionStorage.setItem('__mockFreeze','1')}catch(e){}\n" : '') + mockRaw;
 
 let failures = 0;
 async function reloadKeeping(p, ctx) {
@@ -911,6 +912,15 @@ const ok = (cond, msg) => { console.log((cond ? 'ok   ' : 'FAIL ') + msg); if (!
   ok(await p.evaluate((id) => !document.querySelector('.hmark[data-id="' + id + '"]').classList.contains('on'), tbId), 'a normal tap still runs once (no double toggle)');
   await p.evaluate(() => window.dispatchEvent(new ErrorEvent('error', { message: 'test boom' }))); await p.waitForTimeout(150);
   ok(/That didn't work: test boom/.test(await p.textContent('#toast')), 'an error shows on screen instead of failing silently');
+  await p.waitForTimeout(3000);
+  await p.evaluate(() => { const e = new Event('unhandledrejection'); e.reason = { code: 'rate_limited', message: 'slow down' }; window.dispatchEvent(e); }); await p.waitForTimeout(150);
+  ok(!/slow down/.test(await p.textContent('#toast')), 'an expected Claude refusal (rate limit) does not raise the error message');
+  // Touch taps run each button once
+  await p.click('.tabs [data-v=tasks]'); await p.waitForTimeout(300);
+  const tpId = await p.evaluate(() => { const ids = [...document.querySelectorAll('.trow [data-act=toggle]')].map((e) => e.dataset.id); const docs = Object.values(window.__mock.docs); return ids.filter((id) => docs.some((d) => d.id === id && !d.done && !d.repeat))[0]; });
+  await p.evaluate((id) => document.querySelector('.trow [data-act=toggle][data-id="' + id + '"]').scrollIntoView({ block: 'center' }), tpId); await p.waitForTimeout(200);
+  await p.tap('.trow [data-act=toggle][data-id="' + tpId + '"]'); await p.waitForTimeout(1000);
+  ok(await p.evaluate((id) => Object.values(window.__mock.docs).some((d) => d.id === id && d.done), tpId), 'a touch tap ticks a task once (stays ticked)');
   await ctx.close();
 
   // ── Opening after a while lands in Quick capture ─────────────────
