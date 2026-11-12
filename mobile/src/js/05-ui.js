@@ -132,10 +132,10 @@ document.addEventListener('click', function (e) {
   // its repaint while you're typing, so the tap seemed to do nothing (habit
   // "Mark done" next to the edit fields). Let go of the field first.
   var ae = document.activeElement, view = $('#view');
-  if (ae && ae !== el && !el.contains(ae) && view.contains(ae) && view.contains(el) && el.dataset.act !== 'rename'
+  if (ae && ae !== el && !el.contains(ae) && view.contains(ae) && view.contains(el) && el.dataset.act !== 'rename' && !el.hasAttribute('data-keep')
     && (ae.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName))) ae.blur();
   e.preventDefault(); if (tapLate(el)) return; tapDone(el); runAct(f, el.dataset, el, e);
-  if (render.stale && !(document.activeElement && view.contains(document.activeElement) && /^(INPUT|TEXTAREA)$/.test(document.activeElement.tagName))) render();
+  if (render.stale && !(document.activeElement && view.contains(document.activeElement) && (document.activeElement.isContentEditable || /^(INPUT|TEXTAREA)$/.test(document.activeElement.tagName)))) render();
 });
 ACTS.tab = function (d) { go(d.v); };
 ACTS.back = function () { pop(); };

@@ -75,6 +75,12 @@
     }
     if (/Suggest three possible next actions/.test(prompt)) return Promise.resolve({ options: ['Book the PAT practice slot', 'Run the 1.5 mile test once', 'Print the packet checklist'] });
     if (/You are a reading companion/.test(prompt)) return Promise.resolve({ text: 'So far the book argues that small habits compound.\nIt has not reached the later chapters yet.', known: true });
+    if (/Organize this note/.test(prompt)) {
+      var nt = ''; try { nt = JSON.parse((/\nNote text: (".*")\n/.exec(prompt) || [])[1] || '""'); } catch (e) {}
+      var hc = /packet|academy|polygraph|hcpd|recruiter/i.test(nt), gy = /bench|squat|gym|deadlift/i.test(nt), td = [], re = /(?:need to|remember to|todo:?)\s+([^.\n]+)/gi, mm;
+      while ((mm = re.exec(nt))) td.push(mm[1].trim());
+      return Promise.resolve({ title: nt.split(/\s+/).slice(0, 4).join(' '), folder: hc ? 'HCPD' : gy ? 'Gym' : 'Ideas', tags: hc ? ['hcpd', 'prep'] : gy ? ['gym'] : ['misc'], area: hc ? 'hcpd' : gy ? 'gym' : null, todos: td });
+    }
     if (/life areas is this/.test(prompt)) {
       var am = /Life areas \(JSON\): (\[.*?\])\n/.exec(prompt), tx = (/\nText: (.*)\n/.exec(prompt) || [])[1] || '';
       var areas = am ? JSON.parse(am[1]) : [], hit = areas.filter(function (a) { return tx.toLowerCase().indexOf(a.name.toLowerCase().split(' ')[0]) > -1 || /packet|academy|polygraph/i.test(tx) && a.id === 'hcpd'; })[0];

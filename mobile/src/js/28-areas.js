@@ -176,8 +176,7 @@ function spotFor(kind, id) {
 document.addEventListener('input', function (e) {
   var el = e.target, c = current(); if (!el || !el.id) return;
   var kind = null, id = null;
-  if ((el.id === 'nbody' || el.id === 'ntitle' || el.id === 'nedit') && c.view === 'note') { kind = 'note'; id = c.arg; }
-  else if (el.id === 'etext' && c.view === 'entry') { kind = 'entry'; id = c.arg; }
+  if (el.id === 'etext' && c.view === 'entry') { kind = 'entry'; id = c.arg; }
   else if (el.id === 'jtext' && c.view === 'journal') { kind = 'entry'; id = 'j' + today(); }
   if (!kind) return;
   clearTimeout(spotT); spotT = setTimeout(function () { spotFor(kind, id); }, 2500);

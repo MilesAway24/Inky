@@ -385,8 +385,8 @@ const ok = (cond, msg) => { console.log((cond ? 'ok   ' : 'FAIL ') + msg); if (!
   await goTo('notes'); await p.waitForTimeout(150);
   await p.fill('#nq', 'onboarding'); await p.waitForTimeout(100);
   ok((await p.$$('#notelist .row')).length === 1, 'note search filters as you type');
-  await p.fill('#nq', ''); await p.click('[data-act=notef][data-f=idea]'); await p.waitForTimeout(100);
-  ok((await p.$$('#notelist .row')).length >= 1, 'the Ideas filter shows sorted ideas');
+  await p.fill('#nq', ''); await p.waitForTimeout(100); await p.click('.frowb[data-id=ideas]'); await p.waitForTimeout(150);
+  ok((await p.$$('#view .nrow')).length >= 1, 'the Ideas folder shows sorted ideas');
 
   // ── Smart capture with Claude: five kinds in one go ──────────────
   await p.click('.tabs [data-v=today]'); await p.waitForTimeout(100);
@@ -802,8 +802,9 @@ const ok = (cond, msg) => { console.log((cond ? 'ok   ' : 'FAIL ') + msg); if (!
   await p.fill('#jtext', 'Long day. Finally finished the @HCPD packet draft tonight.'); await p.waitForTimeout(700);
   await p.evaluate(() => document.activeElement && document.activeElement.blur()); await p.waitForTimeout(300);
   await goTo('notes'); await p.click('[data-act=newnote]'); await p.waitForTimeout(200);
-  await p.fill('#ntitle', 'Polygraph prep list'); await p.fill('#nbody', 'Sleep well, bring ID, answer plainly.'); await p.waitForTimeout(200);
-  await p.click('[data-act=notearea][data-a=hcpd]'); await p.waitForTimeout(500);
+  await p.click('#nedit'); await p.keyboard.type('Polygraph prep list'); await p.keyboard.press('Enter'); await p.keyboard.type('Sleep well, bring ID, answer plainly.'); await p.waitForTimeout(800);
+  await p.evaluate(() => document.activeElement.blur()); await p.waitForTimeout(200);
+  await p.click('.nmore summary'); await p.click('[data-act=notearea][data-a=hcpd]'); await p.waitForTimeout(500);
   await openArea('hcpd');
   const hub = await p.textContent('#view');
   ok(/Waiting on the polygraph date/.test(hub) && /Polygraph prep list/.test(hub) && /packet draft/.test(hub), 'the HCPD hub shows its check-in, its note and the @HCPD journal entry');
@@ -812,10 +813,54 @@ const ok = (cond, msg) => { console.log((cond ? 'ok   ' : 'FAIL ') + msg); if (!
   await p.screenshot({ path: shots + '/phone-areahub.png', fullPage: true });
   // Claude suggests an area for an untagged note
   await goTo('notes'); await p.click('[data-act=newnote]'); await p.waitForTimeout(200);
-  await p.fill('#ntitle', 'Academy fitness test'); await p.type('#nbody', 'Mile and a half, push-ups, sit-ups. Need the packet forms too.'); await p.waitForTimeout(3500);
+  await p.click('#nedit'); await p.keyboard.type('Academy fitness test'); await p.keyboard.press('Enter'); await p.keyboard.type('Mile and a half, push-ups, sit-ups. Need to print the packet forms Friday. #fitness'); await p.waitForTimeout(5200);
   ok(await p.isVisible('.spotchip >> text=HCPD'), 'Claude suggests the HCPD area for an untagged note');
   await p.click('.spotchip [data-act=arealink]'); await p.waitForTimeout(500);
   ok(await p.evaluate(() => Object.values(window.__mock.docs).some((d) => d.title === 'Academy fitness test' && d.area === 'hcpd')), 'tapping Link files the note under HCPD');
+
+  // ── Notes like Apple Notes ──────────────────────────────────────
+  const noteDoc = (t) => p.evaluate((t) => Object.values(window.__mock.docs).filter((d) => d.title === t && 'body' in d)[0], t);
+  let an = await noteDoc('Academy fitness test');
+  ok(an && (an.tags || []).includes('fitness') && (an.tags || []).includes('hcpd') && an.folderBy === 'ai', 'a #tag typed in a note becomes a tag, and Claude adds tags and files the note (' + JSON.stringify(an && an.tags) + ')');
+  ok(/Filed in HCPD/.test(await p.textContent('#norg')) && /1 to-do found/.test(await p.textContent('#norg')), 'the note shows "Filed in HCPD" and the to-do Claude found');
+  await p.click('[data-act=notetodos]'); await p.waitForTimeout(600);
+  const pt = await p.evaluate(() => Object.values(window.__mock.docs).filter((d) => d.fromNote)[0]);
+  ok(pt && /print the packet forms/i.test(pt.t) && pt.due, '"Add as tasks" makes a dated task from the note (' + (pt && pt.t + ' ' + pt.due) + ')');
+  // formatting: bold, a checklist, and the cleaner
+  await p.click('#nedit'); await p.keyboard.press('Control+End'); await p.keyboard.press('Enter');
+  await p.click('#ntb [data-c=ck]'); await p.keyboard.type('Running shoes'); await p.keyboard.press('Enter'); await p.keyboard.type('Water bottle'); await p.waitForTimeout(1200);
+  ok(await p.$$eval('#nedit ul.nck > li', (x) => x.length) === 2, 'the checklist button makes a checklist');
+  const liBox = await (await p.$('#nedit ul.nck > li')).boundingBox();
+  await p.mouse.click(liBox.x + 10, liBox.y + liBox.height / 2); await p.waitForTimeout(1200);
+  an = await noteDoc('Academy fitness test');
+  ok(/<li data-done="1">Running shoes/.test(an.html), 'tapping the circle ticks the item, and it is saved');
+  await p.click('#nedit'); await p.keyboard.press('Control+End'); await p.keyboard.press('Enter'); await p.keyboard.press('Enter');
+  await p.click('#ntb [data-c=bold]'); await p.keyboard.type('Bring ID'); await p.waitForTimeout(1200);
+  an = await noteDoc('Academy fitness test');
+  ok(/<b>Bring ID<\/b>/.test(an.html) && /Bring ID/.test(an.body), 'bold is kept in the note');
+  const dirty = await p.evaluate(() => { const ed = document.getElementById('nedit'); ed.focus(); const dt = new DataTransfer(); dt.setData('text/html', '<p onclick="x()">Pasted <img src="https://evil.example/x.png" onerror="alert(1)"><script>window.__pwned=1<\/script><b>ok</b></p>'); ed.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true })); return ed.innerHTML; });
+  await p.waitForTimeout(1200); an = await noteDoc('Academy fitness test');
+  ok(/Pasted/.test(an.html) && !/script|onerror|onclick|evil\.example/.test(an.html) && !(await p.evaluate(() => window.__pwned)), 'pasted scripts, handlers and outside images are stripped');
+  await p.evaluate(() => document.activeElement.blur()); await p.waitForTimeout(200);
+  await reloadKeeping(p, ctx);
+  await goTo('notes');
+  const fl = await p.textContent('#notelist');
+  ok(/All Notes/.test(fl) && /HCPD/.test(fl) && /#fitness/.test(fl) && /Ideas/.test(fl), 'Notes opens on folders: All Notes, the HCPD folder Claude made, Ideas, and tags');
+  await p.screenshot({ path: shots + '/phone-notes-folders.png', fullPage: true });
+  await p.click('.frowb[data-id^="f:"] >> nth=0'); await p.waitForTimeout(200);
+  ok(await p.isVisible('.ngh:text("Today")') && await p.isVisible('.nrow:has-text("Academy fitness test")'), 'a folder lists its notes grouped by date');
+  await p.screenshot({ path: shots + '/phone-notes-list.png', fullPage: true });
+  await p.click('.nrow:has-text("Academy fitness test")'); await p.waitForTimeout(300);
+  ok(await p.$$eval('#nedit ul.nck > li[data-done]', (x) => x.length) === 1 && await p.isVisible('#nedit b:text("Bring ID")'), 'the checklist tick and the bold survive a reload');
+  await p.screenshot({ path: shots + '/phone-note.png', fullPage: true });
+  await p.click('.nmore summary'); await p.click('[data-act=notepin]'); await p.waitForTimeout(300);
+  await goTo('notes'); await p.click('[data-act=smartnew]'); await p.waitForTimeout(150);
+  await p.selectOption('#stag', 'fitness'); await p.click('#sheet [type=submit]'); await p.waitForTimeout(300);
+  await p.click('.frowb[data-id^="s:"]'); await p.waitForTimeout(200);
+  ok((await p.$$('.nrow')).length === 1 && await p.isVisible('.ngh:text("Pinned")'), 'a smart folder gathers notes by tag, and a pinned note sits under Pinned');
+  const nw = await p.evaluate(() => document.documentElement.scrollWidth - innerWidth);
+  ok(nw <= 1, 'Notes screens don\'t scroll sideways');
+
 
   // Every screen: no sideways scrolling
   const views = ['plan', 'shifts', 'books', 'notes', 'tools', 'ranks', 'decks', 'bored', 'gym', 'timer','today', 'tasks', 'more', 'areas', 'inbox', 'notes', 'settings', 'money', 'habits', 'goals', 'projects', 'journal', 'calendar'];
